@@ -10,15 +10,23 @@ this repo) for the full spec this build follows.
 **Working right now:** repo public at github.com/The-Greg-Cote-Show/PFPI,
 both Workers deployed and tested (picks/admin endpoints all verified live,
 including a real browser click-through), GitHub Pages built and serving
-`index.html` / `picks.html` / `admin.html` correctly, frontend gracefully
-running on the original simulated mockup data since no real data exists yet.
+`index.html` / `picks.html` / `admin.html` / `brief.html` correctly, frontend
+gracefully running on the original simulated mockup data since no real data
+exists yet. Admin login (self-service reset, brute-force lockout + alert
+email) and Greg's Brief publisher (own independent login, same reset/lockout
+protection, admin correction path in `admin.html`) are both live and tested
+against the real deployed Worker — see the 2026-08-24 entries below for the
+admin-login incident and the brief-publisher build.
 
 **Five things need you before this is fully live, none of them guessable:**
 1. **DNS** — add a CNAME record `pfpi` -> `the-greg-cote-show.github.io` (same
    pattern as `cotecup`). Nothing at `pfpi.thegregcoteshow.com` will load
    until this is done.
 2. **Resend domain** — verify `thegregcoteshow.com` at resend.com/domains.
-   Until then the Worker can't send picks emails to anyone.
+   Until then the Worker can't send picks emails to anyone. (Admin/Greg
+   account emails — login reset links, brute-force alerts — work today via
+   Resend's default sender regardless, since those always go to a fixed
+   internal address; see the 2026-08-24 entries.)
 3. **Cron triggers** — add in the Cloudflare dashboard Triggers tab for both
    Workers (exact strings below, in the CLOUDFLARE section). Nothing runs on
    a schedule until this is done.
@@ -26,7 +34,10 @@ running on the original simulated mockup data since no real data exists yet.
    scores/schedule ever get polished or published.
 5. **`GITHUB_PAT`** — a fine-grained token (repo: PFPI only, Contents:
    read/write) has no API for creating it, needs the GitHub web UI. Without
-   it, the scores Worker can compute everything but can't publish it.
+   it, the scores Worker can compute everything but can't publish it, and (as
+   of 2026-08-24) neither can Greg's Brief publisher — `/admin/publish-brief`
+   degrades the same way, saving/logging the attempt but honestly reporting
+   back that nothing went live rather than claiming success.
 
 Full detail, reasoning, and exact commands for each are in the log below, in
 the order they came up.
@@ -326,3 +337,116 @@ the order they came up.
   for the last two — just extending that same reasoning to the other three
   rather than guessing at an undefined tie rule. Worth a quick question to
   Greg/Yeti as a fast follow, not a blocker.
+- **[INCIDENT / FIXED]** Admin login was returning a genuine 401 in the
+  browser while Yeti believed the same password succeeded via PowerShell.
+  Added temporary server-side debug logging to `handleAdminLogin`, redeployed,
+  reproduced the failure live, and checked `wrangler tail`. Root cause: the
+  live `ADMIN_PASSWORD_HASH` secret simply didn't match the current password
+  — not CORS, not client-side encoding, not Cloudflare edge/version skew (all
+  independently ruled out with real requests). Yeti's own "PowerShell
+  success" turned out to be a local Node hash computation eyeballed against
+  an assumed-uploaded value, never an actual request to the live endpoint —
+  confirmed by replaying the exact browser-captured password through a real
+  request and getting the identical 401. Fixed by uploading the correct hash
+  (verified two independent ways: Node's `webcrypto` locally and the
+  Worker's own `hashPassword()`), then removed all debug logging and
+  redeployed clean.
+- **[FEATURE]** Added self-service admin password reset
+  (`POST /admin/forgot-password`, `POST /admin/reset-password`) and per-IP
+  brute-force protection (5 failed attempts/15 min -> 429 lockout, one alert
+  email per IP per hour to `yeti@yetiblanc.com`) directly off the back of the
+  incident above, so a bad secret doesn't require a full debugging session
+  again. Password hash storage split: normally the `ADMIN_PASSWORD_HASH`
+  secret, but a completed reset writes a KV override
+  (`admin-password-hash-override`) that takes precedence, since a Worker can
+  write KV at runtime but can't rewrite its own secrets.
+- **[BUG FOUND / FIXED]** `admin.html`'s new "Forgot password?" link didn't
+  appear live after the Worker was redeployed — root cause was simply that
+  `admin.html` lives on GitHub Pages and needs its own `git push`, entirely
+  separate from `wrangler deploy` for the Worker. Fixed by committing and
+  pushing. Worth remembering: any `admin.html` / `index.html` / `picks.html`
+  / `brief.html` change isn't live until it's pushed to `main`, regardless of
+  whether the Worker side was deployed.
+- **[BUG FOUND / FIXED]** The password-reset email itself silently never
+  arrived — `handleForgotPassword` always returned `{sent:true}` without
+  checking whether the Resend send actually succeeded. Tailed logs and found
+  a 403 `domain_not_verified`: `thegregcoteshow.com` (used as the `from`
+  address for admin/Greg account emails) is the same unverified Resend
+  sending domain flagged earlier tonight for family picks emails, still
+  unresolved. Since admin/Greg account emails (reset links, brute-force
+  alerts) always go to a fixed internal address, not family members, worked
+  around it by switching just those to Resend's default `onboarding@resend.dev`
+  sender, which Resend allows to any recipient regardless of domain
+  verification — confirmed with a real delivered test email. Also fixed
+  `handleForgotPassword` to report a real `502` if the send genuinely fails,
+  instead of always claiming success. **This does not fix the family picks
+  emails** (`sendPicksEmail`, still `picks@thegregcoteshow.com`) — those stay
+  blocked on Resend domain verification (item 2 above).
+- **[FEATURE]** Built the real Greg's Brief publisher, from
+  `PFPI_brief_publisher_handoff.md`. The handoff doc's two reference mockups
+  (`pfpi_brief_publisher_mockup.html`, `pfpi_mockup_with_brief.html`) weren't
+  actually present anywhere in the repo, filesystem, or git history when this
+  started — flagged to Yeti rather than guessed at the design blind; Yeti
+  located and supplied both files, and they were used as the real reference
+  for layout/behavior.
+  - **Auth, generalized:** refactored the admin auth code in
+    `picks-worker.js` from admin-specific functions into an `AUTH_CONFIG` map
+    keyed by `"admin"` / `"greg"`, so Greg's Brief gets a fully independent
+    credential (own password hash/salt, own session-token namespace, own
+    reset-token namespace, own `GREG_SESSION_SECRET`) reusing the exact same
+    hashing/session/reset/brute-force machinery already proven for admin,
+    without duplicating it. Greg's session token is never accepted where an
+    admin token is required, and vice versa.
+  - **`GREG_PASSWORD_HASH`, `GREG_SESSION_SECRET`** generated and uploaded as
+    Worker secrets tonight (same pattern as the original admin placeholder:
+    random password generated, hashed, uploaded, the plaintext given to Yeti
+    directly in chat, never written to any file). This is a starting
+    placeholder only — Greg should set his own real password via the same
+    "Forgot password?" flow once he's actually onboarded.
+  - **Greg's own email isn't set up yet** — per Yeti, `GREG_EMAIL` is
+    temporarily pointed at `yeti@yetiblanc.com` (same constant Greg's reset
+    emails use) until Greg is onboarded. One-line change
+    (`picks-worker.js`, `GREG_EMAIL`) when that happens; nothing else about
+    the reset flow needs to change.
+  - **`POST /admin/publish-brief`** (`picks-worker.js`) accepts either a
+    valid Greg session or a valid admin session (header `X-Session-Token`),
+    writes `data/brief-week-N.json` via `commitJSONToGitHub` (moved into
+    `shared.js` so both Workers share one implementation instead of two
+    copies), and — only when the caller is an admin, i.e. a correction, not
+    Greg's own post — logs the override into the same `override-log:*` KV
+    trail pick overrides already use (who, what, when).
+  - **`GET /current-week`** (`picks-worker.js`) added as a small public
+    endpoint so both `brief.html` and `admin.html`'s brief-fix panel default
+    their week selector to the same shared KV `current-week` value the rest
+    of the site uses, rather than recomputing or hardcoding it.
+  - **`brief.html`** — Greg's own gated page: password gate, "Forgot
+    password?", `?resetToken=` reset flow (all mirroring `admin.html`'s
+    proven pattern), week selector, textarea with live character count,
+    publish button. Matches `pfpi_brief_publisher_mockup.html`'s layout and
+    behavior.
+  - **`admin.html`** — added a "Fix Greg's brief" panel (correction tool, not
+    Greg's primary posting flow, per the handoff doc) that auto-loads the
+    currently-published text for the selected week before Yeti edits it, and
+    posts through the same `/admin/publish-brief` endpoint using the existing
+    admin session.
+  - **`index.html`** — added the brief panel under the chart, tied to
+    `currentWeek` and rendered regardless of which category tab is active
+    (matches `pfpi_mockup_with_brief.html`'s reference behavior exactly,
+    including its honest "Greg hasn't published a brief for this week yet."
+    empty state — no fabricated placeholder text). Fetches
+    `data/brief-week-N.json` the same cache-busted way `index.html` already
+    fetches the other real-data JSON files.
+  - **Tested live** against the deployed Worker: `/current-week` returns the
+    computed fallback correctly (no real season data yet); Greg's login
+    succeeds with the placeholder password and fails/locks out correctly with
+    wrong ones; `/admin/publish-brief` correctly rejects a garbage session
+    token (403) and correctly degrades on a real Greg session when
+    `GITHUB_PAT` is missing (202, `published:false`, honest message, nothing
+    silently swallowed).
+  - **Not built, per the handoff doc's explicit scope:** no "new brief
+    posted" email notification to subscribers — that's a separate,
+    not-yet-scoped feature.
+  - **Still blocked on `GITHUB_PAT`** (item 5 above) — the entire feature is
+    wired end-to-end and will start actually publishing to GitHub Pages the
+    moment that secret is set on `pfpi-picks-worker`, no further code changes
+    needed.

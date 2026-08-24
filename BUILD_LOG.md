@@ -259,6 +259,61 @@ the order they came up.
   - `admin.html` — logged in with the real placeholder password against the
     live Worker, override form correctly revealed after login.
   - Cleaned up the throwaway KV test entries used for this again afterward.
+- **[BLOCKER FOUND / FIXED]** The `CNAME` file (pointing at
+  `pfpi.thegregcoteshow.com`) was causing GitHub Pages to redirect the
+  working `the-greg-cote-show.github.io/PFPI/` URL to that custom domain —
+  which still doesn't resolve, since Yeti deliberately deferred the DNS step
+  above. Net effect: there was no URL that actually loaded the site for a
+  normal visitor. Deleted `CNAME`, both locally and on GitHub main (commit
+  `e2fcd16`, "Delete CNAME"). The site now serves correctly from the plain
+  `the-greg-cote-show.github.io/PFPI/` URL. **Leave it deleted** — don't
+  re-add it until Yeti has actually set the DNS CNAME record and asks for it
+  back; re-adding it early just reintroduces this same redirect-to-nowhere.
+- **[TESTED / FIXED]** Yeti reported admin login failing in the browser even
+  though a direct PowerShell request to `/admin/login` returned a valid
+  `sessionToken` with `200 OK` — classic signature of a CORS block rather
+  than an auth or backend failure (the browser makes the request, gets a
+  real response, but silently discards it client-side because the response's
+  `Access-Control-Allow-Origin` doesn't match the page's own origin). Yeti's
+  own diagnosis pointed at exactly that: the header was only allowing
+  `https://pfpi.thegregcoteshow.com`, not the actual serving origin
+  `https://the-greg-cote-show.github.io`.
+  - Checked `picks-worker.js`'s `ALLOWED_ORIGINS` array and `corsHeaders()`:
+    `https://the-greg-cote-show.github.io` is genuinely listed (has been
+    since the very first commit), and the match is a plain `.includes()`
+    exact-string check against the request's `Origin` header — correct
+    logic, no typo, no trailing slash or scheme mismatch.
+  - Verified directly against the **deployed** Worker (not just the source)
+    with `curl`, both an `OPTIONS` preflight and a real `POST
+    /admin/login`, sending `Origin: https://the-greg-cote-show.github.io`:
+    both correctly echoed back
+    `Access-Control-Allow-Origin: https://the-greg-cote-show.github.io`. So
+    the deployed code was already behaving correctly by the time this was
+    checked tonight.
+  - Confirmed what *would* produce Yeti's exact symptom: `corsHeaders()`
+    silently falls back to `ALLOWED_ORIGINS[0]`
+    (`https://pfpi.thegregcoteshow.com`) whenever the request's `Origin`
+    isn't an exact match for anything in the list (sent a `curl` request
+    with an unrelated `Origin` to confirm — response header came back as
+    `pfpi.thegregcoteshow.com`, reproducing what Yeti saw). The most likely
+    explanation is the `CNAME`-redirect blocker above: while that redirect
+    was live, the browser wasn't cleanly loading `admin.html` from
+    `https://the-greg-cote-show.github.io`, so the page's real origin at
+    request time wasn't what it should've been — not a bug in the
+    allowlist itself.
+  - Redeployed `pfpi-picks-worker` (`wrangler deploy`) anyway, no code
+    change needed, purely to guarantee the exact currently-committed source
+    is what's live. Re-verified with fresh `curl` requests post-deploy —
+    preflight and POST from the real origin both correctly return the
+    matching header.
+  - **Worth knowing for future debugging:** because of that silent
+    fallback, *any* unexpected request origin will look exactly like "CORS
+    is misconfigured to only allow pfpi.thegregcoteshow.com" even when the
+    allowlist itself is fine — check the actual `Origin` the browser is
+    sending (Network tab) before assuming the array needs editing.
+  - With the `CNAME` blocker also fixed above, admin login should now work
+    end-to-end from the live `the-greg-cote-show.github.io/PFPI/admin.html`
+    URL.
 - **[SCOPE NOTE]** Of the mockup's 6 chart categories, only **Standings** and
   **Games** are being wired to real data tonight. `weeksLeading` and
   `weeklyTitles` both require a tie-splitting rule ("points... split on

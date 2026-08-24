@@ -23,6 +23,7 @@ button:hover{opacity:.9;}
 .status{font-size:.75rem;margin-top:.75rem;min-height:1em;}
 .status.error{color:var(--red);}
 .status.ok{color:var(--green);}
+.status a{color:var(--blue);}
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:1.5rem;}
 .hidden{display:none;}
 </style>
@@ -36,6 +37,17 @@ button:hover{opacity:.9;}
     <input type="password" id="password">
     <button id="loginBtn">Log in</button>
     <div class="status" id="loginStatus"></div>
+    <div class="status hidden" id="forgotLink"><a href="#" id="forgotBtn">Forgot password?</a></div>
+  </div>
+
+  <div class="panel hidden" id="resetPanel">
+    <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Set a new password</div>
+    <label for="newPassword">New password</label>
+    <input type="password" id="newPassword">
+    <label for="confirmPassword">Confirm new password</label>
+    <input type="password" id="confirmPassword">
+    <button id="resetBtn">Reset password</button>
+    <div class="status" id="resetStatus"></div>
   </div>
 
   <div class="panel hidden" id="overridePanel">
@@ -62,8 +74,10 @@ let sessionToken = null;
 document.getElementById("loginBtn").onclick = async () => {
   const password = document.getElementById("password").value;
   const statusEl = document.getElementById("loginStatus");
+  const forgotEl = document.getElementById("forgotLink");
   statusEl.textContent = "Logging in...";
   statusEl.className = "status";
+  forgotEl.classList.add("hidden");
   try {
     const res = await fetch(`${WORKER_BASE}/admin/login`, {
       method: "POST",
@@ -74,12 +88,75 @@ document.getElementById("loginBtn").onclick = async () => {
     if (!res.ok) {
       statusEl.textContent = data.error || "Login failed.";
       statusEl.className = "status error";
+      forgotEl.classList.remove("hidden");
       return;
     }
     sessionToken = data.sessionToken;
     statusEl.textContent = "Logged in. Session valid for 4 hours.";
     statusEl.className = "status ok";
     document.getElementById("overridePanel").classList.remove("hidden");
+  } catch (e) {
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "status error";
+  }
+};
+
+document.getElementById("forgotBtn").onclick = async (e) => {
+  e.preventDefault();
+  const statusEl = document.getElementById("loginStatus");
+  statusEl.textContent = "Sending reset link...";
+  statusEl.className = "status";
+  try {
+    const res = await fetch(`${WORKER_BASE}/admin/forgot-password`, { method: "POST" });
+    if (!res.ok) {
+      statusEl.textContent = "Could not send reset link.";
+      statusEl.className = "status error";
+      return;
+    }
+    statusEl.textContent = "Reset link sent to the admin email. It's valid for 30 minutes.";
+    statusEl.className = "status ok";
+  } catch (e) {
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "status error";
+  }
+};
+
+const resetToken = new URLSearchParams(location.search).get("resetToken");
+if (resetToken) {
+  document.getElementById("loginPanel").classList.add("hidden");
+  document.getElementById("resetPanel").classList.remove("hidden");
+}
+
+document.getElementById("resetBtn").onclick = async () => {
+  const newPassword = document.getElementById("newPassword").value;
+  const confirmPassword = document.getElementById("confirmPassword").value;
+  const statusEl = document.getElementById("resetStatus");
+
+  if (newPassword !== confirmPassword) {
+    statusEl.textContent = "Passwords don't match.";
+    statusEl.className = "status error";
+    return;
+  }
+
+  statusEl.textContent = "Resetting...";
+  statusEl.className = "status";
+  try {
+    const res = await fetch(`${WORKER_BASE}/admin/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: resetToken, newPassword }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Reset failed.";
+      statusEl.className = "status error";
+      return;
+    }
+    statusEl.textContent = "Password reset. You can log in now.";
+    statusEl.className = "status ok";
+    setTimeout(() => {
+      location.href = location.pathname;
+    }, 1500);
   } catch (e) {
     statusEl.textContent = "Could not reach the server.";
     statusEl.className = "status error";

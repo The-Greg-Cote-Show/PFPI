@@ -233,14 +233,53 @@ async function hashPassword(password, salt) {
   return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-async function handleAdminLogin(request, env) {
-  const { password } = await request.json();
-  const ADMIN_SALT = "pfpi-admin";
-  const attemptedHash = await hashPassword(password, ADMIN_SALT);
+const ADMIN_SALT = "pfpi-admin";
+const ADMIN_PASSWORD_HASH_KV_KEY = "admin-password-hash-override";
 
-  if (attemptedHash !== env.ADMIN_PASSWORD_HASH) {
+// Brute-force protection: per-IP lockout after too many failed admin logins,
+// with a capped-frequency security alert email.
+const LOGIN_FAIL_THRESHOLD = 5;
+const LOGIN_FAIL_WINDOW_SECONDS = 15 * 60;
+const LOGIN_ALERT_COOLDOWN_SECONDS = 60 * 60;
+
+// The live password hash normally comes from the ADMIN_PASSWORD_HASH secret.
+// A completed password reset (see handleResetPassword) writes a KV override
+// that takes precedence, since a Worker can update KV at runtime but can't
+// update its own secrets.
+async function getAdminPasswordHash(env) {
+  const override = await env.PFPI_KV.get(ADMIN_PASSWORD_HASH_KV_KEY);
+  return override || env.ADMIN_PASSWORD_HASH;
+}
+
+function getClientIp(request) {
+  return request.headers.get("CF-Connecting-IP") || "unknown";
+}
+
+async function handleAdminLogin(request, env) {
+  const ip = getClientIp(request);
+  const failKey = `admin-login-fail:${ip}`;
+  const failCount = parseInt((await env.PFPI_KV.get(failKey)) || "0", 10);
+
+  if (failCount >= LOGIN_FAIL_THRESHOLD) {
+    return jsonResponse({ error: "Too many failed attempts. Try again later." }, 429, request);
+  }
+
+  const { password } = await request.json();
+  const attemptedHash = await hashPassword(password, ADMIN_SALT);
+  const currentHash = await getAdminPasswordHash(env);
+
+  if (attemptedHash !== currentHash) {
+    const newFailCount = failCount + 1;
+    await env.PFPI_KV.put(failKey, String(newFailCount), { expirationTtl: LOGIN_FAIL_WINDOW_SECONDS });
+
+    if (newFailCount === LOGIN_FAIL_THRESHOLD) {
+      await flagPossibleBruteForce(ip, env);
+    }
+
     return jsonResponse({ error: "Login failed." }, 401, request);
   }
+
+  await env.PFPI_KV.delete(failKey);
 
   const sessionPayload = { role: "admin", issued: Date.now() };
   const sessionToken = await signPayload(sessionPayload, env.ADMIN_SESSION_SECRET);
@@ -249,10 +288,83 @@ async function handleAdminLogin(request, env) {
   return jsonResponse({ sessionToken }, 200, request);
 }
 
+async function flagPossibleBruteForce(ip, env) {
+  const alertKey = `admin-login-alert:${ip}`;
+  const alreadyAlerted = await env.PFPI_KV.get(alertKey);
+  if (alreadyAlerted) return;
+
+  await env.PFPI_KV.put(alertKey, "sent", { expirationTtl: LOGIN_ALERT_COOLDOWN_SECONDS });
+  await sendAdminEmail(
+    "PFPI admin: possible brute-force login attempt",
+    `${LOGIN_FAIL_THRESHOLD} failed admin login attempts from IP ${ip} within ${LOGIN_FAIL_WINDOW_SECONDS / 60} minutes.\n\nThat IP is now locked out of /admin/login for ${LOGIN_FAIL_WINDOW_SECONDS / 60} minutes. You won't get another alert for this IP for ${LOGIN_ALERT_COOLDOWN_SECONDS / 60} minutes even if it keeps trying.\n\nIf this wasn't you, no action is needed — the lockout is already in effect. If you're locked out yourself, wait for the cooldown or use "Forgot password?" from another network.`,
+    env
+  );
+}
+
 async function verifyAdminToken(token, env) {
   if (!token) return false;
   const session = await env.PFPI_KV.get(`admin-session:${token}`);
   return session === "valid";
+}
+
+// ============================================================
+// ADMIN PASSWORD RESET
+// ============================================================
+
+async function handleForgotPassword(request, env) {
+  const resetPayload = { role: "admin-reset", issued: Date.now() };
+  const resetToken = await signPayload(resetPayload, env.ADMIN_SESSION_SECRET);
+  await env.PFPI_KV.put(`admin-reset:${resetToken}`, "valid", { expirationTtl: 30 * 60 });
+
+  const link = `https://the-greg-cote-show.github.io/PFPI/admin.html?resetToken=${resetToken}`;
+  await sendAdminEmail(
+    "PFPI admin password reset",
+    `A password reset was requested for the PFPI admin panel.\n\nThis link is valid for 30 minutes and can only be used once:\n\n${link}\n\nIf you didn't request this, you can ignore this email.`,
+    env
+  );
+
+  return jsonResponse({ sent: true }, 200, request);
+}
+
+async function sendAdminEmail(subject, text, env) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "PFPI <picks@thegregcoteshow.com>",
+      to: ADMIN_EMAIL,
+      subject,
+      text,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`Failed to send admin email ("${subject}"): ${res.status} ${body}`);
+  }
+  return res.ok;
+}
+
+async function handleResetPassword(request, env) {
+  const { token, newPassword } = await request.json();
+
+  const resetKey = `admin-reset:${token}`;
+  const valid = token && (await env.PFPI_KV.get(resetKey)) === "valid";
+  if (!valid) {
+    return jsonResponse({ error: "Invalid or expired reset link." }, 401, request);
+  }
+
+  if (!newPassword || newPassword.length < 8) {
+    return jsonResponse({ error: "Password must be at least 8 characters." }, 400, request);
+  }
+
+  const newHash = await hashPassword(newPassword, ADMIN_SALT);
+  await env.PFPI_KV.put(ADMIN_PASSWORD_HASH_KV_KEY, newHash);
+  await env.PFPI_KV.delete(resetKey);
+
+  return jsonResponse({ reset: true }, 200, request);
 }
 
 // ============================================================
@@ -312,6 +424,12 @@ export default {
     }
     if (url.pathname === "/admin/login" && request.method === "POST") {
       return handleAdminLogin(request, env);
+    }
+    if (url.pathname === "/admin/forgot-password" && request.method === "POST") {
+      return handleForgotPassword(request, env);
+    }
+    if (url.pathname === "/admin/reset-password" && request.method === "POST") {
+      return handleResetPassword(request, env);
     }
     if (url.pathname === "/admin/override-pick" && request.method === "POST") {
       return handleAdminOverride(request, env);

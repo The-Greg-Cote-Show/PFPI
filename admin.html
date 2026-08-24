@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PFPI Admin | The Greg Cote Show</title>
+<style>
+:root {
+  --bg:#080c14; --panel:#0f1623; --panel2:#141d2e;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --gold:#e8b84b; --red:#e05252; --green:#3ecf74; --blue:#4a9eff;
+  --text:#eef2f7; --muted:#7a8ba8;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;font-size:14px;}
+.wrap{max-width:520px;margin:0 auto;padding:2rem 1.25rem 3rem;}
+.title-main{font-size:1.3rem;font-weight:800;margin-bottom:1.25rem;}
+.title-main span{color:var(--gold);}
+label{display:block;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:.85rem 0 .3rem;}
+input{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:.6rem .7rem;border-radius:8px;font-size:.85rem;}
+button{margin-top:1.1rem;background:var(--blue);border:none;color:#08111f;font-weight:700;padding:.65rem 1.1rem;border-radius:8px;cursor:pointer;font-size:.82rem;}
+button:hover{opacity:.9;}
+.status{font-size:.75rem;margin-top:.75rem;min-height:1em;}
+.status.error{color:var(--red);}
+.status.ok{color:var(--green);}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:1.5rem;}
+.hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="title-main">PFPI <span>Admin</span></div>
+
+  <div class="panel" id="loginPanel">
+    <label for="password">Admin password</label>
+    <input type="password" id="password">
+    <button id="loginBtn">Log in</button>
+    <div class="status" id="loginStatus"></div>
+  </div>
+
+  <div class="panel hidden" id="overridePanel">
+    <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Override a pick</div>
+    <label for="team">Team</label>
+    <input type="text" id="team" placeholder="e.g. Greg's Lobos">
+    <label for="week">Week</label>
+    <input type="number" id="week" min="1" max="18">
+    <label for="gameId">Game ID</label>
+    <input type="text" id="gameId" placeholder="matches the id in data/week-N.json">
+    <label for="newPick">New pick (team name)</label>
+    <input type="text" id="newPick">
+    <label for="adminName">Your name (for the audit log)</label>
+    <input type="text" id="adminName" value="Yeti">
+    <button id="overrideBtn">Save override</button>
+    <div class="status" id="overrideStatus"></div>
+  </div>
+</div>
+
+<script>
+const WORKER_BASE = "https://pfpi-picks-worker.yeti-f3c.workers.dev";
+let sessionToken = null;
+
+document.getElementById("loginBtn").onclick = async () => {
+  const password = document.getElementById("password").value;
+  const statusEl = document.getElementById("loginStatus");
+  statusEl.textContent = "Logging in...";
+  statusEl.className = "status";
+  try {
+    const res = await fetch(`${WORKER_BASE}/admin/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Login failed.";
+      statusEl.className = "status error";
+      return;
+    }
+    sessionToken = data.sessionToken;
+    statusEl.textContent = "Logged in. Session valid for 4 hours.";
+    statusEl.className = "status ok";
+    document.getElementById("overridePanel").classList.remove("hidden");
+  } catch (e) {
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "status error";
+  }
+};
+
+document.getElementById("overrideBtn").onclick = async () => {
+  const statusEl = document.getElementById("overrideStatus");
+  const body = {
+    team: document.getElementById("team").value,
+    week: parseInt(document.getElementById("week").value, 10),
+    gameId: document.getElementById("gameId").value,
+    newPick: document.getElementById("newPick").value,
+    adminName: document.getElementById("adminName").value,
+  };
+  statusEl.textContent = "Saving...";
+  statusEl.className = "status";
+  try {
+    const res = await fetch(`${WORKER_BASE}/admin/override-pick`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Admin-Token": sessionToken },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Override failed.";
+      statusEl.className = "status error";
+      return;
+    }
+    statusEl.textContent = "Saved and logged.";
+    statusEl.className = "status ok";
+  } catch (e) {
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "status error";
+  }
+};
+</script>
+</body>
+</html>

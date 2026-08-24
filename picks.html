@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PFPI Picks | The Greg Cote Show</title>
+<style>
+:root {
+  --bg:#080c14; --panel:#0f1623; --panel2:#141d2e; --panel3:#1a2540;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --gold:#e8b84b; --gold2:#f5d07a; --red:#e05252; --green:#3ecf74; --blue:#4a9eff;
+  --text:#eef2f7; --muted:#7a8ba8;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;font-size:14px;}
+.wrap{max-width:640px;margin:0 auto;padding:1.5rem 1.25rem 3rem;}
+.header{margin-bottom:1.25rem;}
+.title-main{font-size:1.3rem;font-weight:800;letter-spacing:-.02em;}
+.title-main span{color:var(--gold);}
+.subtitle{font-size:.8rem;color:var(--muted);margin-top:4px;}
+.banner{border-radius:10px;padding:.75rem 1rem;margin-bottom:1.25rem;font-size:.8rem;line-height:1.5;}
+.banner.info{background:rgba(74,158,255,.1);border:1px solid rgba(74,158,255,.3);color:var(--blue);}
+.banner.error{background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.3);color:var(--red);}
+.game-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:.75rem;}
+.game-card.locked{opacity:.7;}
+.game-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.game-meta .locked-tag{color:var(--red);font-weight:700;}
+.pick-buttons{display:flex;gap:8px;}
+.pick-btn{flex:1;background:var(--panel2);border:1.5px solid var(--border2);color:var(--text);font-size:.85rem;font-weight:700;padding:.7rem .5rem;border-radius:8px;cursor:pointer;transition:all .15s;}
+.pick-btn:hover:not(:disabled){border-color:var(--blue);}
+.pick-btn.selected{background:var(--blue);border-color:var(--blue);color:#08111f;}
+.pick-btn:disabled{cursor:not-allowed;}
+.pick-btn.selected:disabled{background:var(--panel3);border-color:var(--gold);color:var(--gold2);}
+.save-status{font-size:.68rem;color:var(--muted);margin-top:.5rem;min-height:1em;}
+.save-status.saved{color:var(--green);}
+.save-status.rejected{color:var(--red);}
+.loading{color:var(--muted);font-size:.85rem;padding:2rem 0;text-align:center;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="title-main">PFPI <span>Picks</span></div>
+    <div class="subtitle" id="subtitle">Loading your picks...</div>
+  </div>
+  <div id="content"><div class="loading">Loading...</div></div>
+</div>
+
+<script>
+// Points at the deployed picks-worker directly (a different origin than this
+// static page). Bird Feeder principle is unaffected: this is a write action
+// initiated by the visitor themselves, not a read that should be static.
+const WORKER_BASE = "https://pfpi-picks-worker.yeti-f3c.workers.dev";
+
+const params = new URLSearchParams(window.location.search);
+const token = params.get("token");
+
+function fmtDeadline(iso) {
+  return new Date(iso).toLocaleString("en-US", {
+    timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric",
+    hour: "numeric", minute: "2-digit",
+  }) + " ET";
+}
+
+async function loadPicks() {
+  const content = document.getElementById("content");
+  const subtitle = document.getElementById("subtitle");
+
+  if (!token) {
+    subtitle.textContent = "";
+    content.innerHTML = `<div class="banner error">No token in this link. Use the link from your weekly picks email.</div>`;
+    return;
+  }
+
+  let res, data;
+  try {
+    res = await fetch(`${WORKER_BASE}/my-picks?token=${encodeURIComponent(token)}`);
+    data = await res.json();
+  } catch (e) {
+    content.innerHTML = `<div class="banner error">Could not reach the picks server. Try again in a moment.</div>`;
+    return;
+  }
+
+  if (!res.ok) {
+    subtitle.textContent = "";
+    content.innerHTML = `<div class="banner error">${data.error || "This link is invalid or has expired."}</div>`;
+    return;
+  }
+
+  subtitle.textContent = `${data.team} — Week ${data.week}. Pick any time this week, deadlines are per game.`;
+  content.innerHTML = "";
+
+  if (data.games.length === 0) {
+    content.innerHTML = `<div class="banner info">No games loaded for this week yet. Check back closer to kickoff.</div>`;
+    return;
+  }
+
+  data.games.forEach(game => {
+    const card = document.createElement("div");
+    card.className = "game-card" + (game.locked ? " locked" : "");
+    card.innerHTML = `
+      <div class="game-meta">
+        <span>Deadline: ${fmtDeadline(game.deadline)}</span>
+        ${game.locked ? '<span class="locked-tag">Locked</span>' : ""}
+      </div>
+      <div class="pick-buttons">
+        <button class="pick-btn" data-team="${game.away}" ${game.locked ? "disabled" : ""}>${game.away}</button>
+        <button class="pick-btn" data-team="${game.home}" ${game.locked ? "disabled" : ""}>${game.home}</button>
+      </div>
+      <div class="save-status"></div>
+    `;
+    const buttons = card.querySelectorAll(".pick-btn");
+    buttons.forEach(btn => {
+      if (btn.dataset.team === game.pick) btn.classList.add("selected");
+      btn.onclick = () => savePick(game.id, btn.dataset.team, buttons, card.querySelector(".save-status"));
+    });
+    content.appendChild(card);
+  });
+}
+
+async function savePick(gameId, teamPicked, buttons, statusEl) {
+  buttons.forEach(b => b.classList.toggle("selected", b.dataset.team === teamPicked));
+  statusEl.textContent = "Saving...";
+  statusEl.className = "save-status";
+
+  try {
+    const res = await fetch(`${WORKER_BASE}/submit-picks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, picks: { [gameId]: teamPicked } }),
+    });
+    const data = await res.json();
+    if (data.rejectedLockedGames && data.rejectedLockedGames.includes(gameId)) {
+      statusEl.textContent = "That game already locked, pick not saved.";
+      statusEl.className = "save-status rejected";
+    } else {
+      statusEl.textContent = "Saved.";
+      statusEl.className = "save-status saved";
+    }
+  } catch (e) {
+    statusEl.textContent = "Could not save, try again.";
+    statusEl.className = "save-status rejected";
+  }
+}
+
+loadPicks();
+</script>
+</body>
+</html>

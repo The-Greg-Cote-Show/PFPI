@@ -5,6 +5,32 @@ in order. Secret values are never logged, only names. See
 `PFPI_Claude_Code_handoff_brief.md` (in the parent folder, not committed to
 this repo) for the full spec this build follows.
 
+## Start here: what's live vs. what needs you
+
+**Working right now:** repo public at github.com/The-Greg-Cote-Show/PFPI,
+both Workers deployed and tested (picks/admin endpoints all verified live,
+including a real browser click-through), GitHub Pages built and serving
+`index.html` / `picks.html` / `admin.html` correctly, frontend gracefully
+running on the original simulated mockup data since no real data exists yet.
+
+**Five things need you before this is fully live, none of them guessable:**
+1. **DNS** — add a CNAME record `pfpi` -> `the-greg-cote-show.github.io` (same
+   pattern as `cotecup`). Nothing at `pfpi.thegregcoteshow.com` will load
+   until this is done.
+2. **Resend domain** — verify `thegregcoteshow.com` at resend.com/domains.
+   Until then the Worker can't send picks emails to anyone.
+3. **Cron triggers** — add in the Cloudflare dashboard Triggers tab for both
+   Workers (exact strings below, in the CLOUDFLARE section). Nothing runs on
+   a schedule until this is done.
+4. **`BIG_BALLS_API_KEY`** — wasn't provided tonight. Without it, no live
+   scores/schedule ever get polished or published.
+5. **`GITHUB_PAT`** — a fine-grained token (repo: PFPI only, Contents:
+   read/write) has no API for creating it, needs the GitHub web UI. Without
+   it, the scores Worker can compute everything but can't publish it.
+
+Full detail, reasoning, and exact commands for each are in the log below, in
+the order they came up.
+
 ---
 
 ## 2026-08-24
@@ -151,6 +177,74 @@ this repo) for the full spec this build follows.
   `thegregcoteshow.com` at resend.com/domains (adds DNS records to that
   domain, which I don't have access to touch). This is the one concrete
   blocker standing between tonight's build and a real end-to-end email test.
+- **[CODE]** Wrote `index.html` (adapted from `pfpi_mockup_v3.html`, copied
+  as the starting point so the large embedded simulated dataset carried over
+  byte-for-byte) with real-data wiring layered on top:
+  - Standings tab and Games tab now fetch `data/current.json`,
+    `data/standings.json`, `data/week-N.json` and use them when present and
+    complete for the selected week; otherwise fall back to the exact
+    original simulated behavior, unchanged. This fallback is what's actually
+    live right now, since no real data exists yet.
+  - `weeksLeading`, `weeklyTitles`, `bestWeek`, `tenWin`, `uniqueHits` stay on
+    simulated data unconditionally for now (see scope note below).
+  - The sim-banner and the Games tab's "placeholder" note now hide
+    themselves automatically once real data is actually being shown for
+    that tab/week, instead of being permanently on.
+  - Games tab now shows real per-game status (upcoming/live/final) and real
+    scores when real data is present, not just Final/W-L: the mockup's
+    known home/away-accuracy limitation no longer applies to real data (see
+    the Big Balls research note above), only to the legacy simulated
+    fallback, which never claimed accurate home/away to begin with.
+  - No visual/CSS changes and no changes to interaction behavior (tabs, week
+    row, expand/collapse) — same rendering functions, different data source.
+- **[CODE]** Wrote `picks.html` and `admin.html` — not in any reference doc's
+  file list, but without them the magic-link emails and admin endpoints
+  (already deployed and tested above) have nowhere for a person to actually
+  land. Kept deliberately simple/functional, matching the existing dark
+  theme's CSS variables, not a new visual design pass.
+- **[GITHUB]** Committed and pushed everything to `main` on
+  `The-Greg-Cote-Show/PFPI` (repo stayed public, per the brief).
+- **[GITHUB]** Enabled GitHub Pages (`gh api ... repos/.../pages`, source =
+  `main` branch, root). Verified the live Pages build directly against
+  GitHub's edge (`curl` with the right `Host` header straight to a Pages IP,
+  bypassing DNS) — `index.html`, `picks.html`, `admin.html` all return 200
+  with the expected content; `data/current.json` correctly 404s (nothing
+  published yet, as expected with `BIG_BALLS_API_KEY` unset).
+- **[BLOCKER FOUND]** `pfpi.thegregcoteshow.com` does not resolve to GitHub
+  Pages yet. Compared DNS directly: `cotecup.thegregcoteshow.com` is a CNAME
+  to `the-greg-cote-show.github.io` (resolves to GitHub's Pages IPs) — the
+  known-working pattern. `pfpi.thegregcoteshow.com` currently resolves to an
+  unrelated IP (not GitHub's), so nobody can actually load the custom domain
+  right now, and — because the repo's `CNAME` file is present, matching
+  Cote Cup's own setup — GitHub Pages redirects the plain
+  `the-greg-cote-show.github.io/PFPI/` URL to that same broken custom domain
+  too, so there's currently no URL that works for a normal visitor without a
+  DNS change. Left the `CNAME` file in place rather than removing it, since
+  removing it would just be an config oscillation given the domain-based
+  setup is clearly the intended end state (matches Cote Cup). **Yeti:** add a
+  DNS CNAME record `pfpi` -> `the-greg-cote-show.github.io` at whatever
+  registrar/DNS host manages `thegregcoteshow.com` (the exact same kind of
+  record `cotecup` already has) — I don't have access to that DNS console.
+  Should take effect within minutes to a few hours depending on the host.
+- **[TESTED — BROWSER]** Served the repo locally (`python -m http.server`)
+  and drove a real Chrome tab (claude-in-chrome) to visually confirm the
+  frontend, not just curl/API-level testing:
+  - `index.html` — Standings and Games tabs render correctly on the
+    simulated fallback (expected, no real data published yet), tab
+    switching, week selection, and the game-row expand/collapse pick
+    breakdown all work, zero console errors from the page's own code.
+  - `picks.html` — with no token, shows the friendly error banner. With a
+    fresh valid test token (temporarily allowed `http://localhost:8743` in
+    `picks-worker.js`'s CORS list to make this possible, redeployed, tested,
+    then reverted the CORS list and redeployed again, confirmed via `git
+    diff` that the committed file was never actually changed by this),
+    loaded real games from the live picks-worker, showed the previously
+    saved test picks correctly, showed the locked game as disabled, and
+    clicking a pick on the open game round-tripped a real save to the
+    Worker with a visible "Saved." confirmation.
+  - `admin.html` — logged in with the real placeholder password against the
+    live Worker, override form correctly revealed after login.
+  - Cleaned up the throwaway KV test entries used for this again afterward.
 - **[SCOPE NOTE]** Of the mockup's 6 chart categories, only **Standings** and
   **Games** are being wired to real data tonight. `weeksLeading` and
   `weeklyTitles` both require a tie-splitting rule ("points... split on

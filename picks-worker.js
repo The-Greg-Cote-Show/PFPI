@@ -317,16 +317,25 @@ async function handleForgotPassword(request, env) {
   await env.PFPI_KV.put(`admin-reset:${resetToken}`, "valid", { expirationTtl: 30 * 60 });
 
   const link = `https://the-greg-cote-show.github.io/PFPI/admin.html?resetToken=${resetToken}`;
-  await sendAdminEmail(
+  const sent = await sendAdminEmail(
     "PFPI admin password reset",
     `A password reset was requested for the PFPI admin panel.\n\nThis link is valid for 30 minutes and can only be used once:\n\n${link}\n\nIf you didn't request this, you can ignore this email.`,
     env
   );
 
+  if (!sent) {
+    return jsonResponse({ error: "Reset link could not be emailed. Check Worker logs." }, 502, request);
+  }
   return jsonResponse({ sent: true }, 200, request);
 }
 
 async function sendAdminEmail(subject, text, env) {
+  // Admin-only emails (this function) always go to ADMIN_EMAIL, so they can
+  // use Resend's default sender — Resend allows onboarding@resend.dev to any
+  // recipient even with an unverified sending domain. picks@thegregcoteshow.com
+  // stays in sendPicksEmail() since that goes to family members, but it stays
+  // broken until thegregcoteshow.com is verified at resend.com/domains
+  // (needs DNS console access this Worker doesn't have).
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -334,7 +343,7 @@ async function sendAdminEmail(subject, text, env) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "PFPI <picks@thegregcoteshow.com>",
+      from: "PFPI Admin <onboarding@resend.dev>",
       to: ADMIN_EMAIL,
       subject,
       text,

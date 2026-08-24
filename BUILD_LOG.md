@@ -120,14 +120,28 @@ the order they came up.
 - **[CLOUDFLARE]** Deployed `pfpi-picks-worker` (`wrangler deploy`) ->
   `https://pfpi-picks-worker.yeti-f3c.workers.dev`.
 - **[CLOUDFLARE]** Set secrets on `pfpi-picks-worker`: `RESEND_API_KEY` (the
-  key Yeti provided), `ADMIN_PASSWORD_HASH` (computed locally from the exact
-  placeholder password `M3iiW#kVG6biu7wt%b$@` Yeti already generated, via the
-  same PBKDF2/salt/iteration spec as `hashPassword()` — cross-checked with
-  two independent implementations, Node's `crypto.pbkdf2Sync` and Node's
+  key Yeti provided), `ADMIN_PASSWORD_HASH` (computed locally from the
+  placeholder password Yeti had already generated for tonight, via the same
+  PBKDF2/salt/iteration spec as `hashPassword()` — cross-checked with two
+  independent implementations, Node's `crypto.pbkdf2Sync` and Node's
   `webcrypto.subtle` (the same API the Worker itself uses), both produced
   identical output before it was stored), `ADMIN_SESSION_SECRET` and
   `FAMILY_TOKEN_SECRET` (freshly generated random 32-byte hex values). Secret
   values themselves are not in this log or anywhere in the repo.
+- **[SECURITY FIX]** The step above originally quoted that placeholder
+  password in plaintext in this log — which meant a live, working admin
+  credential sat in plaintext in a **public** repo's commit history. Caught
+  this in a post-build safety scan (grepping the full git history for known
+  secret values before calling the build done). Fixed by rotating it:
+  generated a brand new placeholder password (never written to any file,
+  given to Yeti directly in chat), hashed it the same way, and overwrote
+  `ADMIN_PASSWORD_HASH` with the new hash — the old password no longer works
+  even though it's still readable in this file's git history. Scanned again
+  afterward for `RESEND_API_KEY`, `ADMIN_SESSION_SECRET`,
+  `FAMILY_TOKEN_SECRET`, and both admin passwords (old and new); nothing
+  else matched. **Yeti:** your real admin password right now is the one I
+  gave you in chat, not the one in this file's history — rotate it yourself
+  whenever you're ready, same as always planned.
 - **[CLOUDFLARE]** Deployed `pfpi-scores-worker` (`wrangler deploy --config
   wrangler-scores.toml`) -> `https://pfpi-scores-worker.yeti-f3c.workers.dev`.
   No secrets set on it yet — both `BIG_BALLS_API_KEY` and `GITHUB_PAT` are

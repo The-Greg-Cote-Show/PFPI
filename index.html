@@ -71,6 +71,13 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 .legend-note{font-size:.68rem;color:var(--muted);margin-top:1.25rem;padding-top:.75rem;border-top:1px solid var(--border);}
 
+.brief-panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.4rem;margin-top:1rem;}
+.brief-header{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.85rem;flex-wrap:wrap;}
+.brief-label{font-size:.68rem;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;}
+.brief-week-tag{font-size:.65rem;color:var(--muted);background:var(--panel2);border:1px solid var(--border2);border-radius:6px;padding:3px 9px;}
+.brief-body{font-size:.86rem;line-height:1.65;color:var(--text);white-space:pre-wrap;}
+.brief-body.empty{color:var(--muted);font-style:italic;}
+
 .games-panel{display:none;}
 .games-panel.active{display:block;}
 .games-live-note{background:rgba(74,158,255,.1);border:1px solid rgba(74,158,255,.3);border-radius:10px;padding:.6rem .9rem;margin-bottom:.9rem;font-size:.7rem;color:var(--blue);line-height:1.5;}
@@ -156,6 +163,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="games-list" id="gamesList"></div>
   </div>
 
+  <div class="brief-panel" id="briefPanel">
+    <div class="brief-header">
+      <div class="brief-label">Greg's Weekly Brief</div>
+      <div class="brief-week-tag" id="briefWeekTag"></div>
+    </div>
+    <div class="brief-body" id="briefBody"></div>
+  </div>
+
   <div class="legend-note" id="legendNote"></div>
 </div>
 
@@ -201,7 +216,7 @@ const CURRENT_WEEK = NUM_WEEKS;
 // data activates automatically, tab by tab and week by week, as it becomes
 // available. No visual/interaction behavior changes, only which numbers feed
 // the same chart/list rendering.
-const REAL = { currentWeek: null, standings: null, standingsPct: null, weeks: {} };
+const REAL = { currentWeek: null, standings: null, standingsPct: null, weeks: {}, briefs: {} };
 
 async function fetchJSON(path) {
   try {
@@ -234,6 +249,13 @@ async function loadRealWeek(week) {
   const data = await fetchJSON(`data/week-${week}.json`);
   REAL.weeks[week] = (data && Array.isArray(data.games)) ? data.games : null;
   return REAL.weeks[week];
+}
+
+async function loadRealBrief(week) {
+  if (REAL.briefs[week] !== undefined) return REAL.briefs[week];
+  const data = await fetchJSON(`data/brief-week-${week}.json`);
+  REAL.briefs[week] = (data && typeof data.text === "string") ? data.text : null;
+  return REAL.briefs[week];
 }
 
 function hasRealStandingsForWeek(week) {
@@ -327,6 +349,21 @@ async function render(){
   const weekLabelEl = document.getElementById("weekLabel");
   weekLabelEl.textContent = isFinal ? "Final — Week 18" : "Through Week " + currentWeek;
   weekLabelEl.className = "week-label" + (isFinal?" final":"");
+
+  // Brief shows under the chart regardless of which category tab is active —
+  // it's tied to the selected week, not the selected category — so this
+  // runs before the games/chart branch split below, not inside either one.
+  const briefBodyEl = document.getElementById("briefBody");
+  const briefWeekTagEl = document.getElementById("briefWeekTag");
+  briefWeekTagEl.textContent = isFinal ? "Week " + NUM_WEEKS + " — Final" : "Week " + currentWeek;
+  const brief = await loadRealBrief(currentWeek);
+  if (brief) {
+    briefBodyEl.textContent = brief;
+    briefBodyEl.className = "brief-body";
+  } else {
+    briefBodyEl.textContent = "Greg hasn't published a brief for this week yet.";
+    briefBodyEl.className = "brief-body empty";
+  }
 
   const chartPanel = document.getElementById("chartPanel");
   const gamesPanel = document.getElementById("gamesPanel");

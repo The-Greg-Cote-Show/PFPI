@@ -73,6 +73,60 @@ export function isGameLocked(gameDeadlineISO) {
   return Date.now() > new Date(gameDeadlineISO).getTime();
 }
 
+// ============================================================
+// GITHUB CONTENTS API
+// Used by worker.js (scores/standings) and picks-worker.js (brief publisher)
+// to commit static JSON that GitHub Pages then serves directly — visitors
+// never hit a Worker to read this data. Requires GITHUB_PAT: a fine-grained
+// PAT scoped to only The-Greg-Cote-Show/PFPI with contents:write. Each
+// Worker has its own separate secret store in Cloudflare, so GITHUB_PAT must
+// be set on whichever Worker calls this, even though both point at the same
+// repo.
+// ============================================================
+
+export const GITHUB_OWNER = "The-Greg-Cote-Show";
+export const GITHUB_REPO = "PFPI";
+
+// Returns true if the commit actually happened, false if it was skipped
+// (missing PAT) or failed — callers that report success to a human (not just
+// a background cron tick) should check this rather than assume it worked.
+export async function commitJSONToGitHub(path, jsonObj, message, env) {
+  if (!env.GITHUB_PAT) {
+    console.error(`Skipping GitHub commit of ${path}: GITHUB_PAT not set.`);
+    return false;
+  }
+
+  const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
+  const headers = {
+    "Authorization": `Bearer ${env.GITHUB_PAT}`,
+    "Accept": "application/vnd.github+json",
+    "User-Agent": "pfpi-worker",
+  };
+
+  let sha;
+  const existing = await fetch(apiUrl, { headers });
+  if (existing.ok) {
+    const existingData = await existing.json();
+    sha = existingData.sha;
+  } else if (existing.status !== 404) {
+    console.error(`Failed to check existing file ${path}: ${existing.status}`);
+    return false;
+  }
+
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(jsonObj, null, 2))));
+  const put = await fetch(apiUrl, {
+    method: "PUT",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({ message, content, sha }),
+  });
+
+  if (!put.ok) {
+    console.error(`Failed to commit ${path}: ${put.status} ${await put.text()}`);
+    return false;
+  }
+  return true;
+}
+
 // Falls back to a date-based formula when KV hasn't been seeded yet (should
 // be rare in practice, since the scores worker seeds current-week on every
 // cron tick regardless of whether the Big Balls key is set).

@@ -16,6 +16,8 @@ import {
   computeGameDeadline,
   isGameLocked,
   computeCurrentWeekFromDate,
+  commitJSONToGitHub,
+  NUM_WEEKS,
 } from "./shared.js";
 
 // Test data only, per Yeti (Aug 2026 sessions) — NOT the real 8-team roster.
@@ -26,6 +28,12 @@ const FAMILY_MEMBERS = [
 ];
 
 const ADMIN_EMAIL = "yeti@yetiblanc.com";
+
+// Greg doesn't have his own account/email wired up yet — his password reset
+// emails go to Yeti for now (per Yeti, 2026-08-24). Change this to Greg's
+// real address when he's actually onboarded; nothing else about the reset
+// flow needs to change.
+const GREG_EMAIL = "yeti@yetiblanc.com";
 
 // Allowed frontend origins for CORS. Update once the real custom domain is
 // live; workers.dev origin kept for local/interim testing.
@@ -40,7 +48,7 @@ function corsHeaders(request) {
   return {
     "Access-Control-Allow-Origin": allowOrigin,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-Admin-Token",
+    "Access-Control-Allow-Headers": "Content-Type, X-Admin-Token, X-Session-Token",
     "Vary": "Origin",
   };
 }
@@ -218,7 +226,7 @@ async function handleAdminOverride(request, env) {
 }
 
 // ============================================================
-// ADMIN AUTH
+// AUTH (admin + Greg's Brief — two independent credentials)
 // ============================================================
 
 async function hashPassword(password, salt) {
@@ -233,31 +241,63 @@ async function hashPassword(password, salt) {
   return [...new Uint8Array(bits)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-const ADMIN_SALT = "pfpi-admin";
-const ADMIN_PASSWORD_HASH_KV_KEY = "admin-password-hash-override";
+// Two independent credentials share this same machinery: "admin" (Yeti,
+// admin.html) and "greg" (Greg, brief.html). Each gets its own password
+// hash, session namespace, and reset-token namespace, keyed by `kind` below
+// — Greg's credential is never accepted where an admin token is required,
+// and vice versa, since /admin/override-pick and the admin-only parts of
+// /admin/publish-brief specifically check for an admin session.
+const AUTH_CONFIG = {
+  admin: {
+    salt: "pfpi-admin",
+    hashKvKey: "admin-password-hash-override",
+    passwordHashEnvKey: "ADMIN_PASSWORD_HASH",
+    sessionSecretEnvKey: "ADMIN_SESSION_SECRET",
+    sessionKvPrefix: "admin-session",
+    resetKvPrefix: "admin-reset",
+    resetPage: "admin.html",
+    resetEmail: ADMIN_EMAIL,
+    label: "admin",
+    pageDescription: "the PFPI admin panel",
+  },
+  greg: {
+    salt: "pfpi-greg",
+    hashKvKey: "greg-password-hash-override",
+    passwordHashEnvKey: "GREG_PASSWORD_HASH",
+    sessionSecretEnvKey: "GREG_SESSION_SECRET",
+    sessionKvPrefix: "greg-session",
+    resetKvPrefix: "greg-reset",
+    resetPage: "brief.html",
+    resetEmail: GREG_EMAIL,
+    label: "Greg's Brief",
+    pageDescription: "the PFPI Brief publisher",
+  },
+};
 
-// Brute-force protection: per-IP lockout after too many failed admin logins,
-// with a capped-frequency security alert email.
+// Brute-force protection: per-IP lockout after too many failed logins (of
+// either kind), with a capped-frequency security alert email to Yeti.
 const LOGIN_FAIL_THRESHOLD = 5;
 const LOGIN_FAIL_WINDOW_SECONDS = 15 * 60;
 const LOGIN_ALERT_COOLDOWN_SECONDS = 60 * 60;
 
-// The live password hash normally comes from the ADMIN_PASSWORD_HASH secret.
-// A completed password reset (see handleResetPassword) writes a KV override
-// that takes precedence, since a Worker can update KV at runtime but can't
-// update its own secrets.
-async function getAdminPasswordHash(env) {
-  const override = await env.PFPI_KV.get(ADMIN_PASSWORD_HASH_KV_KEY);
-  return override || env.ADMIN_PASSWORD_HASH;
+// The live password hash normally comes from the <kind>'s *_PASSWORD_HASH
+// secret. A completed password reset (see handleResetPassword) writes a KV
+// override that takes precedence, since a Worker can update KV at runtime
+// but can't update its own secrets.
+async function getPasswordHash(kind, env) {
+  const cfg = AUTH_CONFIG[kind];
+  const override = await env.PFPI_KV.get(cfg.hashKvKey);
+  return override || env[cfg.passwordHashEnvKey];
 }
 
 function getClientIp(request) {
   return request.headers.get("CF-Connecting-IP") || "unknown";
 }
 
-async function handleAdminLogin(request, env) {
+async function handleLogin(kind, request, env) {
+  const cfg = AUTH_CONFIG[kind];
   const ip = getClientIp(request);
-  const failKey = `admin-login-fail:${ip}`;
+  const failKey = `${kind}-login-fail:${ip}`;
   const failCount = parseInt((await env.PFPI_KV.get(failKey)) || "0", 10);
 
   if (failCount >= LOGIN_FAIL_THRESHOLD) {
@@ -265,15 +305,15 @@ async function handleAdminLogin(request, env) {
   }
 
   const { password } = await request.json();
-  const attemptedHash = await hashPassword(password, ADMIN_SALT);
-  const currentHash = await getAdminPasswordHash(env);
+  const attemptedHash = await hashPassword(password, cfg.salt);
+  const currentHash = await getPasswordHash(kind, env);
 
   if (attemptedHash !== currentHash) {
     const newFailCount = failCount + 1;
     await env.PFPI_KV.put(failKey, String(newFailCount), { expirationTtl: LOGIN_FAIL_WINDOW_SECONDS });
 
     if (newFailCount === LOGIN_FAIL_THRESHOLD) {
-      await flagPossibleBruteForce(ip, env);
+      await flagPossibleBruteForce(kind, ip, env);
     }
 
     return jsonResponse({ error: "Login failed." }, 401, request);
@@ -281,45 +321,52 @@ async function handleAdminLogin(request, env) {
 
   await env.PFPI_KV.delete(failKey);
 
-  const sessionPayload = { role: "admin", issued: Date.now() };
-  const sessionToken = await signPayload(sessionPayload, env.ADMIN_SESSION_SECRET);
-  await env.PFPI_KV.put(`admin-session:${sessionToken}`, "valid", { expirationTtl: 4 * 60 * 60 });
+  const sessionPayload = { role: kind, issued: Date.now() };
+  const sessionToken = await signPayload(sessionPayload, env[cfg.sessionSecretEnvKey]);
+  await env.PFPI_KV.put(`${cfg.sessionKvPrefix}:${sessionToken}`, "valid", { expirationTtl: 4 * 60 * 60 });
 
   return jsonResponse({ sessionToken }, 200, request);
 }
 
-async function flagPossibleBruteForce(ip, env) {
-  const alertKey = `admin-login-alert:${ip}`;
+async function flagPossibleBruteForce(kind, ip, env) {
+  const alertKey = `${kind}-login-alert:${ip}`;
   const alreadyAlerted = await env.PFPI_KV.get(alertKey);
   if (alreadyAlerted) return;
 
   await env.PFPI_KV.put(alertKey, "sent", { expirationTtl: LOGIN_ALERT_COOLDOWN_SECONDS });
-  await sendAdminEmail(
-    "PFPI admin: possible brute-force login attempt",
-    `${LOGIN_FAIL_THRESHOLD} failed admin login attempts from IP ${ip} within ${LOGIN_FAIL_WINDOW_SECONDS / 60} minutes.\n\nThat IP is now locked out of /admin/login for ${LOGIN_FAIL_WINDOW_SECONDS / 60} minutes. You won't get another alert for this IP for ${LOGIN_ALERT_COOLDOWN_SECONDS / 60} minutes even if it keeps trying.\n\nIf this wasn't you, no action is needed — the lockout is already in effect. If you're locked out yourself, wait for the cooldown or use "Forgot password?" from another network.`,
+  await sendPfpiEmail(
+    ADMIN_EMAIL,
+    `PFPI ${AUTH_CONFIG[kind].label}: possible brute-force login attempt`,
+    `${LOGIN_FAIL_THRESHOLD} failed ${AUTH_CONFIG[kind].label} login attempts from IP ${ip} within ${LOGIN_FAIL_WINDOW_SECONDS / 60} minutes.\n\nThat IP is now locked out of that login for ${LOGIN_FAIL_WINDOW_SECONDS / 60} minutes. You won't get another alert for this IP for ${LOGIN_ALERT_COOLDOWN_SECONDS / 60} minutes even if it keeps trying.\n\nIf this wasn't you, no action is needed — the lockout is already in effect. If you're locked out yourself, wait for the cooldown or use "Forgot password?" from another network.`,
     env
   );
 }
 
-async function verifyAdminToken(token, env) {
+async function verifySessionToken(kind, token, env) {
   if (!token) return false;
-  const session = await env.PFPI_KV.get(`admin-session:${token}`);
+  const session = await env.PFPI_KV.get(`${AUTH_CONFIG[kind].sessionKvPrefix}:${token}`);
   return session === "valid";
 }
 
+async function verifyAdminToken(token, env) {
+  return verifySessionToken("admin", token, env);
+}
+
 // ============================================================
-// ADMIN PASSWORD RESET
+// PASSWORD RESET (admin and Greg both use this)
 // ============================================================
 
-async function handleForgotPassword(request, env) {
-  const resetPayload = { role: "admin-reset", issued: Date.now() };
-  const resetToken = await signPayload(resetPayload, env.ADMIN_SESSION_SECRET);
-  await env.PFPI_KV.put(`admin-reset:${resetToken}`, "valid", { expirationTtl: 30 * 60 });
+async function handleForgotPassword(kind, request, env) {
+  const cfg = AUTH_CONFIG[kind];
+  const resetPayload = { role: `${kind}-reset`, issued: Date.now() };
+  const resetToken = await signPayload(resetPayload, env[cfg.sessionSecretEnvKey]);
+  await env.PFPI_KV.put(`${cfg.resetKvPrefix}:${resetToken}`, "valid", { expirationTtl: 30 * 60 });
 
-  const link = `https://the-greg-cote-show.github.io/PFPI/admin.html?resetToken=${resetToken}`;
-  const sent = await sendAdminEmail(
-    "PFPI admin password reset",
-    `A password reset was requested for the PFPI admin panel.\n\nThis link is valid for 30 minutes and can only be used once:\n\n${link}\n\nIf you didn't request this, you can ignore this email.`,
+  const link = `https://the-greg-cote-show.github.io/PFPI/${cfg.resetPage}?resetToken=${resetToken}`;
+  const sent = await sendPfpiEmail(
+    cfg.resetEmail,
+    `PFPI ${cfg.label} password reset`,
+    `A password reset was requested for ${cfg.pageDescription}.\n\nThis link is valid for 30 minutes and can only be used once:\n\n${link}\n\nIf you didn't request this, you can ignore this email.`,
     env
   );
 
@@ -329,11 +376,12 @@ async function handleForgotPassword(request, env) {
   return jsonResponse({ sent: true }, 200, request);
 }
 
-async function sendAdminEmail(subject, text, env) {
-  // Admin-only emails (this function) always go to ADMIN_EMAIL, so they can
-  // use Resend's default sender — Resend allows onboarding@resend.dev to any
-  // recipient even with an unverified sending domain. picks@thegregcoteshow.com
-  // stays in sendPicksEmail() since that goes to family members, but it stays
+async function sendPfpiEmail(to, subject, text, env) {
+  // These emails always go to a fixed PFPI-internal address (ADMIN_EMAIL or,
+  // for now, GREG_EMAIL — see its definition), so they can use Resend's
+  // default sender: Resend allows onboarding@resend.dev to any recipient
+  // even with an unverified sending domain. picks@thegregcoteshow.com stays
+  // in sendPicksEmail() since that goes to family members, but it stays
   // broken until thegregcoteshow.com is verified at resend.com/domains
   // (needs DNS console access this Worker doesn't have).
   const res = await fetch("https://api.resend.com/emails", {
@@ -343,23 +391,24 @@ async function sendAdminEmail(subject, text, env) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "PFPI Admin <onboarding@resend.dev>",
-      to: ADMIN_EMAIL,
+      from: "PFPI <onboarding@resend.dev>",
+      to,
       subject,
       text,
     }),
   });
   if (!res.ok) {
     const body = await res.text();
-    console.error(`Failed to send admin email ("${subject}"): ${res.status} ${body}`);
+    console.error(`Failed to send email ("${subject}"): ${res.status} ${body}`);
   }
   return res.ok;
 }
 
-async function handleResetPassword(request, env) {
+async function handleResetPassword(kind, request, env) {
+  const cfg = AUTH_CONFIG[kind];
   const { token, newPassword } = await request.json();
 
-  const resetKey = `admin-reset:${token}`;
+  const resetKey = `${cfg.resetKvPrefix}:${token}`;
   const valid = token && (await env.PFPI_KV.get(resetKey)) === "valid";
   if (!valid) {
     return jsonResponse({ error: "Invalid or expired reset link." }, 401, request);
@@ -369,11 +418,67 @@ async function handleResetPassword(request, env) {
     return jsonResponse({ error: "Password must be at least 8 characters." }, 400, request);
   }
 
-  const newHash = await hashPassword(newPassword, ADMIN_SALT);
-  await env.PFPI_KV.put(ADMIN_PASSWORD_HASH_KV_KEY, newHash);
+  const newHash = await hashPassword(newPassword, cfg.salt);
+  await env.PFPI_KV.put(cfg.hashKvKey, newHash);
   await env.PFPI_KV.delete(resetKey);
 
   return jsonResponse({ reset: true }, 200, request);
+}
+
+// ============================================================
+// GREG'S BRIEF — publish + admin correction
+// ============================================================
+
+async function handlePublishBrief(request, env) {
+  const sessionToken = request.headers.get("X-Session-Token");
+  const isGreg = await verifySessionToken("greg", sessionToken, env);
+  const isAdmin = !isGreg && (await verifySessionToken("admin", sessionToken, env));
+
+  if (!isGreg && !isAdmin) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const { week, text, adminName } = await request.json();
+  const weekNum = parseInt(week, 10);
+  if (!Number.isInteger(weekNum) || weekNum < 1 || weekNum > NUM_WEEKS) {
+    return jsonResponse({ error: "Invalid week." }, 400, request);
+  }
+  const trimmedText = (text || "").trim();
+  if (!trimmedText) {
+    return jsonResponse({ error: "Brief text is required." }, 400, request);
+  }
+
+  const committed = await commitJSONToGitHub(
+    `data/brief-week-${weekNum}.json`,
+    { week: weekNum, text: trimmedText, updatedAt: new Date().toISOString() },
+    `Publish Week ${weekNum} brief${isAdmin ? " [admin correction]" : ""} [automated]`,
+    env
+  );
+
+  if (isAdmin) {
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      adminName: adminName || "Yeti",
+      week: weekNum,
+      action: "publish-brief-override",
+      newText: trimmedText,
+    };
+    await env.PFPI_KV.put(`override-log:${weekNum}:${Date.now()}`, JSON.stringify(logEntry));
+  }
+
+  if (!committed) {
+    return jsonResponse({
+      published: false,
+      error: "Saved, but not yet live — GitHub publishing isn't configured yet (GITHUB_PAT missing). Ask Yeti to set it.",
+    }, 202, request);
+  }
+
+  return jsonResponse({ published: true }, 200, request);
+}
+
+async function handleCurrentWeek(request, env) {
+  const currentWeek = await getCurrentWeek(env);
+  return jsonResponse({ currentWeek }, 200, request);
 }
 
 // ============================================================
@@ -432,16 +537,31 @@ export default {
       return handleSubmitPicks(request, env);
     }
     if (url.pathname === "/admin/login" && request.method === "POST") {
-      return handleAdminLogin(request, env);
+      return handleLogin("admin", request, env);
     }
     if (url.pathname === "/admin/forgot-password" && request.method === "POST") {
-      return handleForgotPassword(request, env);
+      return handleForgotPassword("admin", request, env);
     }
     if (url.pathname === "/admin/reset-password" && request.method === "POST") {
-      return handleResetPassword(request, env);
+      return handleResetPassword("admin", request, env);
     }
     if (url.pathname === "/admin/override-pick" && request.method === "POST") {
       return handleAdminOverride(request, env);
+    }
+    if (url.pathname === "/greg/login" && request.method === "POST") {
+      return handleLogin("greg", request, env);
+    }
+    if (url.pathname === "/greg/forgot-password" && request.method === "POST") {
+      return handleForgotPassword("greg", request, env);
+    }
+    if (url.pathname === "/greg/reset-password" && request.method === "POST") {
+      return handleResetPassword("greg", request, env);
+    }
+    if (url.pathname === "/admin/publish-brief" && request.method === "POST") {
+      return handlePublishBrief(request, env);
+    }
+    if (url.pathname === "/current-week" && request.method === "GET") {
+      return handleCurrentWeek(request, env);
     }
     return jsonResponse({ error: "Not found" }, 404, request);
   },

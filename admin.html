@@ -65,6 +65,18 @@ button:hover{opacity:.9;}
     <button id="overrideBtn">Save override</button>
     <div class="status" id="overrideStatus"></div>
   </div>
+
+  <div class="panel hidden" id="briefFixPanel">
+    <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Fix Greg's brief</div>
+    <label for="briefWeek">Week</label>
+    <input type="number" id="briefWeek" min="1" max="18">
+    <label for="briefFixText">Brief text</label>
+    <textarea id="briefFixText" rows="8" style="width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:.6rem .7rem;border-radius:8px;font-size:.85rem;font-family:inherit;resize:vertical;"></textarea>
+    <label for="briefFixAdminName">Your name (for the audit log)</label>
+    <input type="text" id="briefFixAdminName" value="Yeti">
+    <button id="briefFixBtn">Save brief (admin override)</button>
+    <div class="status" id="briefFixStatus"></div>
+  </div>
 </div>
 
 <script>
@@ -95,6 +107,8 @@ document.getElementById("loginBtn").onclick = async () => {
     statusEl.textContent = "Logged in. Session valid for 4 hours.";
     statusEl.className = "status ok";
     document.getElementById("overridePanel").classList.remove("hidden");
+    document.getElementById("briefFixPanel").classList.remove("hidden");
+    loadBriefForWeek();
   } catch (e) {
     statusEl.textContent = "Could not reach the server.";
     statusEl.className = "status error";
@@ -183,6 +197,80 @@ document.getElementById("overrideBtn").onclick = async () => {
     const data = await res.json();
     if (!res.ok) {
       statusEl.textContent = data.error || "Override failed.";
+      statusEl.className = "status error";
+      return;
+    }
+    statusEl.textContent = "Saved and logged.";
+    statusEl.className = "status ok";
+  } catch (e) {
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "status error";
+  }
+};
+
+// ============================================================
+// FIX GREG'S BRIEF (admin correction, not Greg's own posting flow)
+// ============================================================
+
+async function loadBriefForWeek() {
+  const weekInput = document.getElementById("briefWeek");
+  const textEl = document.getElementById("briefFixText");
+  const statusEl = document.getElementById("briefFixStatus");
+
+  if (!weekInput.value) {
+    try {
+      const res = await fetch(`${WORKER_BASE}/current-week`);
+      const data = await res.json();
+      weekInput.value = data.currentWeek || 1;
+    } catch (e) {
+      weekInput.value = 1;
+    }
+  }
+
+  try {
+    const res = await fetch(`data/brief-week-${weekInput.value}.json?t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      textEl.value = data.text || "";
+      statusEl.textContent = "Loaded the currently published brief for this week.";
+      statusEl.className = "status";
+    } else {
+      textEl.value = "";
+      statusEl.textContent = "No brief published for this week yet.";
+      statusEl.className = "status";
+    }
+  } catch (e) {
+    textEl.value = "";
+    statusEl.textContent = "";
+    statusEl.className = "status";
+  }
+}
+
+document.getElementById("briefWeek").onchange = loadBriefForWeek;
+
+document.getElementById("briefFixBtn").onclick = async () => {
+  const statusEl = document.getElementById("briefFixStatus");
+  const body = {
+    week: parseInt(document.getElementById("briefWeek").value, 10),
+    text: document.getElementById("briefFixText").value,
+    adminName: document.getElementById("briefFixAdminName").value,
+  };
+  statusEl.textContent = "Saving...";
+  statusEl.className = "status";
+  try {
+    const res = await fetch(`${WORKER_BASE}/admin/publish-brief`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Session-Token": sessionToken },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (res.status === 202 && data.published === false) {
+      statusEl.textContent = data.error;
+      statusEl.className = "status error";
+      return;
+    }
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Save failed.";
       statusEl.className = "status error";
       return;
     }

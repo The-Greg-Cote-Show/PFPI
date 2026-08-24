@@ -25,10 +25,8 @@
 // stubbed to log-and-skip rather than fabricate any score/schedule data.
 // ============================================================
 
-import { TEAMS, computeCurrentWeekFromDate } from "./shared.js";
+import { TEAMS, computeCurrentWeekFromDate, commitJSONToGitHub } from "./shared.js";
 
-const GITHUB_OWNER = "The-Greg-Cote-Show";
-const GITHUB_REPO = "PFPI";
 const BIG_BALLS_BASE = "https://api.bigballsdata.com";
 const SEASON = 2026;
 
@@ -71,50 +69,6 @@ function normalizeGame(raw) {
     id: raw.game_id || raw.id,
     home, away, homeScore, awayScore, status, kickoffISO, winner,
   };
-}
-
-// ============================================================
-// GITHUB CONTENTS API
-// ============================================================
-// Requires GITHUB_PAT: a fine-grained Personal Access Token scoped to only
-// The-Greg-Cote-Show/PFPI with contents:write. NOT set up tonight — creating
-// a fine-grained PAT has no API, it's a manual step in GitHub's web UI, and
-// generating a broader credential as a substitute wasn't something to guess
-// at. See BUILD_LOG.md for the exact steps left for Yeti.
-
-async function commitJSONToGitHub(path, jsonObj, message, env) {
-  if (!env.GITHUB_PAT) {
-    console.error(`Skipping GitHub commit of ${path}: GITHUB_PAT not set.`);
-    return;
-  }
-
-  const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${path}`;
-  const headers = {
-    "Authorization": `Bearer ${env.GITHUB_PAT}`,
-    "Accept": "application/vnd.github+json",
-    "User-Agent": "pfpi-scores-worker",
-  };
-
-  let sha;
-  const existing = await fetch(apiUrl, { headers });
-  if (existing.ok) {
-    const existingData = await existing.json();
-    sha = existingData.sha;
-  } else if (existing.status !== 404) {
-    console.error(`Failed to check existing file ${path}: ${existing.status}`);
-    return;
-  }
-
-  const content = btoa(unescape(encodeURIComponent(JSON.stringify(jsonObj, null, 2))));
-  const put = await fetch(apiUrl, {
-    method: "PUT",
-    headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify({ message, content, sha }),
-  });
-
-  if (!put.ok) {
-    console.error(`Failed to commit ${path}: ${put.status} ${await put.text()}`);
-  }
 }
 
 // ============================================================

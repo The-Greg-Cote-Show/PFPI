@@ -1016,3 +1016,60 @@ just re-rendered differently.
   `verifyToken()`/etc. are all already week-type-agnostic (string or
   number), a nice side effect of not having hardcoded numeric-week
   assumptions anywhere in that path.
+
+## 2026-08-25 (continued) — Ad-hoc test picks email + clarified the "mystery" notification emails
+
+Yeti asked why he'd received pick-submission notification emails he didn't
+send, and asked for a self-service way to email himself a test picks link
+as any team, repeatedly, without needing a token generated for him each
+time.
+
+- **The notification emails were real, not a bug**: they were the direct,
+  correctly-working result of my own live testing earlier tonight —
+  submitting real test picks against the live Worker to verify the
+  submission-notification feature (the "4. Email Greg and Yeti" item) and,
+  separately, testing the redesigned `picks.html` end-to-end. Both were
+  genuine picks saves against real test tokens, so the notification firing
+  was the feature working as built, not spurious. Explained plainly rather
+  than left ambiguous.
+- **New: `POST /admin/send-test-picks-email`** (`picks-worker.js`, admin-
+  gated same as `/admin/override-pick`) + a matching "Send test picks
+  email" panel in `admin.html`. Reuses `generateWeeklyToken()` and
+  `formatWeekDeadlines()` unchanged. Always sends to `ADMIN_EMAIL`
+  regardless of which team is requested — the endpoint never accepts or
+  even looks at a recipient in the request body, so it structurally can't
+  become a way to email a real, uninvolved address no matter what's
+  selected in the UI.
+- **Team dropdown covers the real 8-team roster** (Lobos, Roughriders,
+  etc. — matching `shared.js`'s `TEAMS`, imported into `picks-worker.js`
+  for the first time for this), clearly separated in the UI from the 2
+  existing sandboxed `FAMILY_MEMBERS` test teams. This answers Yeti's
+  "how do I pretend to be Dick's Roughriders" ask directly — those real
+  team names weren't previously usable for testing at all outside a manual
+  KV seed.
+- **[BUG CAUGHT before shipping, not after]**: almost reused
+  `sendPicksEmail()` for this (it's the "real" email-sending function,
+  the obvious choice) — caught in time that it still sends from
+  `picks@thegregcoteshow.com`, which the unverified Resend domain still
+  rejects (flagged since the original build, still unresolved — see the
+  Resend domain entries earlier in this log). Used `sendPfpiEmail`'s
+  already-proven `onboarding@resend.dev` sender instead, since the entire
+  point of this feature is an email that actually arrives. **Real weekly
+  picks emails to family members are still broken** for this same reason —
+  this fix only covers admin-facing test emails, same scope as the earlier
+  admin/Greg reset-email fix.
+- **Week field defaults to `"preseason-3"`** (safe — never read by
+  `computeStandings()`, so testing any team against it has zero effect on
+  real scoring) with an explicit warning in the UI if a real numbered week
+  is used instead, since a real numbered week's saved picks DO plug into
+  real standings computation once anyone (including a test submission)
+  saves against it.
+- **Deployed but not independently re-verified end-to-end this time**: my
+  own admin password attempt failed ("Login failed"), and rather than
+  keep guessing at it (5 failed attempts locks out that IP for 15 minutes
+  and fires a security alert email), I stopped after one attempt and left
+  live verification to Yeti testing it directly through the real
+  `admin.html` UI — the natural path for a self-service admin tool anyway.
+  Syntax-checked and code-reviewed, deployed successfully, but the actual
+  send-and-receive round-trip hasn't been confirmed by either of us yet as
+  of this entry.

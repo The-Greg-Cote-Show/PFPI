@@ -225,7 +225,10 @@ let CURRENT_WEEK = 1;
 // (kickoff Sept 9 2026), most of this legitimately has nothing to show yet —
 // render() below reflects that honestly (empty states, not fabricated
 // numbers) rather than falling back to placeholder data.
-const REAL = { currentWeek: null, standings: null, standingsPct: null, weeks: {}, briefs: {}, tieNotes: {} };
+const REAL = {
+  currentWeek: null, standings: null, standingsPct: null, weeks: {}, briefs: {}, tieNotes: {},
+  weeklyTitles: null, weeksLeading: null, bestWeek: null,
+};
 
 async function fetchJSON(path) {
   try {
@@ -252,6 +255,13 @@ async function initRealData() {
       REAL.standings = st.standings;
       REAL.standingsPct = st.standingsPct;
       REAL.tieNotes = st.tieNotes || {};
+      // weeklyTitles/weeksLeading/bestWeek are new fields (worker.js,
+      // 2026-08-25) -- guard against a stale cached data/standings.json from
+      // before they existed, same GitHub Pages propagation-lag gap noted
+      // elsewhere in this file, rather than treat an old file as "no data".
+      REAL.weeklyTitles = st.weeklyTitles || null;
+      REAL.weeksLeading = st.weeksLeading || null;
+      REAL.bestWeek = st.bestWeek || null;
     }
   }
   await render();
@@ -284,14 +294,22 @@ function hasRealStandingsForWeek(week) {
   return !!REAL.standings && TEAMS.every(t => REAL.standings[t] && REAL.standings[t][String(week)] !== undefined);
 }
 
+// Generic version of the check above, for any per-team-per-week data object
+// shaped like REAL.standings (weeklyTitles, weeksLeading, bestWeek all match
+// that shape, whether the per-week value is a number or an object).
+function hasRealDataForWeek(dataObj, week) {
+  return !!dataObj && TEAMS.every(t => dataObj[t] && dataObj[t][String(week)] !== undefined);
+}
+
 // Category defs unchanged from the original build (scope of the 2025->2026
 // switchover is a data-source swap, not a rules change) — only getData
-// changed, from "real-or-simulated" to "real-or-null". weeksLeading,
-// weeklyTitles, tenWin, uniqueHits, and bestWeek have no real-data source at
-// all yet (no Worker computes them — the tie-splitting rule they'd need was
-// never defined, see BUILD_LOG.md's original SCOPE NOTE), so they render an
-// honest empty state unconditionally until that's resolved in a future
-// build, not silently forever.
+// changed, from "real-or-simulated" to "real-or-null". Tie-splitting rule
+// for weeksLeading/weeklyTitles/bestWeek confirmed by Greg via Yeti
+// (2026-08-25, see worker.js's computeStandings and BUILD_LOG.md) -- those
+// three are now real, computed server-side from actual picks/results, same
+// as Standings. tenWin and uniqueHits have no real data source at all
+// (Greg couldn't find historical stats) and stay on an honest empty state
+// per Yeti's explicit, unchanged decision.
 const CATEGORIES = {
   standings: {
     label: "Standings",
@@ -303,13 +321,13 @@ const CATEGORIES = {
     label: "Weeks Leading",
     title: "Weeks leading",
     desc: "Points for holding first place in the overall standings, split on ties.",
-    getData: w => null, unit: "pts", key: w => w
+    getData: w => hasRealDataForWeek(REAL.weeksLeading, w) ? REAL.weeksLeading : null, unit: "pts", key: w => w
   },
   weeklyTitles: {
     label: "Weekly Titles",
     title: "Weekly titles",
     desc: "Points for the best record in each individual week, split on ties.",
-    getData: w => null, unit: "pts", key: w => w
+    getData: w => hasRealDataForWeek(REAL.weeklyTitles, w) ? REAL.weeklyTitles : null, unit: "pts", key: w => w
   },
   tenWin: {
     label: "10-Win Weeks",
@@ -327,7 +345,7 @@ const CATEGORIES = {
     label: "Best Week",
     title: "Best week (running record)",
     desc: "Each team's best single-week record so far this season — only increases when beaten.",
-    getData: w => null, unit: "", key: w => w, isBestWeek: true
+    getData: w => hasRealDataForWeek(REAL.bestWeek, w) ? REAL.bestWeek : null, unit: "", key: w => w, isBestWeek: true
   }
 };
 

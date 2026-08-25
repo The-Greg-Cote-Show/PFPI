@@ -237,22 +237,67 @@ async function fetchHighlightlyPreseasonWeek3(env) {
 }
 
 // ============================================================
-// STANDINGS (cumulative correct picks per team per week)
+// STANDINGS + tie-split point categories (cumulative correct picks per
+// team per week, Weekly Titles, Weeks Leading, Best Week)
 // ============================================================
-// Only Standings and the Games tab are wired to real data tonight.
-// weeksLeading/weeklyTitles/bestWeek need a tie-splitting rule Greg hasn't
-// specified anywhere in the reference docs, and tenWin/uniqueHits are
-// explicitly flagged in the brief as "Greg hasn't found this yet" — all five
-// stay on simulated data in index.html until that's resolved. See
-// BUILD_LOG.md.
+// Tie-splitting rule confirmed by Greg via Yeti (2026-08-25): when N teams
+// tie for a week's honor, each gets 1.00/N rounded to 2 decimals (half-up),
+// awarded at the moment of the tie and summed week-over-week -- not
+// recomputed retroactively. tenWin/uniqueHits stay on permanent simulated
+// data (no real source exists) per Yeti's earlier explicit decision; only
+// Standings, Weekly Titles, Weeks Leading, and Best Week are computed here.
+
+// 1/N rounded to exactly 2 decimals, half-up (matches Greg's worked
+// examples: 3-way tie -> 0.33, 8-way tie -> 0.13).
+function splitShare(n) {
+  return Math.round((1 / n) * 100) / 100;
+}
+function round2(x) {
+  return Math.round(x * 100) / 100;
+}
 
 async function computeStandings(throughWeek, env) {
   const standings = {};
   const standingsPct = {};
-  TEAMS.forEach(t => { standings[t] = {}; standingsPct[t] = {}; });
+  const weeklyTitles = {};
+  const weeksLeading = {};
+  const bestWeek = {};
+  // Cumulative count of weeks (through each week) a team held/shared that
+  // week's honor -- e.g. weeklyTitlesCount[team][week] = 5 means Critters
+  // has held or shared the weekly-title honor in 5 of the weeks played so
+  // far. Feeds the "(N)" in brief.html's digest ("CRITTERS 8.33 (5)").
+  const weeklyTitlesCount = {};
+  const weeksLeadingCount = {};
+  // Total scorable (non-tied) games played league-wide through each week --
+  // same for every team, so kept as a flat week->count map, not per-team.
+  // Lets a consumer (brief.html's digest) derive each team's loss count as
+  // gamesPlayed[week] - standings[team][week] without back-deriving it from
+  // standingsPct (which loses precision/introduces float-division risk).
+  const gamesPlayed = {};
+  TEAMS.forEach(t => {
+    standings[t] = {}; standingsPct[t] = {};
+    weeklyTitles[t] = {}; weeksLeading[t] = {}; bestWeek[t] = {};
+    weeklyTitlesCount[t] = {}; weeksLeadingCount[t] = {};
+  });
 
   let cumulative = {};
   TEAMS.forEach(t => cumulative[t] = 0);
+  let titlePoints = {};
+  TEAMS.forEach(t => titlePoints[t] = 0);
+  let leadPoints = {};
+  TEAMS.forEach(t => leadPoints[t] = 0);
+  let titleCount = {};
+  TEAMS.forEach(t => titleCount[t] = 0);
+  let leadCount = {};
+  TEAMS.forEach(t => leadCount[t] = 0);
+  // Each team's best single-week record so far -- {correct, total, pct, week}
+  // or null until they've played a scorable week. Only replaced when
+  // strictly beaten (higher pct, or same pct with more correct picks as a
+  // tiebreak), so it "only increases when beaten" per the mockup's own
+  // description and never flip-flops between equally-good weeks.
+  let bestSoFar = {};
+  TEAMS.forEach(t => bestSoFar[t] = null);
+
   let gamesPlayedCumulative = 0;
   // Per Yeti (2026-08-25): a tied NFL game is nullified for pick'em purposes
   // entirely -- no one scored correct/incorrect on it, and it doesn't count
@@ -267,27 +312,77 @@ async function computeStandings(throughWeek, env) {
     const results = raw ? JSON.parse(raw) : [];
     const tiedGames = results.filter(g => g.tie);
     const scorableGames = results.filter(g => !g.tie);
-    gamesPlayedCumulative += scorableGames.length;
+    const weekTotal = scorableGames.length;
+    gamesPlayedCumulative += weekTotal;
+    gamesPlayed[String(week)] = gamesPlayedCumulative;
     if (tiedGames.length > 0) {
       tieNotes[week] = tiedGames.map(g => `${g.away} at ${g.home}`);
     }
 
+    const correctThisWeek = {};
     for (const team of TEAMS) {
       const picksRaw = await env.PFPI_KV.get(`picks:${week}:${team}`);
       const picks = picksRaw ? JSON.parse(picksRaw) : {};
-      let correctThisWeek = 0;
+      let correct = 0;
       for (const game of scorableGames) {
-        if (game.winner && picks[game.id] === game.winner) correctThisWeek++;
+        if (game.winner && picks[game.id] === game.winner) correct++;
       }
-      cumulative[team] += correctThisWeek;
+      correctThisWeek[team] = correct;
+      cumulative[team] += correct;
       standings[team][String(week)] = cumulative[team];
       standingsPct[team][String(week)] = gamesPlayedCumulative > 0
         ? cumulative[team] / gamesPlayedCumulative
         : 0;
     }
+
+    // Weekly Titles: best single-week record this week, split on ties.
+    // Skipped (no title awarded) for weeks with no scored games yet -- a
+    // week where every team is at 0-0 isn't a real tie for best record.
+    if (weekTotal > 0) {
+      const maxCorrect = Math.max(...TEAMS.map(t => correctThisWeek[t]));
+      const holders = TEAMS.filter(t => correctThisWeek[t] === maxCorrect);
+      const share = splitShare(holders.length);
+      holders.forEach(t => { titlePoints[t] += share; titleCount[t] += 1; });
+    }
+    TEAMS.forEach(t => {
+      weeklyTitles[t][String(week)] = round2(titlePoints[t]);
+      weeklyTitlesCount[t][String(week)] = titleCount[t];
+    });
+
+    // Weeks Leading: who holds the lead in the cumulative season standings
+    // as of this week (not who had the best week -- the season-long
+    // leader), split on ties. Skipped until at least one scored game exists
+    // season-to-date, for the same reason as above.
+    if (gamesPlayedCumulative > 0) {
+      const maxCum = Math.max(...TEAMS.map(t => cumulative[t]));
+      const holders = TEAMS.filter(t => cumulative[t] === maxCum);
+      const share = splitShare(holders.length);
+      holders.forEach(t => { leadPoints[t] += share; leadCount[t] += 1; });
+    }
+    TEAMS.forEach(t => {
+      weeksLeading[t][String(week)] = round2(leadPoints[t]);
+      weeksLeadingCount[t][String(week)] = leadCount[t];
+    });
+
+    // Best Week: update each team's personal-best week if this week beats it.
+    if (weekTotal > 0) {
+      TEAMS.forEach(team => {
+        const pct = correctThisWeek[team] / weekTotal;
+        const current = bestSoFar[team];
+        if (!current || pct > current.pct || (pct === current.pct && correctThisWeek[team] > current.correct)) {
+          bestSoFar[team] = { correct: correctThisWeek[team], total: weekTotal, pct, week };
+        }
+      });
+    }
+    TEAMS.forEach(t => {
+      bestWeek[t][String(week)] = bestSoFar[t] || { correct: 0, total: 0, pct: 0, week };
+    });
   }
 
-  return { standings, standingsPct, tieNotes };
+  return {
+    standings, standingsPct, tieNotes, weeklyTitles, weeksLeading, bestWeek,
+    weeklyTitlesCount, weeksLeadingCount, gamesPlayed,
+  };
 }
 
 // ============================================================
@@ -437,7 +532,10 @@ async function pollAndPublish(env) {
       weekFiles[week] = await buildWeekPublicJSON(week, normalized, env);
     }
 
-    const { standings, standingsPct, tieNotes } = await computeStandings(currentWeek, env);
+    const {
+      standings, standingsPct, tieNotes, weeklyTitles, weeksLeading, bestWeek,
+      weeklyTitlesCount, weeksLeadingCount, gamesPlayed,
+    } = await computeStandings(currentWeek, env);
 
     for (const [week, games] of Object.entries(weekFiles)) {
       await commitJSONToGitHub(
@@ -450,7 +548,11 @@ async function pollAndPublish(env) {
 
     await commitJSONToGitHub(
       "data/standings.json",
-      { standings, standingsPct, tieNotes, throughWeek: currentWeek, updatedAt: new Date().toISOString() },
+      {
+        standings, standingsPct, tieNotes, weeklyTitles, weeksLeading, bestWeek,
+        weeklyTitlesCount, weeksLeadingCount, gamesPlayed,
+        throughWeek: currentWeek, updatedAt: new Date().toISOString(),
+      },
       `Update standings through Week ${currentWeek} [automated]`,
       env
     );

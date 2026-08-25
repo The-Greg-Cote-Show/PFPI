@@ -36,7 +36,7 @@
 // guesses exactly, including the game_id's YYYY_WW_AWAY_HOME format.
 // ============================================================
 
-import { TEAMS, computeCurrentWeekFromDate, commitJSONToGitHub, getEasternDateParts, FAMILY_MEMBERS } from "./shared.js";
+import { TEAMS, computeCurrentWeekFromDate, commitJSONToGitHub, getEasternDateParts, FAMILY_MEMBERS, computeGameDeadline } from "./shared.js";
 
 const BIG_BALLS_BASE = "https://api.bigballsdata.com";
 const SEASON = 2026;
@@ -312,6 +312,11 @@ async function buildWeekPublicJSON(week, results, env) {
       kickoffISO: g.kickoffISO, hasRealTime: !!g.hasRealTime, status: g.status,
       homeScore: g.homeScore, awayScore: g.awayScore,
       winner: g.winner, tie: !!g.tie, picks,
+      // Same computeGameDeadline() the picks worker uses for /my-picks — not
+      // a second deadline calculation, just exposed here too so a public
+      // page (Greg's dashboard) can sort by urgency without needing an
+      // authenticated per-team session.
+      deadline: computeGameDeadline(g.kickoffISO),
     };
   });
 }

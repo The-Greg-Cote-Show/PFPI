@@ -25,6 +25,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .field{margin-bottom:1.25rem;}
 .field label{display:block;font-size:.8rem;font-weight:700;color:var(--muted);margin-bottom:.5rem;}
 .field input[type=password],
+.field input[type=text],
 .field select,
 .field textarea{
   width:100%;background:var(--panel2);border:1px solid var(--border2);border-radius:8px;
@@ -32,6 +33,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 }
 .field textarea{min-height:220px;resize:vertical;line-height:1.5;}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);}
+.field input[readonly]{opacity:.6;cursor:default;}
 
 .btn{
   background:var(--gold);color:#1a1305;border:none;border-radius:8px;
@@ -50,9 +52,28 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .forgot-link{font-size:.75rem;text-align:center;margin-top:.85rem;}
 .forgot-link a{color:var(--blue);}
 
-#publishScreen,#resetScreen{display:none;}
+#publishScreen,#resetScreen,#dashboardTabs,#missingPicksScreen{display:none;}
+.hidden{display:none !important;}
 
 .char-count{font-size:.68rem;color:var(--muted);text-align:right;margin-top:.35rem;}
+
+.dash-tabs{display:flex;gap:6px;margin-bottom:1rem;}
+.dash-tab-btn{flex:1;background:var(--panel2);border:1px solid var(--border2);color:var(--muted);font-size:.78rem;font-weight:700;padding:.6rem .5rem;border-radius:8px;cursor:pointer;}
+.dash-tab-btn.active{background:var(--gold);color:#1a1305;border-color:var(--gold);}
+
+.toggle-row{display:flex;gap:8px;margin-bottom:1.25rem;}
+.toggle-btn{background:var(--panel2);border:1px solid var(--border2);color:var(--muted);font-size:.78rem;font-weight:700;padding:.5rem .9rem;border-radius:8px;cursor:pointer;}
+.toggle-btn.active{background:var(--panel3);color:var(--gold);border-color:var(--gold);}
+
+.mp-row{background:var(--panel2);border:1px solid var(--border2);border-radius:10px;padding:.75rem .9rem;margin-bottom:.6rem;}
+.mp-row-header{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem;margin-bottom:.5rem;flex-wrap:wrap;}
+.mp-matchup{font-size:.85rem;font-weight:700;}
+.mp-deadline{font-size:.7rem;color:var(--blue);white-space:nowrap;}
+.mp-deadline.mp-locked{color:var(--muted);}
+.mp-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.mp-chip{background:var(--panel3);border:1px solid rgba(224,82,82,.35);color:var(--red);font-size:.72rem;font-weight:600;padding:4px 9px;border-radius:6px;}
+.mp-chip-locked{border-color:var(--border2);color:var(--muted);}
+.mp-all-picked{color:var(--green);font-size:.78rem;font-weight:600;}
 </style>
 </head>
 <body>
@@ -62,27 +83,53 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="title-sub">Weekly publisher &bull; The Greg Cote Show</div>
 
   <div class="card" id="gateScreen">
-    <div class="field">
-      <label for="pw">Password</label>
-      <input type="password" id="pw" autocomplete="current-password" placeholder="Enter password">
-    </div>
-    <button class="btn" id="unlockBtn">Unlock</button>
+    <form id="gateForm">
+      <div class="field">
+        <label for="username">Account</label>
+        <input type="text" id="username" name="username" value="PFPI Commissioner" readonly autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="pw">Password</label>
+        <input type="password" id="pw" name="password" autocomplete="current-password" placeholder="Enter password">
+      </div>
+      <button class="btn" type="submit" id="unlockBtn">Unlock</button>
+    </form>
     <div class="status err" id="gateStatus"></div>
     <div class="forgot-link"><a href="#" id="forgotBtn">Forgot password?</a></div>
     <div class="gate-note">Your browser can save this password so you won't need to type it again.</div>
   </div>
 
   <div class="card" id="resetScreen">
-    <div class="field">
-      <label for="newPassword">New password</label>
-      <input type="password" id="newPassword" autocomplete="new-password">
-    </div>
-    <div class="field">
-      <label for="confirmPassword">Confirm new password</label>
-      <input type="password" id="confirmPassword" autocomplete="new-password">
-    </div>
-    <button class="btn" id="resetBtn">Reset password</button>
+    <form id="resetForm">
+      <div class="field">
+        <label for="newPassword">New password</label>
+        <input type="password" id="newPassword" name="newPassword" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label for="confirmPassword">Confirm new password</label>
+        <input type="password" id="confirmPassword" name="confirmPassword" autocomplete="new-password">
+      </div>
+      <button class="btn" type="submit" id="resetBtn">Reset password</button>
+    </form>
     <div class="status" id="resetStatus"></div>
+  </div>
+
+  <div class="dash-tabs" id="dashboardTabs">
+    <button class="dash-tab-btn active" id="dashTabMissing" data-tab="missing">Missing Picks</button>
+    <button class="dash-tab-btn" id="dashTabPublish" data-tab="publish">Publish Brief</button>
+  </div>
+
+  <div class="card" id="missingPicksScreen">
+    <div class="field">
+      <label for="mpWeekSelect">Week</label>
+      <select id="mpWeekSelect"></select>
+    </div>
+    <div class="toggle-row">
+      <button class="toggle-btn active" id="mpByGameBtn">By game</button>
+      <button class="toggle-btn" id="mpByTeamBtn">By team</button>
+    </div>
+    <div id="mpContent"></div>
+    <div class="status" id="mpStatus"></div>
   </div>
 
   <div class="card" id="publishScreen">
@@ -104,11 +151,21 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 const WORKER_BASE = "https://pfpi-picks-worker.yeti-f3c.workers.dev";
 let sessionToken = null;
 
+// Real 8-team roster only -- matches shared.js's TEAMS export. The 2 sandboxed
+// test teams (Yeti's Big Feet, Gentry's Neanderbrows) are never in this list,
+// so they're automatically excluded from the missing-picks tracker below.
+const REAL_TEAMS = ["Lobos", "Roughriders", "Maniacs", "Critters", "Chickens", "Ferraris", "Llamas", "Giraffes"];
+const TEAM_SHORT = {
+  Lobos: "Greg's Lobos", Roughriders: "Dick's Roughriders", Maniacs: "Mom's Maniacs", Critters: "Chris' Critters",
+  Chickens: "Mike's Chickens", Ferraris: "Christie's Ferraris", Llamas: "Tati's Llamas", Giraffes: "Gracelin's Giraffes",
+};
+
 // ============================================================
 // LOGIN
 // ============================================================
 
-async function tryUnlock() {
+async function tryUnlock(e) {
+  if (e) e.preventDefault();
   const pw = document.getElementById("pw").value;
   const statusEl = document.getElementById("gateStatus");
 
@@ -134,8 +191,10 @@ async function tryUnlock() {
     }
     sessionToken = data.sessionToken;
     document.getElementById("gateScreen").style.display = "none";
-    document.getElementById("publishScreen").style.display = "block";
+    document.getElementById("dashboardTabs").style.display = "flex";
+    document.getElementById("missingPicksScreen").style.display = "block";
     await populateWeeks();
+    await populateMissingPicksWeeks();
   } catch (e) {
     statusEl.textContent = "Could not reach the server.";
     statusEl.className = "status err show";
@@ -172,7 +231,8 @@ if (resetToken) {
   document.getElementById("resetScreen").style.display = "block";
 }
 
-document.getElementById("resetBtn").addEventListener("click", async () => {
+document.getElementById("resetForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
   const newPassword = document.getElementById("newPassword").value;
   const confirmPassword = document.getElementById("confirmPassword").value;
   const statusEl = document.getElementById("resetStatus");
@@ -302,8 +362,153 @@ async function publish() {
   }
 }
 
-document.getElementById("unlockBtn").addEventListener("click", tryUnlock);
-document.getElementById("pw").addEventListener("keydown", e => { if (e.key === "Enter") tryUnlock(); });
+// ============================================================
+// MISSING-PICKS TRACKER
+// ============================================================
+
+let mpView = "byGame";
+const mpGamesCache = {};
+
+// Pulls the same public data/week-N.json games+picks that index.html's
+// Games tab already reads -- no separate calculation, just a different view
+// of who's missing rather than who's already in. `deadline` on each game
+// comes from worker.js's buildWeekPublicJSON, which calls the same
+// computeGameDeadline() the picks worker uses for /my-picks -- not a second
+// deadline calculation.
+async function fetchWeekGames(week) {
+  if (mpGamesCache[week] !== undefined) return mpGamesCache[week];
+  try {
+    const res = await fetch(`data/week-${week}.json?t=${Date.now()}`);
+    if (!res.ok) { mpGamesCache[week] = null; return null; }
+    const data = await res.json();
+    mpGamesCache[week] = Array.isArray(data.games) ? data.games : null;
+    return mpGamesCache[week];
+  } catch (e) {
+    mpGamesCache[week] = null;
+    return null;
+  }
+}
+
+async function populateMissingPicksWeeks() {
+  const currentWeek = await fetchCurrentWeek();
+  const sel = document.getElementById("mpWeekSelect");
+  sel.innerHTML = "";
+  for (let w = 1; w <= currentWeek; w++) {
+    const opt = document.createElement("option");
+    opt.value = w;
+    opt.textContent = "Week " + w;
+    sel.appendChild(opt);
+  }
+  sel.value = currentWeek;
+  await renderMissingPicks();
+}
+
+// `deadline` is a recent addition to data/week-N.json (worker.js) -- guard
+// against a stale cached file from before that field existed (GitHub Pages
+// commit-to-CDN propagation lag is untested/variable, see index.html) rather
+// than let an invalid Date throw inside Intl.DateTimeFormat.
+function fmtDeadline(iso) {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d.getTime())) return "TBD";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric",
+    hour: "numeric", minute: "2-digit",
+  }).format(d) + " ET";
+}
+
+function isPastDeadline(iso) {
+  if (!iso) return false;
+  const t = new Date(iso).getTime();
+  return !isNaN(t) && t < Date.now();
+}
+
+async function renderMissingPicks() {
+  const contentEl = document.getElementById("mpContent");
+  const statusEl = document.getElementById("mpStatus");
+  const week = parseInt(document.getElementById("mpWeekSelect").value, 10);
+
+  contentEl.innerHTML = "";
+  statusEl.textContent = "Loading...";
+  statusEl.className = "status show";
+
+  const games = await fetchWeekGames(week);
+  if (!games || games.length === 0) {
+    statusEl.textContent = "No games published for this week yet.";
+    statusEl.className = "status show";
+    return;
+  }
+  statusEl.textContent = "";
+  statusEl.className = "status";
+
+  // Soonest deadline first, in both views. Missing/invalid deadlines (see
+  // fmtDeadline's note) sort last rather than corrupting the order.
+  const deadlineMs = g => { const t = new Date(g.deadline).getTime(); return isNaN(t) ? Infinity : t; };
+  const sorted = [...games].sort((a, b) => deadlineMs(a) - deadlineMs(b));
+
+  if (mpView === "byGame") {
+    contentEl.innerHTML = sorted.map(g => {
+      const missing = REAL_TEAMS.filter(t => !(g.picks && g.picks[t]));
+      const locked = isPastDeadline(g.deadline);
+      const chipsHtml = missing.length === 0
+        ? `<span class="mp-all-picked">Everyone's picked</span>`
+        : missing.map(t => `<span class="mp-chip${locked ? " mp-chip-locked" : ""}">${TEAM_SHORT[t]}</span>`).join("");
+      return `
+        <div class="mp-row">
+          <div class="mp-row-header">
+            <span class="mp-matchup">${g.away} @ ${g.home}</span>
+            <span class="mp-deadline${locked ? " mp-locked" : ""}">${locked ? "Deadline passed" : fmtDeadline(g.deadline)}</span>
+          </div>
+          <div class="mp-chips">${chipsHtml}</div>
+        </div>
+      `;
+    }).join("");
+  } else {
+    // Team order stays fixed (REAL_TEAMS), matching the "never re-sorted"
+    // convention index.html's charts already use -- only each team's list of
+    // missing games is sorted by urgency.
+    contentEl.innerHTML = REAL_TEAMS.map(team => {
+      const missingGames = sorted.filter(g => !(g.picks && g.picks[team]));
+      const gamesHtml = missingGames.length === 0
+        ? `<span class="mp-all-picked">All picked</span>`
+        : missingGames.map(g => {
+            const locked = isPastDeadline(g.deadline);
+            return `<span class="mp-chip${locked ? " mp-chip-locked" : ""}">${g.away} @ ${g.home} — ${locked ? "deadline passed" : fmtDeadline(g.deadline)}</span>`;
+          }).join("");
+      return `
+        <div class="mp-row">
+          <div class="mp-row-header"><span class="mp-matchup">${TEAM_SHORT[team]}</span></div>
+          <div class="mp-chips">${gamesHtml}</div>
+        </div>
+      `;
+    }).join("");
+  }
+}
+
+document.getElementById("mpWeekSelect").addEventListener("change", renderMissingPicks);
+document.getElementById("mpByGameBtn").addEventListener("click", () => {
+  mpView = "byGame";
+  document.getElementById("mpByGameBtn").classList.add("active");
+  document.getElementById("mpByTeamBtn").classList.remove("active");
+  renderMissingPicks();
+});
+document.getElementById("mpByTeamBtn").addEventListener("click", () => {
+  mpView = "byTeam";
+  document.getElementById("mpByTeamBtn").classList.add("active");
+  document.getElementById("mpByGameBtn").classList.remove("active");
+  renderMissingPicks();
+});
+
+document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const tab = btn.dataset.tab;
+    document.getElementById("missingPicksScreen").style.display = tab === "missing" ? "block" : "none";
+    document.getElementById("publishScreen").style.display = tab === "publish" ? "block" : "none";
+  });
+});
+
+document.getElementById("gateForm").addEventListener("submit", tryUnlock);
 document.getElementById("briefText").addEventListener("input", updateCharCount);
 document.getElementById("publishBtn").addEventListener("click", publish);
 </script>

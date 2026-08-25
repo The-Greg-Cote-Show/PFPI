@@ -33,20 +33,26 @@ button:hover{opacity:.9;}
   <div class="title-main">PFPI <span>Admin</span></div>
 
   <div class="panel" id="loginPanel">
-    <label for="password">Admin password</label>
-    <input type="password" id="password">
-    <button id="loginBtn">Log in</button>
+    <form id="loginForm">
+      <label for="username">Account</label>
+      <input type="text" id="username" name="username" value="PFPI Admin" readonly autocomplete="username">
+      <label for="password">Admin password</label>
+      <input type="password" id="password" name="password" autocomplete="current-password">
+      <button type="submit" id="loginBtn">Log in</button>
+    </form>
     <div class="status" id="loginStatus"></div>
     <div class="status hidden" id="forgotLink"><a href="#" id="forgotBtn">Forgot password?</a></div>
   </div>
 
   <div class="panel hidden" id="resetPanel">
     <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Set a new password</div>
-    <label for="newPassword">New password</label>
-    <input type="password" id="newPassword">
-    <label for="confirmPassword">Confirm new password</label>
-    <input type="password" id="confirmPassword">
-    <button id="resetBtn">Reset password</button>
+    <form id="resetForm">
+      <label for="newPassword">New password</label>
+      <input type="password" id="newPassword" name="newPassword" autocomplete="new-password">
+      <label for="confirmPassword">Confirm new password</label>
+      <input type="password" id="confirmPassword" name="confirmPassword" autocomplete="new-password">
+      <button type="submit" id="resetBtn">Reset password</button>
+    </form>
     <div class="status" id="resetStatus"></div>
   </div>
 
@@ -153,7 +159,8 @@ button:hover{opacity:.9;}
 const WORKER_BASE = "https://pfpi-picks-worker.yeti-f3c.workers.dev";
 let sessionToken = null;
 
-document.getElementById("loginBtn").onclick = async () => {
+document.getElementById("loginForm").onsubmit = async (e) => {
+  e.preventDefault();
   const password = document.getElementById("password").value;
   const statusEl = document.getElementById("loginStatus");
   const forgotEl = document.getElementById("forgotLink");
@@ -213,7 +220,8 @@ if (resetToken) {
   document.getElementById("resetPanel").classList.remove("hidden");
 }
 
-document.getElementById("resetBtn").onclick = async () => {
+document.getElementById("resetForm").onsubmit = async (e) => {
+  e.preventDefault();
   const newPassword = document.getElementById("newPassword").value;
   const confirmPassword = document.getElementById("confirmPassword").value;
   const statusEl = document.getElementById("resetStatus");

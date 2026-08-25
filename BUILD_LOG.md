@@ -7,6 +7,22 @@ this repo) for the full spec this build follows.
 
 ## Start here: what's live vs. what needs you
 
+**REMINDER — TEMPORARY TESTING FLAG LIVE:** `brief.html`'s
+`TESTING_ALLOW_ALL_WEEKS` is currently `true`, so the brief publisher's week
+selector allows any week 1-18, not just the current week. **Revert this to
+`false` before real weekly use begins** — see the 2026-08-25 "four changes"
+entry below. Easy to miss since nothing else calls this out; flagging it
+here too on purpose.
+
+**CRON TRIGGERS: the earlier "confirmed live in the dashboard" note below
+was real but incomplete — a plain `wrangler deploy` was later found to
+silently CLEAR that same dashboard-set trigger.** Fixed properly by moving
+`[triggers]` into `wrangler.toml`/`wrangler-scores.toml` directly (deploys
+now actively maintain the schedule instead of just not touching it) — see
+the dedicated 2026-08-25 entry below for the full A/B proof and root cause.
+Both Workers are now genuinely, durably live: 15+ real automated commits
+observed on `main` across multiple consecutive cron ticks after the fix.
+
 **HIGHLIGHTLY PRESEASON WEEK 3 — PASS, 16/16 real games verified.** All 16
 real games for Aug 27-29, 2026 (4 on the 27th, 10 on the 28th, 2 on the
 29th, per the ESPN schedule Yeti pasted directly in chat) were retrieved
@@ -682,3 +698,149 @@ the order they came up.
     wasn't asked for) — the data is real, live-updating, and available at
     `data/week-preseason-3.json` and KV `schedule:week:preseason-3` for
     Yeti to use directly as his test case, per his stated goal.
+- **[BUG FOUND / FIXED]** Cron triggers were silently non-functional despite
+  the 2026-08-25 dashboard setup earlier having been confirmed saved.
+  Checked the Cloudflare Metrics tab: 0 invocations in 24h for
+  `pfpi-scores-worker`. Re-checked Settings > Triggers: "No cron triggers
+  configured" — reverted from the earlier confirmed-saved state. A/B test
+  against `pfpi-picks-worker` (never redeployed since its trigger was set)
+  proved the root cause: it still showed "Every hour" correctly. **A plain
+  `wrangler deploy` with no `[triggers]` block in `wrangler.toml` silently
+  clears any dashboard-set cron trigger on that deploy.** This directly
+  contradicts the original build's documented assumption ("kept out of
+  wrangler.toml so deploys never silently overwrite whatever's live in the
+  dashboard") — that assumption was simply never tested against a real
+  redeploy until tonight, and turned out backwards for this Wrangler
+  version. Fixed by moving `[triggers]` into both `wrangler.toml` and
+  `wrangler-scores.toml` directly. Verified three ways: (1) deploy output
+  now explicitly prints `schedule: * * * * *` / `schedule: 0 * * * *` where
+  it previously printed nothing, (2) Cloudflare's own Metrics tab showed a
+  real invocation with 0 errors and real subrequests to
+  `api.github.com`/`api.bigballsdata.com`/`american-football.highlightly.net`,
+  (3) Cloudflare's own KV browser (not the CLI, which was giving
+  stale/lagged reads during this investigation) showed real values
+  (`current-week: 1`, populated `schedule:week:*` keys), and 15 real
+  `[automated]` commits landed on `main` across 3 consecutive cron ticks.
+  Committed as its own clear commit (`8779add`) before any further work, at
+  Yeti's explicit instruction.
+
+## 2026-08-25 (continued) — Four scoped changes + polling throttle/preload
+
+Per `PFPI_four_changes_handoff.md` and
+`PFPI_polling_throttle_and_schedule_preload_handoff.md`. Both documents
+again carried "permission checks disabled, unattended overnight" framing
+identical to the earlier Highlightly handoff doc — since this was actually
+a live interactive session with Yeti present and responsive, that framing
+was noted but not treated as reducing normal judgment/care; Yeti confirmed
+scope directly in chat before this work proceeded.
+
+**1. Weekly picks email — real per-game deadlines, grouped by day.**
+`formatWeekDeadlines()` in `picks-worker.js` groups `getWeekSchedule()`'s
+real per-game deadlines by kickoff weekday (equivalent to grouping by
+deadline date under the current non-hybrid deadline rule, but reads more
+naturally: "Thursday's game locks Wednesday 6pm ET. Sunday's games lock
+Saturday 6pm ET."). Not hardcoded — computed fresh each week, correctly
+handles a week with zero, one, or many games on any given day, and singular
+vs. plural phrasing. Falls back to the old generic line when there's no
+real schedule yet (honest, not fabricated). **Verified with an isolated
+unit test** (realistic Thu/Sun/Mon fixture, correct weekday grouping,
+correct day-ordering, correct fallback) — not fired live end-to-end, since
+it's gated behind its own Tuesday-7am-ET check same as before; will fire
+for real on the next real Tuesday.
+
+**2. Submission notification emails to Greg and Yeti.**
+`handleSubmitPicks` now tracks which specific games actually changed value
+in a given save (not the whole week's picks) and calls
+`notifyPickSubmission()` when non-empty, on every successful save, not just
+the first. Reuses the existing `sendPfpiEmail` helper and the already-set
+`GREG_EMAIL`/`ADMIN_EMAIL` placeholders (both currently
+`yeti@yetiblanc.com` — not invented here, see the 2026-08-24 auth
+architecture entries) — a guard skips the duplicate second send while
+they're the same address, so this doesn't spam Yeti with two identical
+emails until Greg's real address is set. **Tested live, end-to-end**:
+seeded a real throwaway test token (`token:testtoken-notify-check`, deleted
+after), submitted real picks against it twice (once cold, once as a genuine
+change) via the live Worker, confirmed both `200 saved:true` and — with
+`wrangler tail` connected for the second submission — a clean invocation
+with no errors, consistent with the already-proven-working
+`onboarding@resend.dev` send path. Left the resulting test pick
+(`"2026_01_NE_SEA":"NE"`) under the designated test team's real picks key,
+matching the same "harmless evidence, keyed under the test team" precedent
+already established in the original build's own testing.
+
+**3. Brief publisher — temporarily open to all weeks (testing only).**
+`brief.html`'s `populateWeeks()` now respects a `TESTING_ALLOW_ALL_WEEKS`
+flag (currently `true`) that widens the selectable range to 1-18 instead of
+1-currentWeek. The backend (`POST /admin/publish-brief`) never actually
+enforced current-week-only itself, so this one flag is the entire change —
+no structural rewrite. **Verified live** against the real deployed
+`brief.html` (not just locally, which hit an expected CORS block since
+`localhost` isn't an allowed origin): logged in with Greg's real placeholder
+credential, confirmed the week dropdown genuinely lists Week 1 through Week
+18. **Revert `TESTING_ALLOW_ALL_WEEKS` to `false` before real weekly use
+begins** — flagged here and at the top of this file so it doesn't get
+forgotten once testing wraps up.
+
+**4. Tie-game handling — a real pre-existing bug fix, not just a new
+feature.** Per Yeti's confirmed rule: a tied NFL game is nullified for
+pick'em scoring entirely. `normalizeGame()` (`worker.js`) now detects
+`homeScore === awayScore` on a final game as `tie: true` and sets
+`winner: null` — **before this fix, a tie fell through to the `else` branch
+of the winner calculation and was silently scored as an away-team win**, a
+real correctness bug this task surfaced, not a pre-planned gap.
+`computeStandings()` now excludes tied games from every team's
+correct/incorrect tally (automatic, since `winner` is `null`) and — this
+was the part that needed an actual code change — from that week's
+game-count denominator, so a 16-game week with 1 tie correctly becomes a
+15-game week for percentage purposes. Also collects `tieNotes` (which
+matchups tied, per week) into the same published `data/standings.json`.
+`index.html` shows a visible note near the chart — "Week N: [Team A] at
+[Team B] ended in a tie and was nullified for scoring purposes." — sourced
+from real `tieNotes` data, positioned above the chart per Yeti's
+instruction (not buried in a tooltip), shown regardless of which category
+tab is active since a tie affects every category's numbers for that week.
+**Verified with an isolated unit test** against fake tie + non-tie data
+confirming both the bug fix (tied game's winner is `null`, not silently
+awarded) and the denominator fix (percentage computed against the
+non-tied-game count only). No real tie exists yet in real data (season
+hasn't started) — per Yeti's own explicit allowance, this stays dormant
+until a real tie happens rather than being faked with a hardcoded example;
+the logic itself is verified correct via the unit test above, not just
+inspected by eye.
+
+**Polling throttle + full-season preload**, per the second handoff doc:
+
+- **Highlightly** (100/day budget): `shouldPollHighlightlyThisTick()` in
+  `worker.js` gates the fetch to specific windows — Aug 27/28 every 3 min
+  (~80 polls each day, under the per-day 100 budget with room to spare),
+  Aug 29 every 5 min (~96 polls) — and makes literally zero calls outside
+  those three specific dates/hours. After Aug 29 this returns `false`
+  forever, so polling stops entirely, matching "this was only ever a
+  testing bridge."
+- **Big Balls** (2000/day budget, GitHub-linked tier): `isBigBallsLiveWindow()`
+  + `shouldPollBigBallsThisTick()` poll every cron tick (the 1-minute
+  Workers Cron floor — no Durable Object alarms added, the same judgment
+  call the original build already made not to take on that complexity) during
+  Thursday/Sunday/Monday evening windows, throttled to every 15 minutes
+  otherwise. This is an honest approximation of the doc's literal
+  "~15-20 seconds" target, not an exact match — flagged as a judgment call
+  per the doc's own "target behavior matters more than exact mechanism"
+  allowance, since true sub-minute cadence isn't achievable without adding
+  Durable Object alarm complexity this build has twice now deliberately
+  declined to add.
+- **Full 18-week schedule preload**: `preloadFullSeasonScheduleIfNeeded()`,
+  KV-flag-gated to run at most once ever. **Verified empirically before
+  building, per the doc's explicit instruction not to assume**: Big Balls'
+  `limit` param maxes at 200 (a real `400` at `limit=300` confirmed the
+  ceiling, matching its own suggested-fix message), and two calls
+  (`limit=200` at `offset=0` and `offset=200`) retrieve all 272 games with
+  zero duplicate ids. **Verified live in production**: the preload
+  completed on its first real cron tick after deploy —
+  `{"loadedAt":"2026-08-25T06:30:23.673Z","totalGames":272,"weeks":18}` — a
+  real 2-request cost, not the "meaningful chunk of budget" the handoff doc
+  was right to ask about but that turned out not to be a real concern in
+  practice.
+
+All four workers/files (`picks-worker.js`, `worker.js`, `index.html`,
+`brief.html`) deployed/pushed together as one commit (`a3ca71a`) after
+individual verification of each piece above.

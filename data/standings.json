@@ -52,6 +52,179 @@
     }
   },
   "tieNotes": {},
+  "weeklyTitles": {
+    "Lobos": {
+      "1": 0
+    },
+    "Roughriders": {
+      "1": 0
+    },
+    "Maniacs": {
+      "1": 0
+    },
+    "Critters": {
+      "1": 0
+    },
+    "Chickens": {
+      "1": 0
+    },
+    "Ferraris": {
+      "1": 0
+    },
+    "Llamas": {
+      "1": 0
+    },
+    "Giraffes": {
+      "1": 0
+    }
+  },
+  "weeksLeading": {
+    "Lobos": {
+      "1": 0
+    },
+    "Roughriders": {
+      "1": 0
+    },
+    "Maniacs": {
+      "1": 0
+    },
+    "Critters": {
+      "1": 0
+    },
+    "Chickens": {
+      "1": 0
+    },
+    "Ferraris": {
+      "1": 0
+    },
+    "Llamas": {
+      "1": 0
+    },
+    "Giraffes": {
+      "1": 0
+    }
+  },
+  "bestWeek": {
+    "Lobos": {
+      "1": {
+        "correct": 0,
+        "total": 0,
+        "pct": 0,
+        "week": 1
+      }
+    },
+    "Roughriders": {
+      "1": {
+        "correct": 0,
+        "total": 0,
+        "pct": 0,
+        "week": 1
+      }
+    },
+    "Maniacs": {
+      "1": {
+        "correct": 0,
+        "total": 0,
+        "pct": 0,
+        "week": 1
+      }
+    },
+    "Critters": {
+      "1": {
+        "correct": 0,
+        "total": 0,
+        "pct": 0,
+        "week": 1
+      }
+    },
+    "Chickens": {
+      "1": {
+        "correct": 0,
+        "total": 0,
+        "pct": 0,
+        "week": 1
+      }
+    },
+    "Ferraris": {
+      "1": {
+        "correct": 0,
+        "total": 0,
+        "pct": 0,
+        "week": 1
+      }
+    },
+    "Llamas": {
+      "1": {
+        "correct": 0,
+        "total": 0,
+        "pct": 0,
+        "week": 1
+      }
+    },
+    "Giraffes": {
+      "1": {
+        "correct": 0,
+        "total": 0,
+        "pct": 0,
+        "week": 1
+      }
+    }
+  },
+  "weeklyTitlesCount": {
+    "Lobos": {
+      "1": 0
+    },
+    "Roughriders": {
+      "1": 0
+    },
+    "Maniacs": {
+      "1": 0
+    },
+    "Critters": {
+      "1": 0
+    },
+    "Chickens": {
+      "1": 0
+    },
+    "Ferraris": {
+      "1": 0
+    },
+    "Llamas": {
+      "1": 0
+    },
+    "Giraffes": {
+      "1": 0
+    }
+  },
+  "weeksLeadingCount": {
+    "Lobos": {
+      "1": 0
+    },
+    "Roughriders": {
+      "1": 0
+    },
+    "Maniacs": {
+      "1": 0
+    },
+    "Critters": {
+      "1": 0
+    },
+    "Chickens": {
+      "1": 0
+    },
+    "Ferraris": {
+      "1": 0
+    },
+    "Llamas": {
+      "1": 0
+    },
+    "Giraffes": {
+      "1": 0
+    }
+  },
+  "gamesPlayed": {
+    "1": 0
+  },
   "throughWeek": 1,
-  "updatedAt": "2026-08-25T19:30:56.335Z"
+  "updatedAt": "2026-08-25T19:45:56.735Z"
 }

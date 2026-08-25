@@ -6,7 +6,13 @@ compatibility_date = "2026-08-24"
 binding = "PFPI_KV"
 id = "3b5cd856fa7b40908601404f46b95456"
 
-# Cron trigger (live-scores polling) is configured in the Cloudflare
-# dashboard Triggers tab, not here. See BUILD_LOG.md for the recommended
-# cron string. Kept out of wrangler.toml so deploys never silently overwrite
-# whatever cadence is actually live in the dashboard.
+# Cron trigger (live-scores polling). MUST live here, not dashboard-only —
+# proven 2026-08-25 that `wrangler deploy` with no [triggers] block silently
+# CLEARS any dashboard-set cron trigger on THIS worker specifically: set via
+# the dashboard, then wiped by the very next `wrangler deploy` (the
+# Highlightly integration deploy), leaving this Worker with zero invocations
+# for 24h+ despite the dashboard having shown it as saved. The original
+# build's opposite assumption was never actually tested against a real
+# redeploy until this happened — see BUILD_LOG.md.
+[triggers]
+crons = ["* * * * *"]

@@ -8,7 +8,14 @@ id = "3b5cd856fa7b40908601404f46b95456"
 
 # Cron trigger (Tuesday 7am ET weekly picks email, guarded internally so the
 # hourly firing only actually sends once it's genuinely Tuesday 7am
-# America/New_York) is configured in the Cloudflare dashboard Triggers tab,
-# not here. See BUILD_LOG.md for the exact recommended cron string and why
-# it's kept out of wrangler.toml (lesson learned from Cote Cup: config here
-# can drift from what's actually live in the dashboard and mislead).
+# America/New_York). MUST live here, not dashboard-only — proven 2026-08-25
+# that `wrangler deploy` with no [triggers] block silently CLEARS any
+# dashboard-set cron trigger on that Worker (confirmed via a real A/B: this
+# worker's trigger survived because it wasn't redeployed after being set via
+# the dashboard, while pfpi-scores-worker's identical dashboard-set trigger
+# was wiped by its next `wrangler deploy`, going 24h+ with zero invocations
+# as a result). The original build's opposite assumption (dashboard-only is
+# safer, config here can drift) was never actually tested against a real
+# redeploy until this happened — see BUILD_LOG.md.
+[triggers]
+crons = ["0 * * * *"]

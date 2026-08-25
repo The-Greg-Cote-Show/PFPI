@@ -18,6 +18,66 @@ in order. Secret values are never logged, only names. See
 `PFPI_Claude_Code_handoff_brief.md` (in the parent folder, not committed to
 this repo) for the full spec this build follows.
 
+## 2026-08-25 — live-testing feedback: preseason picks fix, single-submit-email redesign, admin correction form
+
+Yeti tested `picks.html` live (real browser, both desktop and mobile) against
+the real preseason Week 3 schedule and reported back three things. All three
+are now **done, deployed, committed, and pushed** (worker version
+`e6f4c83`'s commit; picks-worker.js deploy Version ID `fbdac9fd` for the
+correction form, `46f59067` for the picks-merge fix):
+
+1. **"The picks aren't translating to the live site"** — real bug, root
+   cause found: `worker.js`'s preseason publish step (`pollAndPublish()`)
+   was overwriting `data/week-preseason-3.json` with Highlightly's raw
+   response every poll, which has no concept of PFPI picks at all — the
+   regular-season path merges saved KV picks into the public JSON but the
+   preseason path never did. Fixed by merging saved
+   `picks:preseason-3:${team}` KV data (both the real 8-team roster and the
+   two sandboxed `FAMILY_MEMBERS` test teams) into each game before
+   publishing. **Verified live** via the one-time manual-bypass technique
+   (forced `shouldPollHighlightlyThisTick` to fire once outside its normal
+   window, confirmed `"picks": {"Roughriders": "BUF", "Gentry's
+   Neanderbrows": "PIT"}` landed correctly on a real game, then reverted the
+   bypass).
+
+2. **"An email is sent to the admin for every pick someone makes. That's not
+   good."** — redesigned into a save/notify split. `POST /submit-picks`
+   (fires on every pick-button click) now only saves, silently, no email.
+   New `POST /confirm-picks` fires exactly once when the visitor clicks the
+   new Submit button on `picks.html`, and sends ONE email listing the
+   visitor's full current picks, tagging only picks that changed since the
+   last notified submission with `(Updated)` — brand-new picks show
+   plainly, per Yeti's exact spec ("New picks should just show what the
+   pick was"). Tracked via a `notified-picks:${week}:${team}` KV snapshot.
+   Submit button has the exact note text Yeti specified above it: "Picks
+   will be sent to the commissioner. If a mistake was noticed after the
+   deadline, please contact the commissioner and email yeti@yetiblanc.com
+   for edit approval." **Verified live.**
+
+3. **"We'll need a way for me as the admin to send a correction form. That
+   will be much better than me making the changes."** — new admin.html
+   panel ("Send correction form"), team/week/gameId inputs, calls new
+   `POST /admin/send-correction-email`. Generates a 24h-TTL token
+   (`generateCorrectionToken`) carrying a `correctionGameId` that unlocks
+   exactly that one game past its deadline — every other game on the token
+   stays locked normally (`handleGetPicks`/`handleSubmitPicks` both check
+   `g.id === correctionGameId`). `picks.html` shows a banner when a
+   correction link is in use, so whoever's using it knows only one game is
+   unlocked. Per Yeti's answer when asked who this should be able to email
+   ("Only ever to yourself (Recommended for now)") — it always sends to
+   `ADMIN_EMAIL` (`yeti@yetiblanc.com`), never a request-supplied recipient;
+   revisit this once real family emails are onboarded. **Deployed and
+   pushed; not yet exercised live end-to-end** — next step if you want full
+   confidence is to actually trigger one from admin.html and confirm the
+   email arrives and the named game genuinely unlocks past its deadline
+   while everything else on that link stays locked.
+
+**Still open / known, not touched this pass:** real weekly picks emails to
+family members are still blocked by the unverified `thegregcoteshow.com`
+Resend sending domain — needs actual DNS verification on your end, not a
+workaround. Yeti also mentioned "a couple of tweaks" to `picks.html`'s
+appearance on live testing but hadn't specified what yet as of this entry.
+
 ## Start here: what's live vs. what needs you
 
 **2026-08-25, ~10:30 AM ET — explicit status check on both handoffs tonight,

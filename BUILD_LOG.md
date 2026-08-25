@@ -1227,3 +1227,70 @@ literally specced ("format already-correct existing calculations, don't
 recompute scoring logic") is only actually possible for the Standings
 portion of the digest right now. Waiting on Yeti's direction before writing
 any Feature 2 code.
+
+## 2026-08-25 (continued) — Tie-splitting rule confirmed; Feature 2 built and verified
+
+Yeti relayed a real, specific tie-splitting rule from Greg: when N teams tie
+for a week's honor, each gets `1.00/N` rounded to 2 decimals (half-up:
+2-way=.50, 3-way=.33, 6-way=.17, 7-way=.14, 8-way=.13), awarded at the
+moment of the tie and summed week-over-week, not recomputed retroactively.
+This explicitly authorized writing real new scoring logic for Weekly
+Titles, Weeks Leading, and Best Week — bigger scope than the original
+handoff doc, approved live in chat.
+
+**worker.js's `computeStandings()` now also computes real Weekly Titles,
+Weeks Leading, and Best Week** (`splitShare()`/`round2()` implement the
+rule above exactly), in the same loop pass that already builds Standings —
+zero extra KV reads. Also added: `gamesPlayed` (a shared week->count map,
+so losses can be derived exactly without back-dividing through
+`standingsPct`) and `weeklyTitlesCount`/`weeksLeadingCount` (cumulative
+occurrence counts, feeding the "(N)" in the digest format below). All
+committed into `data/standings.json` alongside the existing fields.
+**10-Win Weeks and Unique Hits are untouched** — no real data source
+exists for either; Yeti's earlier decision on those two stands.
+
+**index.html** wires `weeksLeading`/`weeklyTitles`/`bestWeek` to this new
+real data (same `hasRealDataForWeek()` pattern already proven for
+Standings) — these three chart tabs are no longer permanently empty.
+
+**Feature 2 (Weekly Digest) built**: new third tab on brief.html
+(`digestScreen`), week selector (default current week), generates Greg's
+exact house-style text block from the real data above — "Copy to
+clipboard" and "Insert into brief text" actions. Verified two ways:
+1. **Live, real data**: pre-season week 1, correctly shows all 8 teams at
+   0-0 / "--" GB and "No weeks decided yet." for the point categories —
+   honest, not fabricated, since no games have been played yet.
+2. **Against Greg's own worked examples, via synthetic data through the
+   real functions** (not just eyeballed) — fed `buildStandingsBlock()` the
+   exact 177-94/176-95/175-96(x2)/168-103/160-111/156-115 records from his
+   sample and got back the identical records/pcts/GB column (0/1/2/2/9/17/
+   21); fed `buildPointBlock()` his exact Weeks Leading numbers and got
+   back `CRITTERS 8.33 (5), Maniacs 6.33 (4), Ferraris 2.66 (1),
+   Roughriders 0.33 & Llamas 0.33.` — matches his real text verbatim except
+   which of the two exactly-tied-at-0.33 teams sorts first (arbitrary,
+   TEAMS-array order, not otherwise specified); `buildBestWeekBlock()`
+   reproduced `Best Week: Lobos .929 (13-1/W12).` exactly; the raw
+   `splitShare()` formula independently verified against all of Greg's
+   named tie sizes (2/3/6/7/8-way -> .50/.33/.17/.14/.13).
+
+**Formatting decisions made without an exact spec — flagged for Greg to
+confirm, not silently assumed correct:**
+- No automatic ALL-CAPS/`[Won playoff]` marker in the Standings block. In
+  Greg's sample, Critters and Ferraris have the *identical* record
+  (177-94/.653) but only Critters is capitalized+annotated — that can only
+  be a real-world tiebreak (playoff, head-to-head) this system has no data
+  for, not something derivable from the record alone. Left blank/no-caps
+  per the handoff doc's own explicit allowance ("fine if this only ever
+  shows blank during the regular season").
+- Teams with a zero value are omitted entirely from the Weekly
+  Titles/Weeks Leading lists (a team that's never led/never won a week has
+  nothing to report) — Greg's sample never shows a 0.00 entry either way,
+  so this is inferred, not confirmed.
+- The non-final header line (`PFPI STANDINGS THROUGH WEEK N 2026`) is
+  invented — Greg's only sample was a season-final digest
+  (`PFPI OFFICIAL FINAL 2025 STANDINGS`), no mid-season example exists to
+  match against.
+- Team-name column width standardized to a clean, consistent 32 chars
+  rather than replicating the 1-character inconsistency visible in Greg's
+  hand-typed sample (31 vs 32 across different rows) — a generator should
+  be consistent even where a manually-typed example wasn't.

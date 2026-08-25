@@ -1294,3 +1294,50 @@ confirm, not silently assumed correct:**
   rather than replicating the 1-character inconsistency visible in Greg's
   hand-typed sample (31 vs 32 across different rows) — a generator should
   be consistent even where a manually-typed example wasn't.
+
+## 2026-08-25 (continued) — Digest formatting follow-up: all three items resolved
+
+`PFPI_digest_formatting_followup.md` gave real, final answers (confirmed by
+Yeti) to all three items flagged above. Implemented and verified live:
+
+1. **No ALL-CAPS anywhere** — dropped the leader-caps convention from
+   `buildPointBlock()` entirely. Normal case throughout; Greg does his own
+   emphasis/styling once he's writing the actual brief.
+2. **Zero-value teams no longer omitted** — `buildPointBlock()` lists all 8
+   real roster teams every time, including anyone at 0.00 (which, pre-
+   season, is currently all 8 — verified live: they render as one big
+   `&`-joined tied group at 0.00, which is the correct mechanical
+   consequence of applying the existing tie-join rule uniformly, not a
+   special case).
+3. **Header styling** — now `PFPI WEEK N STANDINGS` (mid-season) or
+   `PFPI OFFICIAL FINAL 2026 STANDINGS` (final), both bold + underlined +
+   ALL CAPS, same treatment all season.
+
+**Bold/underline implementation note**: the actual publish pipeline
+(`data/brief-week-N.json`, the `#briefText` textarea, `index.html`'s brief
+display) is plain text end to end — there's no rich-text storage anywhere
+on this site, so real bold/underline can't survive into the published
+brief itself. Rather than fake it with literal markup characters (asterisks
+etc.) that would show up as junk in the final plain-text brief, the digest
+preview (`#digestOutput`) changed from a `<textarea readonly>` to a
+non-editable `<div>` that actually renders the header in real `<b><u>`
+HTML — so Greg sees genuine bold+underline on screen, not just ALL CAPS.
+"Copy to clipboard" now writes both `text/html` (real bold+underline, for
+pasting into Gmail/Docs/Slack/anywhere rich) and `text/plain` (clean ALL
+CAPS, no stray markup) via `ClipboardItem`, so the right one is picked up
+automatically depending on where Greg pastes. "Insert into brief text"
+uses the plain-text version only, matching the plain textarea it feeds.
+
+**Verified live**: header renders visibly bold+underlined in the real
+deployed page (screenshot taken); `buildPointBlock()` re-run against the
+same Weeks Leading numbers from the original worked example now correctly
+includes Lobos/Chickens/Giraffes at the end as a `&`-joined 0.00 group
+alongside the original non-zero entries, with no caps anywhere. The
+clipboard write itself couldn't be exercised end-to-end in this automated
+browser session (`NotAllowedError: Document is not focused` — a CDP/
+automation-only limitation, not a real-session issue), but this correctly
+exercised and confirmed the fallback chain: `clipboard.write()` ->
+`clipboard.writeText()` -> manual-selection, all the way down, no
+uncaught errors. Worth a real click-through by Yeti or Greg in an actual
+focused browser tab to confirm the rich-paste behavior itself (e.g. paste
+into a Google Doc and check the header comes through bold+underlined).

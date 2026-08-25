@@ -1,0 +1,56 @@
+{
+  "standings": {
+    "Lobos": {
+      "1": 0
+    },
+    "Roughriders": {
+      "1": 0
+    },
+    "Maniacs": {
+      "1": 0
+    },
+    "Critters": {
+      "1": 0
+    },
+    "Chickens": {
+      "1": 0
+    },
+    "Ferraris": {
+      "1": 0
+    },
+    "Llamas": {
+      "1": 0
+    },
+    "Giraffes": {
+      "1": 0
+    }
+  },
+  "standingsPct": {
+    "Lobos": {
+      "1": 0
+    },
+    "Roughriders": {
+      "1": 0
+    },
+    "Maniacs": {
+      "1": 0
+    },
+    "Critters": {
+      "1": 0
+    },
+    "Chickens": {
+      "1": 0
+    },
+    "Ferraris": {
+      "1": 0
+    },
+    "Llamas": {
+      "1": 0
+    },
+    "Giraffes": {
+      "1": 0
+    }
+  },
+  "throughWeek": 1,
+  "updatedAt": "2026-08-25T05:48:23.449Z"
+}

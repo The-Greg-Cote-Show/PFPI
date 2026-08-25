@@ -10,6 +10,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -21,6 +22,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -32,6 +34,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -43,6 +46,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -54,6 +58,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -65,6 +70,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -76,6 +82,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -87,6 +94,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -98,6 +106,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -109,6 +118,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -120,6 +130,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -131,6 +142,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -142,6 +154,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -153,6 +166,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -164,6 +178,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     },
     {
@@ -175,6 +190,7 @@
       "homeScore": null,
       "awayScore": null,
       "winner": null,
+      "tie": false,
       "picks": {}
     }
   ]

@@ -36,7 +36,7 @@
 // guesses exactly, including the game_id's YYYY_WW_AWAY_HOME format.
 // ============================================================
 
-import { TEAMS, computeCurrentWeekFromDate, commitJSONToGitHub } from "./shared.js";
+import { TEAMS, computeCurrentWeekFromDate, commitJSONToGitHub, getEasternDateParts } from "./shared.js";
 
 const BIG_BALLS_BASE = "https://api.bigballsdata.com";
 const SEASON = 2026;
@@ -86,6 +86,101 @@ function normalizeGame(raw) {
     id: raw.game_id || raw.id,
     home, away, homeScore, awayScore, status, kickoffISO, winner,
   };
+}
+
+// ============================================================
+// HIGHLIGHTLY — preseason Week 3 (Aug 27-29, 2026) ONLY
+// ============================================================
+// SCOPE, DECIDED 2026-08-25 (per PFPI_highlightly_overnight_handoff.md's
+// explicit instruction not to silently expand scope): this is a STOPGAP
+// for this one preseason week specifically, not an ongoing parallel source
+// alongside Big Balls. Big Balls has zero PRE/POST coverage (confirmed, see
+// BUILD_LOG.md) so it can't cover this week at all; Highlightly can, but
+// nothing here assumes it'll be used again after Week 3. If postseason
+// coverage is ever wanted the same way, that's a separate decision for
+// Yeti to make, not something this build extends to automatically.
+//
+// VERIFIED LIVE (2026-08-25) against the real ESPN-published Week 3
+// schedule Yeti pasted in chat: GET /matches?league=NFL&season=2026&limit=100
+// returns 78 games (45 preseason + 33 already-scheduled regular season) in
+// one call, no pagination needed. Filtering to round==="preseason" and an
+// Eastern-calendar-date of Aug 27/28/29 (not the raw `date` field's UTC
+// calendar date, which splits some games onto the wrong day — evening ET
+// kickoffs roll into the next UTC day) reliably returns all 16 real games,
+// matched matchup-for-matchup and kickoff-time-for-kickoff-time against the
+// ESPN listing. The `date=YYYY-MM-DD` query param this same endpoint
+// supports does NOT reliably do this (confirmed: date=2026-08-27 alone
+// returns only 1 of the 4 real Aug-27-ET games, missing the three 8pm+ ET
+// games that land on 2026-08-28 in UTC) — don't use it for this purpose.
+//
+// UNCONFIRMED, flagged not guessed: `state.score.current` is a combined
+// "X - Y" string with no separate home/away fields, and every game is
+// still 0-0/"Scheduled" as of this writing (games haven't kicked off yet).
+// Assumed "away - home" order below, matching this site's own away@home
+// convention elsewhere — genuinely unverified against a real score. Isolated
+// entirely in normalizeHighlightlyGame() so it's a one-function fix once
+// any of these games actually finishes (very soon — Aug 27).
+
+const HIGHLIGHTLY_BASE = "https://american-football.highlightly.net";
+const PRESEASON_WEEK3_ET_DATES = new Set(["2026-08-27", "2026-08-28", "2026-08-29"]);
+
+function easternDateKey(isoString) {
+  const parts = getEasternDateParts(new Date(isoString));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function normalizeHighlightlyGame(g) {
+  const home = g.homeTeam?.abbreviation || null;
+  const away = g.awayTeam?.abbreviation || null;
+
+  const desc = (g.state?.description || "").toLowerCase();
+  const status = desc.includes("final") ? "final" : desc.includes("scheduled") ? "scheduled" : "in_progress";
+
+  // UNCONFIRMED order — see gap notice above.
+  let awayScore = null, homeScore = null;
+  const current = g.state?.score?.current;
+  if (current && current !== "0 - 0") {
+    const parts = current.split(" - ").map(s => parseInt(s.trim(), 10));
+    if (parts.length === 2 && parts.every(n => !isNaN(n))) {
+      [awayScore, homeScore] = parts;
+    }
+  }
+
+  let winner = null;
+  if (status === "final" && homeScore !== null && awayScore !== null) {
+    winner = homeScore > awayScore ? home : away;
+  }
+
+  return {
+    id: `hl-${g.id}`,
+    home, away, homeScore, awayScore, status, kickoffISO: g.date, winner,
+  };
+}
+
+async function fetchHighlightlyPreseasonWeek3(env) {
+  if (!env.HIGHLIGHTLY_API_KEY) {
+    console.error("Skipping Highlightly preseason Week 3 fetch: HIGHLIGHTLY_API_KEY not set.");
+    return null;
+  }
+
+  const res = await fetch(`${HIGHLIGHTLY_BASE}/matches?league=NFL&season=${SEASON}&limit=100`, {
+    headers: { "x-rapidapi-key": env.HIGHLIGHTLY_API_KEY },
+  });
+  if (!res.ok) {
+    console.error(`Highlightly fetch failed: ${res.status} ${await res.text()}`);
+    return null;
+  }
+
+  const data = await res.json();
+  const games = (data.data || [])
+    .filter(g => g.round === "preseason" && PRESEASON_WEEK3_ET_DATES.has(easternDateKey(g.date)))
+    .map(normalizeHighlightlyGame);
+
+  if (games.length !== 16) {
+    console.error(`Highlightly preseason Week 3: expected 16 games, got ${games.length}. Check for a real schedule change or a filter regression.`);
+  }
+
+  return games;
 }
 
 // ============================================================
@@ -165,59 +260,74 @@ async function pollAndPublish(env) {
   await env.PFPI_KV.put("current-week", String(currentWeek));
 
   if (!env.BIG_BALLS_API_KEY) {
-    console.error("Skipping Big Balls poll: BIG_BALLS_API_KEY not set. No score/schedule data fetched or published this tick.");
-    return;
-  }
+    console.error("Skipping Big Balls poll: BIG_BALLS_API_KEY not set. No regular-season score/schedule data fetched or published this tick.");
+  } else {
+    // Poll current week and next week, so next week's kickoff times (and
+    // therefore deadlines) are available before Tuesday's picks email goes out.
+    const weeksToPoll = [currentWeek, Math.min(currentWeek + 1, 18)];
+    const weekFiles = {};
 
-  // Poll current week and next week, so next week's kickoff times (and
-  // therefore deadlines) are available before Tuesday's picks email goes out.
-  const weeksToPoll = [currentWeek, Math.min(currentWeek + 1, 18)];
-  const weekFiles = {};
+    for (const week of weeksToPoll) {
+      const raw = await fetchBigBallsWeek(week, env);
+      if (!raw) continue;
+      const normalized = raw.map(normalizeGame);
 
-  for (const week of weeksToPoll) {
-    const raw = await fetchBigBallsWeek(week, env);
-    if (!raw) continue;
-    const normalized = raw.map(normalizeGame);
+      // Schedule cache for the picks worker's deadline math: kickoff times only.
+      await env.PFPI_KV.put(
+        `schedule:week:${week}`,
+        JSON.stringify(normalized.map(g => ({ id: g.id, home: g.home, away: g.away, kickoffISO: g.kickoffISO })))
+      );
 
-    // Schedule cache for the picks worker's deadline math: kickoff times only.
-    await env.PFPI_KV.put(
-      `schedule:week:${week}`,
-      JSON.stringify(normalized.map(g => ({ id: g.id, home: g.home, away: g.away, kickoffISO: g.kickoffISO })))
-    );
+      // Once a game is final, its result is locked in for standings purposes.
+      const finals = normalized.filter(g => g.status === "final");
+      if (finals.length > 0) {
+        await env.PFPI_KV.put(`results:week:${week}`, JSON.stringify(finals));
+      }
 
-    // Once a game is final, its result is locked in for standings purposes.
-    const finals = normalized.filter(g => g.status === "final");
-    if (finals.length > 0) {
-      await env.PFPI_KV.put(`results:week:${week}`, JSON.stringify(finals));
+      weekFiles[week] = await buildWeekPublicJSON(week, normalized, env);
     }
 
-    weekFiles[week] = await buildWeekPublicJSON(week, normalized, env);
-  }
+    const { standings, standingsPct } = await computeStandings(currentWeek, env);
 
-  const { standings, standingsPct } = await computeStandings(currentWeek, env);
+    for (const [week, games] of Object.entries(weekFiles)) {
+      await commitJSONToGitHub(
+        `data/week-${week}.json`,
+        { week: Number(week), games },
+        `Update Week ${week} scores/picks [automated]`,
+        env
+      );
+    }
 
-  for (const [week, games] of Object.entries(weekFiles)) {
     await commitJSONToGitHub(
-      `data/week-${week}.json`,
-      { week: Number(week), games },
-      `Update Week ${week} scores/picks [automated]`,
+      "data/standings.json",
+      { standings, standingsPct, throughWeek: currentWeek, updatedAt: new Date().toISOString() },
+      `Update standings through Week ${currentWeek} [automated]`,
+      env
+    );
+
+    await commitJSONToGitHub(
+      "data/current.json",
+      { currentWeek, numWeeks: 18, updatedAt: new Date().toISOString() },
+      "Update current week pointer [automated]",
       env
     );
   }
 
-  await commitJSONToGitHub(
-    "data/standings.json",
-    { standings, standingsPct, throughWeek: currentWeek, updatedAt: new Date().toISOString() },
-    `Update standings through Week ${currentWeek} [automated]`,
-    env
-  );
-
-  await commitJSONToGitHub(
-    "data/current.json",
-    { currentWeek, numWeeks: 18, updatedAt: new Date().toISOString() },
-    "Update current week pointer [automated]",
-    env
-  );
+  // Preseason Week 3 stopgap (Aug 27-29, 2026 only) — see scope notice above
+  // fetchHighlightlyPreseasonWeek3(). Independent of the Big Balls block
+  // above: this runs every poll tick regardless, guarded only by its own
+  // HIGHLIGHTLY_API_KEY check, so it keeps updating with live scores through
+  // Aug 27-29 on the same cron cadence as everything else.
+  const preseasonGames = await fetchHighlightlyPreseasonWeek3(env);
+  if (preseasonGames) {
+    await env.PFPI_KV.put("schedule:week:preseason-3", JSON.stringify(preseasonGames));
+    await commitJSONToGitHub(
+      "data/week-preseason-3.json",
+      { week: "preseason-3", games: preseasonGames, updatedAt: new Date().toISOString() },
+      "Update preseason Week 3 (Highlightly) [automated]",
+      env
+    );
+  }
 }
 
 // ============================================================

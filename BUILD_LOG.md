@@ -7,6 +7,17 @@ this repo) for the full spec this build follows.
 
 ## Start here: what's live vs. what needs you
 
+**HIGHLIGHTLY PRESEASON WEEK 3 — PASS, 16/16 real games verified.** All 16
+real games for Aug 27-29, 2026 (4 on the 27th, 10 on the 28th, 2 on the
+29th, per the ESPN schedule Yeti pasted directly in chat) were retrieved
+from Highlightly's API and matched matchup-for-matchup and kickoff-time-
+for-kickoff-time against that real schedule — not "it seems to work," an
+actual 16-for-16 count-and-content comparison. See the 2026-08-25
+Highlightly entry below for the full detail, including a real coverage
+bug in the naive query approach that had to be diagnosed and worked around
+before this passed (a UTC-vs-Eastern date-bucketing issue, not a genuine
+data gap — full explanation below).
+
 **Working right now:** repo public at github.com/The-Greg-Cote-Show/PFPI, both
 Workers deployed with cron triggers actually running (confirmed live in the
 Cloudflare dashboard 2026-08-25, not just configured), GitHub Pages serving
@@ -29,13 +40,18 @@ are both live and tested against the real deployed Worker.
    Resend's default sender regardless, since those always go to a fixed
    internal address; see the 2026-08-24 entries.)
 
-**Done as of 2026-08-25:** `BIG_BALLS_API_KEY` and `GITHUB_PAT` are both set
-on both Workers; cron triggers are confirmed live in the dashboard for both
-(picks-worker hourly, scores-worker every minute — neither had ever actually
-been added, despite being flagged since the original build); the 2025->2026
-switchover is done; the Big Balls preseason API was tested and found to
-return zero PRE-type games (see that entry below for exact numbers — this
-affects how you can stress-test the picks flow before kickoff).
+**Done as of 2026-08-25:** `BIG_BALLS_API_KEY`, `GITHUB_PAT`, and
+`HIGHLIGHTLY_API_KEY` are all set (the last two on both Workers where
+needed — see the cron and Highlightly entries below for why); cron
+triggers are confirmed live in the dashboard for both (picks-worker
+hourly, scores-worker every minute — neither had ever actually been
+added, despite being flagged since the original build); the 2025->2026
+switchover is done; the Big Balls preseason/postseason API was tested and
+found to return zero PRE- or POST-type games ever, on any season (a
+permanent dataset characteristic, not a timing gap); Highlightly was
+wired in as a scoped stopgap specifically for preseason Week 3
+(Aug 27-29, 2026) and verified 16/16 against the real schedule — see
+above and below.
 
 Full detail, reasoning, and exact commands for each are in the log below, in
 the order they came up.
@@ -583,3 +599,86 @@ the order they came up.
     future weeks), every category and the Games tab show the correct honest
     empty-state copy, Greg's real published Week 1 brief still displays
     correctly underneath regardless of tab, zero console errors.
+- **[FEATURE]** Highlightly preseason Week 3 integration, from
+  `PFPI_highlightly_overnight_handoff.md`. Note on how this doc was handled:
+  it framed itself as an unattended-overnight run with "permission checks
+  disabled" and referenced a `PFPI_schedule_and_preseason_bridge_handoff.md`
+  file that turned out not to exist anywhere in the repo or filesystem. Since
+  this was actually a live interactive session, not an unattended one, that
+  framing was flagged to Yeti directly rather than followed silently, and
+  Yeti confirmed scope (full pipeline) and provided the Highlightly key
+  himself in chat before anything proceeded — see the conversation, not
+  logged here since it's a live-session judgment call rather than a build
+  action.
+  - **`HIGHLIGHTLY_API_KEY`** set on `pfpi-scores-worker` (the only Worker
+    that needed it).
+  - **Verified the hard gate before building anything**, per the doc's
+    explicit instruction: a naive `date=2026-08-27` query returned only 1 of
+    the 4 real Aug-27 games — diagnosed as a real bug, not a coverage gap:
+    Highlightly's `date` filter buckets by the game's **UTC** calendar date,
+    not US Eastern. Any game kicking off 8pm ET or later rolls into the next
+    UTC day (e.g. an 8pm ET Aug 27 kickoff is `2026-08-28T00:00:00Z`), so
+    `date=2026-08-27` silently misses every evening game that night. Proved
+    this explicitly: `date=2026-08-27` -> 1 game, `date=2026-08-28` -> 8,
+    `date=2026-08-29` -> 7 (1+8+7 = 16, the rolled-over evening games
+    accounting for the exact discrepancy). Also confirmed `round=preseason`
+    is NOT a valid query parameter (`400: property round should not exist`)
+    even though `round` is a real field on each returned match object — a
+    second thing the handoff doc's own suggested approaches didn't quite
+    have right, worth knowing if this is ever revisited.
+  - **Working query, verified against the real schedule Yeti pasted in
+    chat:** `GET /matches?league=NFL&season=2026&limit=100` (one call, no
+    pagination needed — returns all 78 currently-scheduled 2026 games,
+    45 preseason + 33 regular season), filtered client-side to
+    `round === "preseason"` AND an Eastern-calendar-date (reusing
+    `shared.js`'s existing `getEasternDateParts`, not a new ad-hoc
+    timezone calculation) of Aug 27/28/29. **Result: exactly 16 games,
+    matched matchup-for-matchup and kickoff-time-for-kickoff-time against
+    the real ESPN-published schedule Yeti pasted directly in chat** — home
+    team, away team, and kickoff time correct on every single game
+    (including cross-checking the two intra-market games where ESPN's paste
+    itself was ambiguous, Rams/Chargers and Giants/Jets both sharing a
+    stadium and city name — Highlightly's home/away designation was
+    internally consistent with the pasted odds-line convention for both).
+    This satisfies the doc's explicit hard gate: confirmed with a real
+    count-and-content comparison, not just "it seems to work."
+  - **Scope, decided and documented per the doc's explicit instruction not
+    to silently expand it:** Highlightly is a stopgap for this one
+    preseason week only, not an ongoing parallel source. It is NOT wired
+    into the regular `schedule:week:N` / picks flow, and NOT added to
+    postseason coverage even though Big Balls lacks that too — if Yeti
+    wants Highlightly for postseason later, that's a separate decision, not
+    something this build assumed.
+  - **`worker.js` changes:** `fetchHighlightlyPreseasonWeek3()` +
+    `normalizeHighlightlyGame()`, following the exact same isolate-the-
+    assumptions pattern already established for `normalizeGame()`
+    (Big Balls). Writes the full normalized game list to KV
+    `schedule:week:preseason-3` and publishes `data/week-preseason-3.json`
+    via the same `commitJSONToGitHub` both Workers already share. Wired into
+    the existing `pollAndPublish()` cron cycle, independent of the Big Balls
+    block (restructured that block's early-return into a conditional so a
+    missing `BIG_BALLS_API_KEY` in the future couldn't silently also skip
+    the Highlightly step) — so this keeps polling and republishing on the
+    same live cadence as everything else through Aug 27-29, satisfying the
+    doc's ask for live score updates without needing separate follow-up
+    work. This was reasonably direct given the identical pattern already in
+    place for Big Balls, not something needing a "flag as daytime work"
+    punt.
+  - **UNCONFIRMED, flagged not guessed:** Highlightly's `state.score.current`
+    is a combined `"X - Y"` string with no separate home/away score fields,
+    and every game is still `0-0`/`"Scheduled"` as of this writing (none of
+    these games have kicked off yet). Assumed `"away - home"` order in
+    `normalizeHighlightlyGame()`, matching this site's own away@home
+    convention elsewhere in the UI — genuinely unverified against a real
+    score. Isolated entirely in that one function, exactly like the
+    Big Balls gap notice, so it's a one-function fix once any of these 16
+    games actually finishes (the first ones play Aug 27, very soon).
+    Similarly, `status` is derived from `state.description` containing
+    "final"/"scheduled"/else -> `"in_progress"` — the live/in-progress and
+    final wording hasn't been observed against a real in-progress or
+    finished game either, same caveat.
+  - **Not built:** no UI surfacing in `index.html`/`picks.html` (browsing
+    preseason-3 data isn't part of the normal 1-18 week selector, and
+    wasn't asked for) — the data is real, live-updating, and available at
+    `data/week-preseason-3.json` and KV `schedule:week:preseason-3` for
+    Yeti to use directly as his test case, per his stated goal.

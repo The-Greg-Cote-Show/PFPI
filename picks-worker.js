@@ -18,6 +18,7 @@ import {
   computeCurrentWeekFromDate,
   commitJSONToGitHub,
   NUM_WEEKS,
+  TEAMS,
 } from "./shared.js";
 
 // Test data only, per Yeti (Aug 2026 sessions) — NOT the real 8-team roster.
@@ -293,6 +294,52 @@ async function handleAdminOverride(request, env) {
   await env.PFPI_KV.put(logKey, JSON.stringify(logEntry));
 
   return jsonResponse({ saved: true, logged: true }, 200, request);
+}
+
+// ============================================================
+// AD-HOC TEST PICKS EMAIL (admin.html "Send test picks email")
+// ============================================================
+// Per Yeti (2026-08-25): a self-service way to get a picks link emailed
+// to himself on demand, as ANY team -- not just the two sandboxed
+// FAMILY_MEMBERS test entries -- so he can see how a real roster team
+// (e.g. "Roughriders") looks and behaves, and test repeatedly without
+// needing a manual KV token seed each time. Reuses generateWeeklyToken()
+// and formatWeekDeadlines() unchanged -- no second token or deadline
+// logic. Always sends to ADMIN_EMAIL regardless of what's requested,
+// never accepts a recipient from the request, so this can never become a
+// way to email a real, uninvolved address.
+async function handleSendTestPicksEmail(request, env) {
+  const adminToken = request.headers.get("X-Admin-Token");
+  const isValidAdmin = await verifyAdminToken(adminToken, env);
+  if (!isValidAdmin) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const { team, week } = await request.json();
+  if (!team || !week) {
+    return jsonResponse({ error: "team and week are required." }, 400, request);
+  }
+
+  const testToken = await generateWeeklyToken(team, week, env);
+  const link = `https://the-greg-cote-show.github.io/PFPI/picks.html?token=${testToken}`;
+  const schedule = await getWeekSchedule(week, env);
+  const deadlineSummary = formatWeekDeadlines(schedule);
+
+  // Deliberately NOT sendPicksEmail() -- that still sends from
+  // picks@thegregcoteshow.com, which the unverified Resend domain still
+  // rejects (see BUILD_LOG.md, unresolved). sendPfpiEmail's
+  // onboarding@resend.dev sender is the one actually proven to deliver.
+  const sent = await sendPfpiEmail(
+    ADMIN_EMAIL,
+    `[TEST] PFPI Week ${week} picks — as ${team}`,
+    `Test picks link for "${team}", Week ${week}.\n\nUse this link any time, you can save and come back before each game's deadline:\n\n${link}\n\n${deadlineSummary}\n\nThis is a test email triggered from admin.html, not a real weekly picks notification.`,
+    env
+  );
+
+  if (!sent) {
+    return jsonResponse({ error: "Email could not be sent. Check Worker logs." }, 502, request);
+  }
+  return jsonResponse({ sent: true, link }, 200, request);
 }
 
 // ============================================================
@@ -617,6 +664,9 @@ export default {
     }
     if (url.pathname === "/admin/override-pick" && request.method === "POST") {
       return handleAdminOverride(request, env);
+    }
+    if (url.pathname === "/admin/send-test-picks-email" && request.method === "POST") {
+      return handleSendTestPicksEmail(request, env);
     }
     if (url.pathname === "/greg/login" && request.method === "POST") {
       return handleLogin("greg", request, env);

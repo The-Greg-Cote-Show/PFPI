@@ -36,7 +36,7 @@
 // guesses exactly, including the game_id's YYYY_WW_AWAY_HOME format.
 // ============================================================
 
-import { TEAMS, computeCurrentWeekFromDate, commitJSONToGitHub, getEasternDateParts } from "./shared.js";
+import { TEAMS, computeCurrentWeekFromDate, commitJSONToGitHub, getEasternDateParts, FAMILY_MEMBERS } from "./shared.js";
 
 const BIG_BALLS_BASE = "https://api.bigballsdata.com";
 const SEASON = 2026;
@@ -465,10 +465,38 @@ async function pollAndPublish(env) {
   // Aug 27-29 on the same cron cadence as everything else.
   const preseasonGames = await fetchHighlightlyPreseasonWeek3(env);
   if (preseasonGames) {
+    // Schedule cache stays picks-free, matching schedule:week:N's existing
+    // shape (kickoff-math only, not for public reading).
     await env.PFPI_KV.put("schedule:week:preseason-3", JSON.stringify(preseasonGames));
+
+    // [BUG FIX 2026-08-25, found by Yeti actually testing picks against
+    // preseason] The published JSON was never merging in saved picks --
+    // every poll simply overwrote it with Highlightly's raw response,
+    // which has no concept of PFPI picks at all. Regular-season weeks
+    // never had this problem because buildWeekPublicJSON() always merges
+    // picks in; preseason skipped that function entirely. Mirrors the
+    // same one-KV-read-per-team approach, but merges BOTH the real
+    // 8-team roster and the two sandboxed FAMILY_MEMBERS test teams
+    // (imported from shared.js, not duplicated), since preseason-3 is
+    // specifically Yeti's cross-team testing sandbox -- whichever team he
+    // tests as, the picks need to actually show up.
+    const preseasonPicksTeams = [...TEAMS, ...FAMILY_MEMBERS.map(m => m.team)];
+    const picksByTeam = {};
+    for (const team of preseasonPicksTeams) {
+      const picksRaw = await env.PFPI_KV.get(`picks:preseason-3:${team}`);
+      picksByTeam[team] = picksRaw ? JSON.parse(picksRaw) : {};
+    }
+    const preseasonGamesWithPicks = preseasonGames.map(g => {
+      const picks = {};
+      for (const team of preseasonPicksTeams) {
+        if (picksByTeam[team][g.id]) picks[team] = picksByTeam[team][g.id];
+      }
+      return { ...g, picks };
+    });
+
     await commitJSONToGitHub(
       "data/week-preseason-3.json",
-      { week: "preseason-3", games: preseasonGames, updatedAt: new Date().toISOString() },
+      { week: "preseason-3", games: preseasonGamesWithPicks, updatedAt: new Date().toISOString() },
       "Update preseason Week 3 (Highlightly) [automated]",
       env
     );

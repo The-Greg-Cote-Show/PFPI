@@ -7,6 +7,16 @@
 
 export const TEAMS = ["Lobos", "Roughriders", "Maniacs", "Critters", "Chickens", "Ferraris", "Llamas", "Giraffes"];
 
+// Test data only, per Yeti (Aug 2026 sessions) — NOT the real 8-team
+// roster above. Real family emails are still pending from Greg; do not
+// invent them here. Moved here from picks-worker.js (2026-08-25) so
+// worker.js can also merge these teams' picks into published preseason
+// data — a single source of truth instead of two copies that could drift.
+export const FAMILY_MEMBERS = [
+  { team: "Yeti's Big Feet", name: "Yeti (test)", email: "yetiblancmusic@gmail.com" },
+  { team: "Gentry's Neanderbrows", name: "Yeti (test, 2nd account)", email: "ggentry@gmail.com" },
+];
+
 // Re-verified for the 2026 season (see BUILD_LOG.md). Week 1 runs from
 // kickoff through the following Tuesday morning, when the next week's picks
 // window opens.

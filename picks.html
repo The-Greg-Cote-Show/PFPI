@@ -52,6 +52,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .save-status{font-size:.68rem;color:var(--muted);margin-top:.5rem;min-height:1em;text-align:center;}
 .save-status.saved{color:var(--green);}
 .save-status.rejected{color:var(--red);}
+
+.hidden{display:none !important;}
+.submit-section{margin-top:1.5rem;text-align:center;}
+.submit-note{font-size:.72rem;color:var(--muted);line-height:1.5;margin-bottom:.85rem;}
+.submit-btn{background:var(--gold);color:#1a1305;border:none;border-radius:8px;font-size:.9rem;font-weight:800;padding:.8rem 1.5rem;cursor:pointer;width:100%;}
+.submit-btn:hover:not(:disabled){background:var(--gold2);}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed;}
+.submit-status{font-size:.75rem;margin-top:.75rem;min-height:1em;text-align:center;}
+.submit-status.saved{color:var(--green);}
+.submit-status.rejected{color:var(--red);}
 </style>
 </head>
 <body>
@@ -61,6 +71,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="subtitle" id="subtitle">Loading your picks...</div>
   </div>
   <div id="content"><div class="loading">Loading...</div></div>
+  <div class="submit-section hidden" id="submitSection">
+    <div class="submit-note">Picks will be sent to the commissioner. If a mistake was noticed after the deadline, please contact the commissioner and email yeti@yetiblanc.com for edit approval.</div>
+    <button class="submit-btn" id="submitBtn">Submit picks</button>
+    <div class="submit-status" id="submitStatus"></div>
+  </div>
 </div>
 
 <script>
@@ -208,6 +223,14 @@ async function loadPicks() {
 
     content.appendChild(groupEl);
   });
+
+  // Per Yeti (2026-08-25): a Submit button so exactly one confirmation
+  // email goes out when they're actually done, not one per pick click.
+  // Individual clicks above still save immediately via /submit-picks --
+  // that hasn't changed -- they just no longer email anyone by
+  // themselves; only clicking Submit (handleConfirmPicks server-side)
+  // does that now.
+  document.getElementById("submitSection").classList.remove("hidden");
 }
 
 async function savePick(gameId, teamPicked, buttons, statusEl) {
@@ -234,6 +257,38 @@ async function savePick(gameId, teamPicked, buttons, statusEl) {
     statusEl.className = "save-status rejected";
   }
 }
+
+document.getElementById("submitBtn").onclick = async () => {
+  const btn = document.getElementById("submitBtn");
+  const statusEl = document.getElementById("submitStatus");
+  btn.disabled = true;
+  btn.textContent = "Submitting...";
+  statusEl.textContent = "";
+  statusEl.className = "submit-status";
+
+  try {
+    const res = await fetch(`${WORKER_BASE}/confirm-picks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = "Submit picks";
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Could not submit picks.";
+      statusEl.className = "submit-status rejected";
+      return;
+    }
+    statusEl.textContent = "Picks submitted to the commissioner.";
+    statusEl.className = "submit-status saved";
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = "Submit picks";
+    statusEl.textContent = "Could not reach the server, try again.";
+    statusEl.className = "submit-status rejected";
+  }
+};
 
 loadPicks();
 </script>

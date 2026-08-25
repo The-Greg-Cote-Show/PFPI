@@ -19,14 +19,8 @@ import {
   commitJSONToGitHub,
   NUM_WEEKS,
   TEAMS,
+  FAMILY_MEMBERS,
 } from "./shared.js";
-
-// Test data only, per Yeti (Aug 2026 sessions) — NOT the real 8-team roster.
-// Real family emails are still pending from Greg; do not invent them here.
-const FAMILY_MEMBERS = [
-  { team: "Yeti's Big Feet", name: "Yeti (test)", email: "yetiblancmusic@gmail.com" },
-  { team: "Gentry's Neanderbrows", name: "Yeti (test, 2nd account)", email: "ggentry@gmail.com" },
-];
 
 const ADMIN_EMAIL = "yeti@yetiblanc.com";
 
@@ -207,6 +201,10 @@ async function handleGetPicks(request, env) {
 // PICKS SUBMISSION
 // ============================================================
 
+// Per Yeti (2026-08-25): individual pick changes save silently now -- no
+// email per click. Notification only fires from handleConfirmPicks() below,
+// once, when the visitor explicitly clicks Submit. This function's job is
+// purely save + lock enforcement, unchanged from before.
 async function handleSubmitPicks(request, env) {
   const { token, picks } = await request.json();
 
@@ -220,7 +218,6 @@ async function handleSubmitPicks(request, env) {
   const existing = await getSavedPicks(team, week, env) || {};
 
   const rejected = [];
-  const changed = [];
   for (const [gameId, pick] of Object.entries(picks || {})) {
     const game = schedule.find(g => g.id === gameId);
     if (!game) continue;
@@ -228,22 +225,10 @@ async function handleSubmitPicks(request, env) {
       rejected.push(gameId);
       continue;
     }
-    if (existing[gameId] !== pick) {
-      changed.push({ matchup: `${game.away} @ ${game.home}`, pick });
-    }
     existing[gameId] = pick;
   }
 
   await savePicks(team, week, existing, env);
-
-  // Per Yeti (2026-08-25): notify Greg and Yeti on every successful save
-  // that actually changes something, not just the first save of the week —
-  // people plausibly submit one game early and finish the rest later, and
-  // both should notify. Only what changed in THIS submission, not a dump
-  // of the whole week's picks every time.
-  if (changed.length > 0) {
-    await notifyPickSubmission(team, week, changed, env);
-  }
 
   return jsonResponse({
     saved: true,
@@ -251,19 +236,65 @@ async function handleSubmitPicks(request, env) {
   }, 200, request);
 }
 
-async function notifyPickSubmission(team, week, changed, env) {
-  const lines = changed.map(c => `${c.matchup}: ${c.pick}`).join("\n");
-  const text = `${team} just submitted Week ${week} picks (${new Date().toISOString()}).\n\nChanged in this submission:\n${lines}`;
+// ============================================================
+// CONFIRM PICKS — the one-email-per-submit flow (picks.html's Submit button)
+// ============================================================
+// Per Yeti (2026-08-25): a single consolidated email per Submit click,
+// covering the visitor's full current picks (not just what changed), with
+// an "(Updated)" tag only on picks that differ from what was already
+// notified in a PRIOR submission -- brand-new picks (never notified
+// before) show plainly, matching "New picks should just show what the
+// pick was." Tracks the last-notified snapshot in its own KV key so
+// resubmitting after further edits only flags what's genuinely different
+// this time, not the whole history.
+async function handleConfirmPicks(request, env) {
+  const { token } = await request.json();
+
+  const tokenData = await verifyToken(token, env);
+  if (!tokenData) {
+    return jsonResponse({ error: "Invalid or expired link." }, 401, request);
+  }
+
+  const { team, week } = tokenData;
+  const schedule = await getWeekSchedule(week, env);
+  const current = await getSavedPicks(team, week, env) || {};
+
+  if (Object.keys(current).length === 0) {
+    return jsonResponse({ error: "No picks to submit yet." }, 400, request);
+  }
+
+  const notifiedKey = `notified-picks:${week}:${team}`;
+  const lastNotifiedRaw = await env.PFPI_KV.get(notifiedKey);
+  const lastNotified = lastNotifiedRaw ? JSON.parse(lastNotifiedRaw) : {};
+
+  const lines = [];
+  for (const [gameId, pick] of Object.entries(current)) {
+    const game = schedule.find(g => g.id === gameId);
+    const matchup = game ? `${game.away} @ ${game.home}` : gameId;
+    const wasNotifiedBefore = Object.prototype.hasOwnProperty.call(lastNotified, gameId);
+    const isUpdated = wasNotifiedBefore && lastNotified[gameId] !== pick;
+    lines.push(`${matchup}: ${pick}${isUpdated ? " (Updated)" : ""}`);
+  }
+
   const subject = `PFPI: ${team} submitted Week ${week} picks`;
+  const text = `${team} submitted Week ${week} picks (${new Date().toISOString()}).\n\n${lines.join("\n")}`;
   // Two separate sends (not one email with two recipients) so each stays a
   // private notification, consistent with how admin/Greg account emails
   // already work elsewhere in this file. GREG_EMAIL is currently the same
   // placeholder as ADMIN_EMAIL (Greg's real address isn't in the system
   // yet, see its definition above) — not invented here, just reused.
-  await sendPfpiEmail(ADMIN_EMAIL, subject, text, env);
+  const sent = await sendPfpiEmail(ADMIN_EMAIL, subject, text, env);
   if (GREG_EMAIL !== ADMIN_EMAIL) {
     await sendPfpiEmail(GREG_EMAIL, subject, text, env);
   }
+
+  if (!sent) {
+    return jsonResponse({ error: "Could not send confirmation email. Check Worker logs." }, 502, request);
+  }
+
+  await env.PFPI_KV.put(notifiedKey, JSON.stringify(current));
+
+  return jsonResponse({ submitted: true }, 200, request);
 }
 
 // ============================================================
@@ -652,6 +683,9 @@ export default {
     }
     if (url.pathname === "/submit-picks" && request.method === "POST") {
       return handleSubmitPicks(request, env);
+    }
+    if (url.pathname === "/confirm-picks" && request.method === "POST") {
+      return handleConfirmPicks(request, env);
     }
     if (url.pathname === "/admin/login" && request.method === "POST") {
       return handleLogin("admin", request, env);

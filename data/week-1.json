@@ -1,0 +1,181 @@
+{
+  "week": 1,
+  "games": [
+    {
+      "id": "2026_01_NE_SEA",
+      "home": "SEA",
+      "away": "NE",
+      "kickoffISO": "2026-09-09T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_SF_LA",
+      "home": "LA",
+      "away": "SF",
+      "kickoffISO": "2026-09-10T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_ARI_LAC",
+      "home": "LAC",
+      "away": "ARI",
+      "kickoffISO": "2026-09-13T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_ATL_PIT",
+      "home": "PIT",
+      "away": "ATL",
+      "kickoffISO": "2026-09-13T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_BAL_IND",
+      "home": "IND",
+      "away": "BAL",
+      "kickoffISO": "2026-09-13T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_BUF_HOU",
+      "home": "HOU",
+      "away": "BUF",
+      "kickoffISO": "2026-09-13T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_CHI_CAR",
+      "home": "CAR",
+      "away": "CHI",
+      "kickoffISO": "2026-09-13T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_CLE_JAX",
+      "home": "JAX",
+      "away": "CLE",
+      "kickoffISO": "2026-09-13T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_DAL_NYG",
+      "home": "NYG",
+      "away": "DAL",
+      "kickoffISO": "2026-09-13T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_GB_MIN",
+      "home": "MIN",
+      "away": "GB",
+      "kickoffISO": "2026-09-13T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_MIA_LV",
+      "home": "LV",
+      "away": "MIA",
+      "kickoffISO": "2026-09-13T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_NO_DET",
+      "home": "DET",
+      "away": "NO",
+      "kickoffISO": "2026-09-13T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_NYJ_TEN",
+      "home": "TEN",
+      "away": "NYJ",
+      "kickoffISO": "2026-09-13T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_TB_CIN",
+      "home": "CIN",
+      "away": "TB",
+      "kickoffISO": "2026-09-13T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_WAS_PHI",
+      "home": "PHI",
+      "away": "WAS",
+      "kickoffISO": "2026-09-13T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    },
+    {
+      "id": "2026_01_DEN_KC",
+      "home": "KC",
+      "away": "DEN",
+      "kickoffISO": "2026-09-14T12:00:00.000Z",
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "picks": {}
+    }
+  ]
+}

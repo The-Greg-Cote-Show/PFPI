@@ -76,11 +76,13 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .mp-all-picked{color:var(--green);font-size:.78rem;font-weight:600;}
 
 .digest-output{
-  width:100%;background:var(--panel2);border:1px solid var(--border2);border-radius:8px;
+  width:100%;min-height:22rem;max-height:32rem;overflow:auto;box-sizing:border-box;
+  background:var(--panel2);border:1px solid var(--border2);border-radius:8px;
   color:var(--text);font-size:.78rem;line-height:1.5;padding:.85rem;
-  font-family:"SF Mono",Consolas,"Courier New",monospace;white-space:pre;resize:vertical;
+  font-family:"SF Mono",Consolas,"Courier New",monospace;white-space:pre-wrap;
   margin-bottom:.85rem;
 }
+.digest-output:focus{outline:none;border-color:var(--blue);}
 .digest-actions{display:flex;gap:8px;}
 .digest-btn{width:auto;flex:1;font-size:.8rem;padding:.6rem 1rem;}
 </style>
@@ -147,7 +149,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <label for="digestWeekSelect">Week</label>
       <select id="digestWeekSelect"></select>
     </div>
-    <textarea id="digestOutput" class="digest-output" readonly rows="18"></textarea>
+    <div id="digestOutput" class="digest-output" tabindex="0"></div>
     <div class="digest-actions">
       <button class="btn digest-btn" id="digestCopyBtn" type="button">Copy to clipboard</button>
       <button class="btn digest-btn" id="digestInsertBtn" type="button">Insert into brief text</button>
@@ -584,8 +586,10 @@ function buildStandingsBlock(st, week, isFinal) {
   rows.sort((a, b) => b.wins - a.wins);
   const leaderWins = rows.length ? rows[0].wins : 0;
 
+  // Header: same bold/underline/ALL-CAPS treatment all season, per Yeti
+  // (2026-08-25) -- only the wording changes between mid-season and final.
   const lines = [];
-  lines.push(isFinal ? `PFPI OFFICIAL FINAL ${SEASON_YEAR} STANDINGS` : `PFPI STANDINGS THROUGH WEEK ${week} ${SEASON_YEAR}`);
+  lines.push(isFinal ? `PFPI OFFICIAL FINAL ${SEASON_YEAR} STANDINGS` : `PFPI WEEK ${week} STANDINGS`);
   lines.push(`Team`.padEnd(32) + (isFinal ? "Final Season" : "Season").padEnd(13) + "GB");
   rows.forEach(r => {
     const name = TEAM_SHORT[r.team].padEnd(32);
@@ -597,23 +601,17 @@ function buildStandingsBlock(st, week, isFinal) {
   return lines.join("\n");
 }
 
-// Weekly Titles / Weeks Leading block: "TEAM X.XX (N), Team X.XX (N), ...".
-// Leader(s) at the max value are ALL CAPS (all of them, if tied for the
-// literal top spot -- same "share the crown rather than arbitrarily pick
-// one" precedent as Best Week's existing tie handling). Teams tied at the
-// exact same cumulative value are joined with "&" and drop the "(N)" count,
-// matching Greg's real example ("Llamas 0.33 & Roughriders 0.33") rather
-// than the more generic prose description elsewhere in the handoff doc.
-// Teams with zero (never held this honor) are omitted -- an unconfirmed but
-// reasonable read of a real example that never shows a 0.00 entry; flagged
-// in BUILD_LOG.md for Greg to correct if his real convention differs.
+// Weekly Titles / Weeks Leading block: "Team X.XX (N), Team X.XX (N), ...".
+// Normal case throughout, no leader emphasis -- per Yeti (2026-08-25), the
+// digest is a plain stats scaffold, Greg does his own styling in the
+// published brief. All 8 real roster teams are always listed, including
+// any at 0.00 -- also per Yeti, that's real information (nobody's led yet),
+// not something to hide. Teams tied at the exact same cumulative value are
+// still joined with "&" and drop the "(N)" count, matching Greg's real
+// example ("Llamas 0.33 & Roughriders 0.33").
 function buildPointBlock(label, dataObj, countObj, week) {
   const wKey = String(week);
-  const entries = REAL_TEAMS
-    .map(t => ({ team: t, value: dataObj[t][wKey], count: countObj[t][wKey] }))
-    .filter(e => e.value > 0);
-
-  if (entries.length === 0) return `${label}: No weeks decided yet.`;
+  const entries = REAL_TEAMS.map(t => ({ team: t, value: dataObj[t][wKey], count: countObj[t][wKey] }));
 
   entries.sort((a, b) => b.value - a.value);
   const groups = [];
@@ -622,14 +620,12 @@ function buildPointBlock(label, dataObj, countObj, week) {
     if (last && last[0].value === e.value) last.push(e);
     else groups.push([e]);
   }
-  const maxValue = groups[0][0].value;
 
   const text = groups.map(group => {
     const tied = group.length > 1;
     return group.map(e => {
-      const name = e.value === maxValue ? e.team.toUpperCase() : e.team;
       const valStr = e.value.toFixed(2);
-      return tied ? `${name} ${valStr}` : `${name} ${valStr} (${e.count})`;
+      return tied ? `${e.team} ${valStr}` : `${e.team} ${valStr} (${e.count})`;
     }).join(" & ");
   }).join(", ");
 
@@ -655,6 +651,30 @@ function buildBestWeekBlock(st, week) {
   return `Best Week: ${text}.`;
 }
 
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// The digest is plain text everywhere it's actually stored/published
+// (data/brief-week-N.json, the #briefText textarea) -- there's no rich-text
+// pipeline anywhere in this site. But per Yeti (2026-08-25), the header
+// line specifically needs bold+underline, which a plain string can't carry.
+// Resolution: keep one plain-text string (used for "Insert into brief
+// text" and as the clipboard's text/plain fallback) and derive a parallel
+// HTML string that wraps just the first line in <b><u> -- used for the
+// on-page preview and as the clipboard's text/html payload, so pasting into
+// a rich destination (Gmail, Docs, etc.) actually carries the formatting,
+// while pasting into a plain-text field (like #briefText) degrades
+// gracefully to the ALL-CAPS text with no stray markup characters.
+function buildDigestHtml(plainText) {
+  return plainText
+    .split("\n")
+    .map((line, i) => (i === 0 ? `<b><u>${escapeHtml(line)}</u></b>` : escapeHtml(line)))
+    .join("\n");
+}
+
+let currentDigestPlainText = "";
+
 async function renderDigest() {
   const outputEl = document.getElementById("digestOutput");
   const statusEl = document.getElementById("digestStatus");
@@ -662,7 +682,8 @@ async function renderDigest() {
 
   statusEl.textContent = "Loading...";
   statusEl.className = "status show";
-  outputEl.value = "";
+  outputEl.innerHTML = "";
+  currentDigestPlainText = "";
 
   const st = await fetchStandingsData();
   if (!st || !st.weeklyTitles || !st.weeksLeading || !st.bestWeek || !st.gamesPlayed) {
@@ -685,31 +706,50 @@ async function renderDigest() {
     "Unique Hits: Not available yet — no real data source for this category.",
     buildBestWeekBlock(st, week),
   ];
-  outputEl.value = parts.join("\n\n");
+  currentDigestPlainText = parts.join("\n\n");
+  outputEl.innerHTML = buildDigestHtml(currentDigestPlainText);
 }
 
 document.getElementById("digestWeekSelect").addEventListener("change", renderDigest);
 
 document.getElementById("digestCopyBtn").addEventListener("click", async () => {
   const statusEl = document.getElementById("digestStatus");
-  const text = document.getElementById("digestOutput").value;
+  const outputEl = document.getElementById("digestOutput");
   try {
-    await navigator.clipboard.writeText(text);
+    // Write both flavors so a rich destination (Gmail, Docs, Slack) gets
+    // the real bold+underline header, and a plain destination gets clean
+    // ALL-CAPS text with no markup characters left behind.
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        "text/plain": new Blob([currentDigestPlainText], { type: "text/plain" }),
+        "text/html": new Blob([outputEl.innerHTML], { type: "text/html" }),
+      }),
+    ]);
     statusEl.textContent = "Copied to clipboard.";
     statusEl.className = "status ok show";
   } catch (e) {
-    // Clipboard API can be blocked in some contexts -- fall back to a
-    // manual select so the user can still Ctrl/Cmd+C it themselves.
-    const outputEl = document.getElementById("digestOutput");
-    outputEl.focus();
-    outputEl.select();
-    statusEl.textContent = "Couldn't copy automatically -- text is selected, press Ctrl/Cmd+C.";
-    statusEl.className = "status warn show";
+    try {
+      // ClipboardItem/write unsupported in this browser -- plain text still
+      // covers the common case.
+      await navigator.clipboard.writeText(currentDigestPlainText);
+      statusEl.textContent = "Copied to clipboard (plain text).";
+      statusEl.className = "status ok show";
+    } catch (e2) {
+      // Clipboard API fully blocked -- fall back to a manual selection so
+      // the user can still Ctrl/Cmd+C it themselves.
+      const range = document.createRange();
+      range.selectNodeContents(outputEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      statusEl.textContent = "Couldn't copy automatically -- text is selected, press Ctrl/Cmd+C.";
+      statusEl.className = "status warn show";
+    }
   }
 });
 
 document.getElementById("digestInsertBtn").addEventListener("click", () => {
-  document.getElementById("briefText").value = document.getElementById("digestOutput").value;
+  document.getElementById("briefText").value = currentDigestPlainText;
   updateCharCount();
   document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(b => b.classList.remove("active"));
   document.getElementById("dashTabPublish").classList.add("active");

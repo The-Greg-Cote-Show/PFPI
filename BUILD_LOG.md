@@ -1133,3 +1133,97 @@ time.
   Syntax-checked and code-reviewed, deployed successfully, but the actual
   send-and-receive round-trip hasn't been confirmed by either of us yet as
   of this entry.
+
+## 2026-08-25 (continued) — Login disambiguation fix + Greg's dashboard, Part 1 and Feature 1
+
+Working from `PFPI_greg_dashboard_handoff.md`. Flagged its "Yeti won't be
+watching continuously" framing in chat before starting (same pattern as
+prior handoff docs — see this session's chat) since Yeti was actually live
+in the conversation; Yeti's own explicit "push/commit without asking"
+instruction in chat is what authorized proceeding, not the doc's framing.
+
+**Part 1 — login disambiguation (admin.html, brief.html): DONE, verified live.**
+- Added a real, visible username field to both login forms — `PFPI Admin`
+  (admin.html) and `PFPI Commissioner` (brief.html) — fixed/readonly,
+  `autocomplete="username"`, exactly as specced. No backend change:
+  `handleLogin()` in picks-worker.js only ever reads `password` from the
+  body, so this is purely a browser-facing fix.
+- Also wrapped both login forms AND both reset-password forms in real
+  `<form>` elements (neither page had one before — password fields sat in
+  plain `<div>`s with a manual click handler, and admin.html's password
+  field had no Enter-to-submit at all). Password managers key off real
+  forms much more reliably than click handlers, so this directly serves
+  the diagnosed root cause rather than just adding a label. `onsubmit` with
+  `e.preventDefault()` replaces the old `onclick`/manual-keydown wiring;
+  behavior is otherwise unchanged.
+- **Verified live on the real deployed pages** (not just visual — actually
+  exercised): both "Account" fields render correctly with the right fixed
+  label; admin.html's login correctly shows "Login failed." + reveals
+  "Forgot password?" on a deliberate wrong-password attempt (one attempt
+  only, to stay well clear of the 5-attempt lockout); clicked
+  "Forgot password?" on BOTH pages and confirmed both real reset emails
+  still fire ("Reset link sent..." / "...to the admin email...") — the
+  reset flow's own code path was untouched by this change, and this
+  confirms that held true in practice, not just by inspection. Did not
+  attempt a real password login on either page (neither password is
+  available to me — correctly so, per the handoff doc's own rule).
+- Hit GitHub Pages' known commit-to-CDN propagation lag firsthand (empty
+  cache-busted fetch showed the pre-change page for ~1-2 min after push) —
+  same documented-but-previously-untested gap noted elsewhere in this repo.
+  Not a bug; just something to expect immediately after a frontend push.
+
+**Feature 1 — missing-picks tracker (brief.html, new tab): DONE, verified live.**
+- New "Missing Picks" / "Publish Brief" tab bar appears after Greg (or
+  admin) logs in; Missing Picks is the default tab. Toggle between "By
+  game" (each game → which of the real 8 haven't picked it) and "By team"
+  (each real team → which games they haven't picked), both sorted by
+  deadline urgency (soonest first). Week selector defaults to the current
+  week, capped at current week (past weeks selectable, future weeks not —
+  matches the doc's ask).
+- **The 2 sandboxed test teams are structurally excluded**, not just
+  filtered out in the UI: the tracker iterates a hardcoded `REAL_TEAMS`
+  list (matching shared.js's `TEAMS` export) that never included them in
+  the first place.
+- **No new scoring/calculation logic** — reads the exact same public
+  `data/week-N.json` (games + picks) that index.html's Games tab already
+  reads. A team is "missing" a game simply when it's absent from that
+  game's `picks` object.
+- **One real backend addition, not a workaround**: `buildWeekPublicJSON()`
+  in worker.js now also stamps each game with `deadline`, computed via the
+  same `computeGameDeadline()` the picks worker already uses for
+  `GET /my-picks` — not a second deadline calculation, just exposing the
+  existing one somewhere a public (non-per-team-authenticated) page can
+  read it. Deployed to `pfpi-scores-worker` via `wrangler deploy --config
+  wrangler-scores.toml`.
+- **Verified live, full round-trip**: after confirming the new field
+  hadn't propagated yet (Big Balls polling is throttled to every 15 UTC
+  minutes outside a live window — worth knowing next time a just-deployed
+  worker.js field seems to be "missing" from data/week-N.json, it's
+  probably just waiting for the next :00/:15/:30/:45 tick, not broken),
+  waited for the next tick, confirmed `deadline` appeared in the real
+  `data/week-1.json`, then drove the actual rendered tracker on the real
+  page (via direct JS calls to the page's own already-loaded functions —
+  no login bypass, since the tracker's own data fetches are public and
+  unauthenticated). Confirmed: real Week 1 deadlines compute correctly
+  (e.g. Sept 9 kickoff → "Tue, Sep 8, 6:00 PM ET" deadline, the correct
+  day-before-6pm-ET rule), sorted soonest-first, all 8 real teams correctly
+  show as missing every game (expected and honest — season hasn't started,
+  zero real picks exist yet), and the By game / By team toggle both work.
+- Guarded `fmtDeadline`/sort against a missing-or-stale `deadline` (shows
+  "TBD" and sorts last, rather than throwing inside `Intl.DateTimeFormat`)
+  for the same propagation-lag reason above — this was a real, observed
+  transient state during this session's own testing, not a hypothetical.
+
+**Feature 2 — weekly results summary: NOT STARTED, flagging before starting (per Yeti in chat).**
+See chat for the full explanation. Short version: the handoff doc's premise
+that "Standings, Weeks Leading, Weekly Titles, Best Week are real" data is
+factually wrong against the current repo — only Standings has any real
+computation behind it. `weeksLeading`, `weeklyTitles`, `tenWin`,
+`uniqueHits`, and `bestWeek` all still return `getData: w => null`
+unconditionally in index.html (confirmed by reading the file directly, not
+assumed) — the tie-splitting rule they'd need was never defined, per this
+log's own original SCOPE NOTE, still unresolved. Building Feature 2 as
+literally specced ("format already-correct existing calculations, don't
+recompute scoring logic") is only actually possible for the Standings
+portion of the digest right now. Waiting on Yeti's direction before writing
+any Feature 2 code.

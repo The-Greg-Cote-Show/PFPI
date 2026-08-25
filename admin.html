@@ -111,6 +111,42 @@ button:hover{opacity:.9;}
     <button id="testEmailBtn">Email me this test link</button>
     <div class="status" id="testEmailStatus"></div>
   </div>
+
+  <div class="panel hidden" id="correctionPanel">
+    <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Send correction form</div>
+    <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
+      For fixing a pick after its deadline has already passed — a real
+      picks link that unlocks ONLY the one game below, past its deadline;
+      every other game on it stays locked normally. Always sent to your
+      own admin address (yeti@yetiblanc.com) — forward it to whoever
+      needs to fix their pick once real family email is set up. Valid 24
+      hours. This is the "much better than me making the changes"
+      alternative to the Override panel above.
+    </div>
+    <label for="correctionTeam">Team</label>
+    <select id="correctionTeam">
+      <optgroup label="Real roster">
+        <option value="Lobos">Greg's Lobos</option>
+        <option value="Roughriders">Dick's Roughriders</option>
+        <option value="Maniacs">Mom's Maniacs</option>
+        <option value="Critters">Chris' Critters</option>
+        <option value="Chickens">Mike's Chickens</option>
+        <option value="Ferraris">Christie's Ferraris</option>
+        <option value="Llamas">Tati's Llamas</option>
+        <option value="Giraffes">Gracelin's Giraffes</option>
+      </optgroup>
+      <optgroup label="Sandboxed test teams">
+        <option value="Yeti's Big Feet">Yeti's Big Feet</option>
+        <option value="Gentry's Neanderbrows">Gentry's Neanderbrows</option>
+      </optgroup>
+    </select>
+    <label for="correctionWeek">Week</label>
+    <input type="text" id="correctionWeek" placeholder="preseason-3, or 1-18">
+    <label for="correctionGameId">Game ID</label>
+    <input type="text" id="correctionGameId" placeholder="matches the id in data/week-N.json">
+    <button id="correctionBtn">Email me this correction link</button>
+    <div class="status" id="correctionStatus"></div>
+  </div>
 </div>
 
 <script>
@@ -143,6 +179,7 @@ document.getElementById("loginBtn").onclick = async () => {
     document.getElementById("overridePanel").classList.remove("hidden");
     document.getElementById("briefFixPanel").classList.remove("hidden");
     document.getElementById("testEmailPanel").classList.remove("hidden");
+    document.getElementById("correctionPanel").classList.remove("hidden");
     loadBriefForWeek();
   } catch (e) {
     statusEl.textContent = "Could not reach the server.";
@@ -327,6 +364,35 @@ document.getElementById("testEmailBtn").onclick = async () => {
   statusEl.className = "status";
   try {
     const res = await fetch(`${WORKER_BASE}/admin/send-test-picks-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Admin-Token": sessionToken },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Send failed.";
+      statusEl.className = "status error";
+      return;
+    }
+    statusEl.textContent = "Sent to yeti@yetiblanc.com. Link: " + data.link;
+    statusEl.className = "status ok";
+  } catch (e) {
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "status error";
+  }
+};
+
+document.getElementById("correctionBtn").onclick = async () => {
+  const statusEl = document.getElementById("correctionStatus");
+  const body = {
+    team: document.getElementById("correctionTeam").value,
+    week: document.getElementById("correctionWeek").value,
+    gameId: document.getElementById("correctionGameId").value,
+  };
+  statusEl.textContent = "Sending...";
+  statusEl.className = "status";
+  try {
+    const res = await fetch(`${WORKER_BASE}/admin/send-correction-email`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Admin-Token": sessionToken },
       body: JSON.stringify(body),

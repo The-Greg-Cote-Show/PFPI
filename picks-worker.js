@@ -66,6 +66,24 @@ async function generateWeeklyToken(team, week, env) {
   return signed;
 }
 
+// Per Yeti (2026-08-25): "a way for me as the admin to send a correction
+// form... much better than me making the changes." Unlike a normal weekly
+// token, this one carries a correctionGameId that unlocks exactly that one
+// game past its deadline (see handleGetPicks/handleSubmitPicks) -- nothing
+// else about the token or the picks flow changes. 24h TTL (weekly tokens
+// have none) since this grants a real, if narrow, unlock capability and
+// shouldn't linger indefinitely.
+async function generateCorrectionToken(team, week, gameId, env) {
+  const payload = { team, week, correctionGameId: gameId, issued: Date.now() };
+  const signed = await signPayload(payload, env.FAMILY_TOKEN_SECRET);
+  await env.PFPI_KV.put(
+    `token:${signed}`,
+    JSON.stringify({ team, week, correctionGameId: gameId }),
+    { expirationTtl: 24 * 60 * 60 }
+  );
+  return signed;
+}
+
 async function signPayload(payload, secret) {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
@@ -180,7 +198,7 @@ async function handleGetPicks(request, env) {
   const tokenData = await verifyToken(token, env);
   if (!tokenData) return jsonResponse({ error: "Invalid or expired link." }, 401, request);
 
-  const { team, week } = tokenData;
+  const { team, week, correctionGameId } = tokenData;
   const schedule = await getWeekSchedule(week, env);
   const saved = await getSavedPicks(team, week, env) || {};
 
@@ -190,11 +208,16 @@ async function handleGetPicks(request, env) {
     away: g.away,
     kickoffISO: g.kickoffISO,
     deadline: g.deadline,
-    locked: isGameLocked(g.deadline),
+    // An admin-issued correction token (see handleSendCorrectionEmail)
+    // unlocks exactly the one game it names, even past its deadline --
+    // every other game on a correction token stays locked normally, and
+    // every normal weekly token is completely unaffected since
+    // correctionGameId is simply absent from its payload.
+    locked: g.id === correctionGameId ? false : isGameLocked(g.deadline),
     pick: saved[g.id] || null,
   }));
 
-  return jsonResponse({ team, week, games }, 200, request);
+  return jsonResponse({ team, week, games, isCorrection: !!correctionGameId }, 200, request);
 }
 
 // ============================================================
@@ -213,7 +236,7 @@ async function handleSubmitPicks(request, env) {
     return jsonResponse({ error: "Invalid or expired link." }, 401, request);
   }
 
-  const { team, week } = tokenData;
+  const { team, week, correctionGameId } = tokenData;
   const schedule = await getWeekSchedule(week, env);
   const existing = await getSavedPicks(team, week, env) || {};
 
@@ -221,7 +244,10 @@ async function handleSubmitPicks(request, env) {
   for (const [gameId, pick] of Object.entries(picks || {})) {
     const game = schedule.find(g => g.id === gameId);
     if (!game) continue;
-    if (isGameLocked(game.deadline)) {
+    // See handleGetPicks for the matching correctionGameId note -- same
+    // one-game bypass, same "every other game stays locked normally"
+    // guarantee.
+    if (gameId !== correctionGameId && isGameLocked(game.deadline)) {
       rejected.push(gameId);
       continue;
     }
@@ -364,6 +390,46 @@ async function handleSendTestPicksEmail(request, env) {
     ADMIN_EMAIL,
     `[TEST] PFPI Week ${week} picks — as ${team}`,
     `Test picks link for "${team}", Week ${week}.\n\nUse this link any time, you can save and come back before each game's deadline:\n\n${link}\n\n${deadlineSummary}\n\nThis is a test email triggered from admin.html, not a real weekly picks notification.`,
+    env
+  );
+
+  if (!sent) {
+    return jsonResponse({ error: "Email could not be sent. Check Worker logs." }, 502, request);
+  }
+  return jsonResponse({ sent: true, link }, 200, request);
+}
+
+// Per Yeti (2026-08-25): "a way for me as the admin to send a correction
+// form... much better than me making the changes." Always sends to
+// ADMIN_EMAIL, same as handleSendTestPicksEmail — Yeti's explicit call,
+// since real family emails aren't in the system yet. He forwards it
+// himself once ready; this endpoint never accepts or looks at a recipient
+// in the request.
+async function handleSendCorrectionEmail(request, env) {
+  const adminToken = request.headers.get("X-Admin-Token");
+  const isValidAdmin = await verifyAdminToken(adminToken, env);
+  if (!isValidAdmin) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const { team, week, gameId } = await request.json();
+  if (!team || !week || !gameId) {
+    return jsonResponse({ error: "team, week, and gameId are required." }, 400, request);
+  }
+
+  const schedule = await getWeekSchedule(week, env);
+  const game = schedule.find(g => g.id === gameId);
+  if (!game) {
+    return jsonResponse({ error: `No game with id "${gameId}" found in week ${week}'s schedule.` }, 400, request);
+  }
+
+  const correctionToken = await generateCorrectionToken(team, week, gameId, env);
+  const link = `https://the-greg-cote-show.github.io/PFPI/picks.html?token=${correctionToken}`;
+
+  const sent = await sendPfpiEmail(
+    ADMIN_EMAIL,
+    `[CORRECTION] PFPI Week ${week} — ${team} — ${game.away} @ ${game.home}`,
+    `One-time correction link for "${team}", Week ${week}, ${game.away} @ ${game.home}.\n\nThis link unlocks ONLY that one game, even though its deadline has passed — every other game on this link stays locked normally. Forward it to whoever needs to fix their pick.\n\nValid for 24 hours:\n\n${link}`,
     env
   );
 
@@ -701,6 +767,9 @@ export default {
     }
     if (url.pathname === "/admin/send-test-picks-email" && request.method === "POST") {
       return handleSendTestPicksEmail(request, env);
+    }
+    if (url.pathname === "/admin/send-correction-email" && request.method === "POST") {
+      return handleSendCorrectionEmail(request, env);
     }
     if (url.pathname === "/greg/login" && request.method === "POST") {
       return handleLogin("greg", request, env);

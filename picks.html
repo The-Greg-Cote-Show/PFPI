@@ -163,6 +163,14 @@ async function loadPicks() {
     return;
   }
 
+  // Admin-issued correction links (see handleSendCorrectionEmail,
+  // picks-worker.js) unlock exactly one already-locked game -- flagged
+  // here so whoever's using the link knows that's what's going on, not
+  // just silently seeing one unlocked game among locked ones.
+  if (data.isCorrection) {
+    content.innerHTML = `<div class="banner info">This is a one-time correction link — only the affected game below is unlocked past its deadline. Everything else stays locked normally.</div>`;
+  }
+
   // Chronological by kickoff, then grouped by kickoff calendar date (ET) --
   // games within a group are already in kickoff order since the full list
   // was sorted first.

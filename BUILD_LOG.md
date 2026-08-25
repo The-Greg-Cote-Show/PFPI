@@ -7,6 +7,56 @@ this repo) for the full spec this build follows.
 
 ## Start here: what's live vs. what needs you
 
+**2026-08-25, ~10:30 AM ET — explicit status check on both handoffs tonight,
+requested by Yeti in plain terms (done-and-verified / done-but-untested /
+not-done, no vague summaries). Copied here verbatim as the authoritative
+current status; superseded only by a later dated entry, not by anything
+above this block:**
+
+*Polling throttle / preload:*
+1. `[triggers]` fix committed and pushed — **done and verified** (`8779add`).
+2. Highlightly throttled to Aug 27/28/29 only — **done and verified that it
+   stays off** (7 real hours of zero calls confirmed via git history between
+   the throttle deploy and a deliberate one-time manual bypass). **The
+   actual in-window 3-min/5-min cadence is unverified** — can't be tested
+   until Thursday.
+3. Big Balls throttled to "~15-20 sec live / less otherwise" — **not done
+   as literally specified, a deliberate substitute already flagged below**:
+   every cron tick (1-min floor, no Durable Object alarms added) during
+   live windows, every 15 min otherwise. **The 15-min "otherwise" half is
+   verified** (real commits at 09:30/09:45/10:00/10:15 ET, exactly 15 min
+   apart). **The every-tick "live window" half is unverified** — no live
+   window has occurred yet.
+4. Full 18-week/272-game preload — **done and verified**:
+   `{"loadedAt":"2026-08-25T06:30:23.673Z","totalGames":272,"weeks":18}`.
+
+*Four changes:*
+5. Weekly deadline email lists real per-day deadlines — **done but
+   unverified end-to-end**. Logic unit-tested and passing; never fired live
+   (gated behind Tuesday 7am ET, which had already passed today before this
+   was built — next real firing is next Tuesday).
+6. Submission notification email — **done and verified live** (real test
+   submission, 200 response, clean `wrangler tail` with zero errors).
+   Placeholder used: `GREG_EMAIL` = `ADMIN_EMAIL` = `yeti@yetiblanc.com`
+   (already-set placeholder, not invented here). Confirmed no email sent to
+   any real, uninvolved address — a dedup guard prevents double-sending
+   while both addresses are identical.
+7. Brief publisher reopened for all weeks — **done and verified live**
+   (real login, dropdown genuinely lists Week 1-18). Single boolean flag,
+   no structural change — see the reminder immediately below this block.
+8. Tie nullification — **scoring math done and verified** (isolated unit
+   test proves both the fix and the denominator exclusion). **Frontend note
+   built but unverified live** — no real tie exists yet (season hasn't
+   started); not faked for testing, per explicit instruction.
+
+**Judgment calls/blockers worth knowing even though marked done:** item 3
+above never hit its literal spec, by necessity, not oversight. The
+`[triggers]` bug reversed a deliberate original-build decision that had
+never been tested against a real redeploy. A real crash (undefined `picks`
+on preseason games) shipped and was caught only by live browser testing,
+not code review — worth remembering that review alone isn't sufficient
+for this codebase's JS.
+
 **REMINDER — TEMPORARY TESTING FLAG LIVE:** `brief.html`'s
 `TESTING_ALLOW_ALL_WEEKS` is currently `true`, so the brief publisher's week
 selector allows any week 1-18, not just the current week. **Revert this to

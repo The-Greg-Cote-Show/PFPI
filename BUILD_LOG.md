@@ -1,5 +1,18 @@
 # PFPI Build Log
 
+## 🔗 READY TEST LINK — picks.html redesign (2026-08-25)
+
+**https://the-greg-cote-show.github.io/PFPI/picks.html?token=pfpi-preseason3-test**
+
+Real token, already seeded in KV, valid now — no need to generate one
+yourself. Points at "Gentry's Neanderbrows" against the real, live
+preseason Week 3 schedule (16 real games, real kickoff times, real
+per-game deadlines already computed). One pick (PIT, in the first
+Thursday game) is already saved from my own verification pass, on purpose
+— left in so you immediately see the pre-selected/pre-filled behavior
+working the moment you open the link, not stripped out. Everything else
+is untouched for you to click through fresh.
+
 Running log of every significant action taken by Claude Code during the build,
 in order. Secret values are never logged, only names. See
 `PFPI_Claude_Code_handoff_brief.md` (in the parent folder, not committed to
@@ -950,3 +963,56 @@ directly, then built the UI on request.
   `hasRealTime:true` landed in the real published JSON, then reverted the
   bypass and redeployed before committing — the throttle itself was never
   weakened, just paused for one tick under direct supervision.
+
+## 2026-08-25 (continued) — picks.html layout redesign
+
+Per `PFPI_picks_form_redesign_handoff.md`, run while Yeti stepped away
+(blanket push permission given directly in chat for this task). Layout/
+display only, exactly as scoped — token handling, the save/submit flow,
+and per-game deadline locking are byte-for-byte the same logic as before,
+just re-rendered differently.
+
+- **Grouped by kickoff calendar date** (chronological), games within a
+  group also chronological by kickoff time. Each group shows one date
+  heading and one shared deadline line — every game sharing a kickoff date
+  shares a deadline under the existing per-day rule, so the first game's
+  `deadline` (already computed server-side, already on every game from
+  `GET /my-picks`) represents the whole group. **Nothing recomputes the
+  deadline** — this only groups and formats values already present in the
+  API response, same principle `formatWeekDeadlines()` already established
+  for the weekly email, applied client-side instead of server-side. This
+  is the one place the handoff doc asked to flag if the existing logic
+  "didn't translate cleanly": it translated cleanly, no adaptation needed
+  beyond grouping already-computed values.
+- **One card per game**, per Yeti's own pushback on his original two-card
+  idea (already resolved in the handoff doc itself, not re-litigated here).
+  Away team first, home team second — confirmed convention, matches the
+  `game_id` format already used throughout (`2026_01_NE_SEA`) — each with
+  an AWAY/HOME label above the name, kickoff time in ET on the card.
+- **Kept the existing two-button pick control**, not a native `<select>`.
+  The handoff doc explicitly allowed either; the two-button control is
+  already tested, already mobile-friendly, and switching to a `<select>`
+  would have meant rewriting tested interaction logic (onchange vs onclick,
+  different selected/disabled handling) for a task scoped as layout-only —
+  judgment call, not an oversight.
+- Single-column stack on both mobile and desktop, no separate desktop
+  arrangement, per the doc's simplicity instruction.
+- **Verified live, full round-trip**, not just visually: loaded the real
+  redeployed page with a real token against the real preseason schedule
+  (see the test link at the very top of this file), confirmed all 16 games
+  render correctly grouped into 3 date groups (Thu/Fri/Sat) with correct
+  deadlines (Wed 6pm / Thu 6pm / Fri 6pm respectively — right day-before
+  rule), clicked a real pick (PIT), confirmed "Saved." client-side, then
+  independently re-fetched `GET /my-picks` and confirmed the pick actually
+  persisted server-side (`"pick":"PIT"`) — not just a UI state change.
+  Zero console errors.
+- **Test link generation**: no public endpoint exists to generate a token
+  on demand (the real flow is cron-gated, Tuesday 7am only) — used the same
+  direct-KV-seed approach already established earlier tonight for the
+  submission-notification test, targeting `"Gentry's Neanderbrows"`
+  (the second existing test team, left `"Yeti's Big Feet"` alone since it
+  already carries older test artifacts) against `week: "preseason-3"`.
+  This worked with zero new backend code — `getWeekSchedule()`/
+  `verifyToken()`/etc. are all already week-type-agnostic (string or
+  number), a nice side effect of not having hardcoded numeric-week
+  assumptions anywhere in that path.

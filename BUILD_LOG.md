@@ -18,7 +18,8 @@ protection, admin correction path in `admin.html`) are both live and tested
 against the real deployed Worker — see the 2026-08-24 entries below for the
 admin-login incident and the brief-publisher build.
 
-**Five things need you before this is fully live, none of them guessable:**
+**Three things still need you (2 of the original 5 are now done — see
+2026-08-25 entries):**
 1. **DNS** — add a CNAME record `pfpi` -> `the-greg-cote-show.github.io` (same
    pattern as `cotecup`). Nothing at `pfpi.thegregcoteshow.com` will load
    until this is done.
@@ -30,14 +31,11 @@ admin-login incident and the brief-publisher build.
 3. **Cron triggers** — add in the Cloudflare dashboard Triggers tab for both
    Workers (exact strings below, in the CLOUDFLARE section). Nothing runs on
    a schedule until this is done.
-4. **`BIG_BALLS_API_KEY`** — wasn't provided tonight. Without it, no live
-   scores/schedule ever get polished or published.
-5. **`GITHUB_PAT`** — a fine-grained token (repo: PFPI only, Contents:
-   read/write) has no API for creating it, needs the GitHub web UI. Without
-   it, the scores Worker can compute everything but can't publish it, and (as
-   of 2026-08-24) neither can Greg's Brief publisher — `/admin/publish-brief`
-   degrades the same way, saving/logging the attempt but honestly reporting
-   back that nothing went live rather than claiming success.
+
+**Done as of 2026-08-25:** `BIG_BALLS_API_KEY` and `GITHUB_PAT` are both set
+on their Workers now. Real scores/schedule polling and Greg's Brief
+publishing are fully live — see the 2026-08-25 entries for what got
+verified/fixed once real data was actually reachable.
 
 Full detail, reasoning, and exact commands for each are in the log below, in
 the order they came up.
@@ -450,3 +448,44 @@ the order they came up.
     wired end-to-end and will start actually publishing to GitHub Pages the
     moment that secret is set on `pfpi-picks-worker`, no further code changes
     needed.
+
+## 2026-08-25
+
+- **[CLOUDFLARE]** `GITHUB_PAT` set on **both** Workers — Yeti's first attempt
+  only targeted `pfpi-scores-worker` (`--config wrangler-scores.toml`), but
+  `pfpi-picks-worker` also needs it for `/admin/publish-brief`'s
+  `commitJSONToGitHub` call, and Cloudflare Workers don't share secrets with
+  each other even though they share `shared.js` and the `PFPI_KV` namespace.
+  Verified end-to-end: real Greg-session publish call returned
+  `{"published":true}`, and the resulting commit
+  (`Publish Week 1 brief [automated]`) showed up on `origin/main`.
+- **[CLOUDFLARE]** `BIG_BALLS_API_KEY` set on `pfpi-scores-worker`.
+- **[BUG FOUND / FIXED]** With a real key finally available, checked
+  `normalizeGame()`'s field-name guesses (flagged since the original build as
+  unconfirmed) against real responses — both an upcoming 2026 week and a
+  genuinely completed 2025 week, so this isn't a pre-season-only artifact.
+  Two guesses were wrong, and both were live-impacting, not cosmetic:
+  - **No `status` field exists, ever** (confirmed even on the completed 2025
+    game, which had a real 24-20 final score with no status anywhere) — every
+    game was falling back to `"scheduled"`, so real finals would never have
+    been picked up into standings. Fixed: status is now derived from whether
+    both scores are populated. Residual known limitation, flagged not
+    silently assumed away: Big Balls exposes no live/in-progress signal at
+    all, so if this Worker ever polls mid-game, a partial score could be
+    misread as final. Not fixable without a field the API doesn't provide.
+  - **No kickoff time-of-day field exists**, only a date-only `game_date`
+    (e.g. `"2025-09-04"`) — `kickoffISO` was resolving to `null` for every
+    real game, which would have fed `computeGameDeadline(null)` -> epoch time
+    -> every game showing as already locked the instant real data started
+    flowing. This was live-impacting immediately: `computeCurrentWeekFromDate()`
+    already clamps to Week 1 before the season starts, so the very next cron
+    tick after `BIG_BALLS_API_KEY` was set would have cached this broken data
+    into `schedule:week:1`. Fixed: `kickoffISO` is synthesized at noon UTC on
+    `game_date`, which is unambiguous in every NFL city's timezone and is
+    enough for `computeGameDeadline()` (day-level, not hour-level) without
+    fabricating a kickoff hour the API doesn't provide.
+  - `home_team`/`away_team`, `home_score`/`away_score`, and the
+    `game_id` `YYYY_WW_AWAY_HOME` format all matched the original guesses
+    exactly — no changes needed there.
+  - Redeployed `pfpi-scores-worker` with the fix before any real cron tick
+    could poll and cache the broken version.

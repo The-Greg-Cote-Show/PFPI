@@ -600,7 +600,11 @@ function renderGames(realGames){
 
   // Real data (worker.js) carries confirmed home/away from Big Balls' game_id
   // format, so this is accurate, not a known limitation. See BUILD_LOG.md.
-  realGames.forEach((g, idx) => {
+  // Sorted chronologically by kickoff -- neither Big Balls nor Highlightly
+  // guarantee return order, per Yeti (2026-08-25, caught Aug 29's slate
+  // showing before Aug 27's on the Preseason view).
+  const sortedGames = [...realGames].sort((a, b) => new Date(a.kickoffISO) - new Date(b.kickoffISO));
+  sortedGames.forEach((g, idx) => {
     const isExpanded = expandedGameIdx === idx;
     const card = document.createElement("div");
     card.className = "game-card" + (isExpanded ? " expanded" : "");

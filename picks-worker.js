@@ -92,23 +92,65 @@ async function verifyToken(token, env) {
 
 // ============================================================
 // SCHEDULED TRIGGER — Tuesday 7:00 AM Eastern (DST-safe)
-// Cron itself fires hourly; actual cron string lives in the Cloudflare
-// dashboard Triggers tab (see BUILD_LOG.md), not hardcoded here.
+// Cron itself fires hourly, configured in wrangler.toml's [triggers]
+// block (moved there from dashboard-only 2026-08-25 — see BUILD_LOG.md for
+// why: a dashboard-only trigger was proven to get silently cleared by a
+// plain `wrangler deploy`).
 // ============================================================
 
 async function handleWeeklyTrigger(env) {
   if (!isTargetLocalTime(7, 2, "America/New_York")) return; // 2 = Tuesday
 
   const currentWeek = await getCurrentWeek(env);
+  const schedule = await getWeekSchedule(currentWeek, env);
+  const deadlineSummary = formatWeekDeadlines(schedule);
 
   for (const member of FAMILY_MEMBERS) {
     const token = await generateWeeklyToken(member.team, currentWeek, env);
     const link = `https://pfpi.thegregcoteshow.com/picks.html?token=${token}`;
-    await sendPicksEmail(member.email, member.name, currentWeek, link, env);
+    await sendPicksEmail(member.email, member.name, currentWeek, link, deadlineSummary, env);
   }
 }
 
-async function sendPicksEmail(toEmail, name, week, link, env) {
+// Groups this week's real per-game deadlines into a scannable day-by-day
+// summary for the picks email, per Yeti (2026-08-25) — e.g. "Thursday's
+// game locks Wednesday 6pm ET. Sunday's games lock Saturday 6pm ET." Not
+// hardcoded day names: computed from the real schedule since the mix
+// varies week to week (bye weeks, holiday games on unusual days). Under
+// the current (non-hybrid) deadline rule every game sharing a kickoff
+// weekday shares one deadline date, so grouping by kickoff weekday is
+// equivalent to grouping by deadline date but reads more naturally in the
+// email. Falls back to the old generic line if there's no real schedule
+// yet (season hasn't started / Big Balls hasn't published this week) —
+// honest fallback, not a fabricated deadline list.
+function formatWeekDeadlines(schedule) {
+  if (!schedule || schedule.length === 0) {
+    return "Deadlines are per-game (6pm ET the day before).";
+  }
+  const weekdayET = iso => new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "long" }).format(new Date(iso));
+  const dayOrder = ["Thursday", "Friday", "Saturday", "Sunday", "Monday", "Tuesday", "Wednesday"];
+  const groups = new Map(); // kickoff weekday -> { deadlineWeekday, count }
+
+  for (const g of schedule) {
+    const kickoffWeekday = weekdayET(g.kickoffISO);
+    const deadlineWeekday = weekdayET(g.deadline);
+    const existing = groups.get(kickoffWeekday);
+    if (existing) existing.count++;
+    else groups.set(kickoffWeekday, { deadlineWeekday, count: 1 });
+  }
+
+  const lines = [];
+  for (const day of dayOrder) {
+    const g = groups.get(day);
+    if (!g) continue;
+    const noun = g.count === 1 ? "game" : "games";
+    const verb = g.count === 1 ? "locks" : "lock";
+    lines.push(`${day}'s ${noun} ${verb} ${g.deadlineWeekday} 6pm ET.`);
+  }
+  return lines.join(" ");
+}
+
+async function sendPicksEmail(toEmail, name, week, link, deadlineSummary, env) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -119,7 +161,7 @@ async function sendPicksEmail(toEmail, name, week, link, env) {
       from: "PFPI <picks@thegregcoteshow.com>",
       to: toEmail,
       subject: `PFPI Week ${week} picks are open`,
-      text: `Hey ${name},\n\nYour Week ${week} picks are ready. Use this link any time this week, you can save and come back before each game's deadline:\n\n${link}\n\nDeadlines are per-game (6pm ET the day before), so submit as you go. Good luck.`,
+      text: `Hey ${name},\n\nYour Week ${week} picks are ready. Use this link any time this week, you can save and come back before each game's deadline:\n\n${link}\n\n${deadlineSummary}\n\nGood luck.`,
     }),
   });
   if (!res.ok) {
@@ -177,6 +219,7 @@ async function handleSubmitPicks(request, env) {
   const existing = await getSavedPicks(team, week, env) || {};
 
   const rejected = [];
+  const changed = [];
   for (const [gameId, pick] of Object.entries(picks || {})) {
     const game = schedule.find(g => g.id === gameId);
     if (!game) continue;
@@ -184,15 +227,42 @@ async function handleSubmitPicks(request, env) {
       rejected.push(gameId);
       continue;
     }
+    if (existing[gameId] !== pick) {
+      changed.push({ matchup: `${game.away} @ ${game.home}`, pick });
+    }
     existing[gameId] = pick;
   }
 
   await savePicks(team, week, existing, env);
 
+  // Per Yeti (2026-08-25): notify Greg and Yeti on every successful save
+  // that actually changes something, not just the first save of the week —
+  // people plausibly submit one game early and finish the rest later, and
+  // both should notify. Only what changed in THIS submission, not a dump
+  // of the whole week's picks every time.
+  if (changed.length > 0) {
+    await notifyPickSubmission(team, week, changed, env);
+  }
+
   return jsonResponse({
     saved: true,
     rejectedLockedGames: rejected,
   }, 200, request);
+}
+
+async function notifyPickSubmission(team, week, changed, env) {
+  const lines = changed.map(c => `${c.matchup}: ${c.pick}`).join("\n");
+  const text = `${team} just submitted Week ${week} picks (${new Date().toISOString()}).\n\nChanged in this submission:\n${lines}`;
+  const subject = `PFPI: ${team} submitted Week ${week} picks`;
+  // Two separate sends (not one email with two recipients) so each stays a
+  // private notification, consistent with how admin/Greg account emails
+  // already work elsewhere in this file. GREG_EMAIL is currently the same
+  // placeholder as ADMIN_EMAIL (Greg's real address isn't in the system
+  // yet, see its definition above) — not invented here, just reused.
+  await sendPfpiEmail(ADMIN_EMAIL, subject, text, env);
+  if (GREG_EMAIL !== ADMIN_EMAIL) {
+    await sendPfpiEmail(GREG_EMAIL, subject, text, env);
+  }
 }
 
 // ============================================================

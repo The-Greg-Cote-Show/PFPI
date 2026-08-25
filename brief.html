@@ -223,14 +223,25 @@ async function fetchCurrentWeek() {
   }
 }
 
+// TEMPORARY — for Yeti's testing (per PFPI_four_changes_handoff.md,
+// 2026-08-25), so the brief publisher can be exercised across every week
+// right now instead of only the current one. REVERT to `false` before
+// real weekly use begins — the backend (POST /admin/publish-brief) never
+// enforced current-week-only itself, so flipping this back is the only
+// change needed to restore normal behavior.
+const TESTING_ALLOW_ALL_WEEKS = true;
+const NUM_WEEKS = 18;
+
 async function populateWeeks() {
   const currentWeek = await fetchCurrentWeek();
+  const maxWeek = TESTING_ALLOW_ALL_WEEKS ? NUM_WEEKS : currentWeek;
   const sel = document.getElementById("weekSelect");
   sel.innerHTML = "";
-  // Only weeks up through the current week are selectable — Greg can
-  // publish this week's brief or go back and fix a past one, but can't
-  // accidentally pick a week that hasn't happened yet.
-  for (let w = 1; w <= currentWeek; w++) {
+  // Normally only weeks up through the current week are selectable — Greg
+  // can publish this week's brief or go back and fix a past one, but can't
+  // accidentally pick a week that hasn't happened yet. See
+  // TESTING_ALLOW_ALL_WEEKS above for why this is temporarily wider.
+  for (let w = 1; w <= maxWeek; w++) {
     const opt = document.createElement("option");
     opt.value = w;
     opt.textContent = "Week " + w;

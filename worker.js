@@ -77,14 +77,22 @@ function normalizeGame(raw) {
   const kickoffISO = raw.kickoff || raw.start_time || raw.game_time
     || (raw.game_date ? `${raw.game_date}T12:00:00.000Z` : null);
 
+  // Tie handling, per Yeti (2026-08-25): a tied game is nullified for
+  // pick'em purposes entirely -- no winner, excluded from every team's
+  // correct/incorrect tally and from the week's game-count denominator
+  // (see computeStandings below). Before this fix, a tie (homeScore ===
+  // awayScore) fell through to the `else` branch below and was silently
+  // recorded as an away-team win -- a real scoring bug, not just a missing
+  // feature, now fixed at the source.
+  const tie = status === "final" && homeScore !== null && awayScore !== null && homeScore === awayScore;
   let winner = null;
-  if (status === "final" && homeScore !== null && awayScore !== null) {
+  if (status === "final" && homeScore !== null && awayScore !== null && !tie) {
     winner = homeScore > awayScore ? home : away;
   }
 
   return {
     id: raw.game_id || raw.id,
-    home, away, homeScore, awayScore, status, kickoffISO, winner,
+    home, away, homeScore, awayScore, status, kickoffISO, winner, tie,
   };
 }
 
@@ -157,9 +165,34 @@ function normalizeHighlightlyGame(g) {
   };
 }
 
+// Throttled to fit Highlightly's 100/day free-tier budget, per Yeti
+// (2026-08-25) — poll only within each real game day's window, at an
+// interval chosen so that day's window alone stays comfortably under 100
+// (each day's budget resets independently, so this is per-day, not summed
+// across all three): Aug 27/28 (~4hr windows) every 3 min -> 80 polls;
+// Aug 29 (~8hr window) every 5 min -> 96 polls, exactly as specified.
+// Outside these specific dates/hours: no call is made at all -- not just a
+// no-op response, an actual skipped fetch, so nothing is spent when
+// there's nothing to learn. After Aug 29 this returns false forever; this
+// was only ever a testing bridge, not an ongoing source (see scope notice
+// above this section).
+function shouldPollHighlightlyThisTick(now) {
+  const parts = getEasternDateParts(now);
+  const dateKey = `${parts.year}-${parts.month}-${parts.day}`;
+  const hour = parseInt(parts.hour, 10);
+  const minute = now.getUTCMinutes(); // safe: whole-hour ET/UTC offset, see notice above
+  if (dateKey === "2026-08-27") return hour >= 19 && hour < 23 && minute % 3 === 0;
+  if (dateKey === "2026-08-28") return hour >= 18 && hour < 22 && minute % 3 === 0;
+  if (dateKey === "2026-08-29") return hour >= 13 && hour < 21 && minute % 5 === 0;
+  return false;
+}
+
 async function fetchHighlightlyPreseasonWeek3(env) {
   if (!env.HIGHLIGHTLY_API_KEY) {
     console.error("Skipping Highlightly preseason Week 3 fetch: HIGHLIGHTLY_API_KEY not set.");
+    return null;
+  }
+  if (!shouldPollHighlightlyThisTick(new Date())) {
     return null;
   }
 
@@ -201,17 +234,29 @@ async function computeStandings(throughWeek, env) {
   let cumulative = {};
   TEAMS.forEach(t => cumulative[t] = 0);
   let gamesPlayedCumulative = 0;
+  // Per Yeti (2026-08-25): a tied NFL game is nullified for pick'em purposes
+  // entirely -- no one scored correct/incorrect on it, and it doesn't count
+  // toward that week's game total. tieNotes feeds index.html's visible
+  // "Week N: X at Y ended in a tie" note (see frontend below and
+  // BUILD_LOG.md) -- collected here since this loop already has the real
+  // schedule/result data needed, avoiding a second pass or a second fetch.
+  const tieNotes = {};
 
   for (let week = 1; week <= throughWeek; week++) {
     const raw = await env.PFPI_KV.get(`results:week:${week}`);
     const results = raw ? JSON.parse(raw) : [];
-    gamesPlayedCumulative += results.length;
+    const tiedGames = results.filter(g => g.tie);
+    const scorableGames = results.filter(g => !g.tie);
+    gamesPlayedCumulative += scorableGames.length;
+    if (tiedGames.length > 0) {
+      tieNotes[week] = tiedGames.map(g => `${g.away} at ${g.home}`);
+    }
 
     for (const team of TEAMS) {
       const picksRaw = await env.PFPI_KV.get(`picks:${week}:${team}`);
       const picks = picksRaw ? JSON.parse(picksRaw) : {};
       let correctThisWeek = 0;
-      for (const game of results) {
+      for (const game of scorableGames) {
         if (game.winner && picks[game.id] === game.winner) correctThisWeek++;
       }
       cumulative[team] += correctThisWeek;
@@ -222,7 +267,7 @@ async function computeStandings(throughWeek, env) {
     }
   }
 
-  return { standings, standingsPct };
+  return { standings, standingsPct, tieNotes };
 }
 
 // ============================================================
@@ -246,9 +291,85 @@ async function buildWeekPublicJSON(week, results, env) {
       id: g.id, home: g.home, away: g.away,
       kickoffISO: g.kickoffISO, status: g.status,
       homeScore: g.homeScore, awayScore: g.awayScore,
-      winner: g.winner, picks,
+      winner: g.winner, tie: !!g.tie, picks,
     };
   });
+}
+
+// ============================================================
+// POLLING THROTTLE — per Yeti (2026-08-25): Highlightly (100/day) and Big
+// Balls (2000/day, GitHub-linked tier) have genuinely different budgets and
+// needs, so they don't share a cadence. The underlying Cron Trigger floor
+// is still 1 minute (no Durable Object alarms in this build -- same
+// judgment call the original build already made not to add that
+// complexity), so "every ~15-20s" during Big Balls live windows is
+// approximated as "every tick" (the finest available), per the handoff
+// doc's own "target behavior matters more than exact mechanism" allowance.
+// ============================================================
+
+function isBigBallsLiveWindow(now) {
+  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(now);
+  const hour = parseInt(getEasternDateParts(now).hour, 10);
+  // Thursday/Monday night windows; Sunday covers early/late/SNF.
+  if (weekday === "Thu") return hour >= 20;
+  if (weekday === "Sun") return hour >= 13;
+  if (weekday === "Mon") return hour >= 20;
+  return false;
+}
+
+// Outside live windows: poll every 15 min instead of every tick -- still
+// catches schedule/flex changes, a fraction of the 2000/day budget. UTC
+// minute is safe to gate on directly since every NFL-market US timezone is
+// a whole-hour UTC offset (no half-hour zones), so UTC and ET
+// minute-of-hour always agree.
+function shouldPollBigBallsThisTick(now) {
+  return isBigBallsLiveWindow(now) || now.getUTCMinutes() % 15 === 0;
+}
+
+// ============================================================
+// FULL 2026 REGULAR-SEASON SCHEDULE PRELOAD (one-time)
+// ============================================================
+// Per Yeti (2026-08-25): pre-load all 272 games' matchups/dates/kickoff
+// times now, not progressively as [currentWeek, currentWeek+1] normally
+// would. Verified empirically first, not assumed: Big Balls' `limit` maxes
+// at 200 (a real 400 at limit=300 confirmed the ceiling), and two calls
+// (limit=200 at offset=0 and offset=200) retrieve all 272 games with zero
+// duplicate ids -- a real 2-request cost, not the "meaningful chunk of
+// budget" the handoff doc was right to ask about but that turned out not
+// to be a real concern in practice. KV-flag-gated so this runs at most
+// once ever: checked every tick, but only actually calls Big Balls the one
+// time the flag isn't set, so a later tick can't repeat the cost.
+async function preloadFullSeasonScheduleIfNeeded(env) {
+  const flagKey = `season-${SEASON}-full-schedule-loaded`;
+  if (await env.PFPI_KV.get(flagKey)) return;
+
+  const headers = { "Authorization": `Bearer ${env.BIG_BALLS_API_KEY}` };
+  const all = [];
+  for (const offset of [0, 200]) {
+    const res = await fetch(`${BIG_BALLS_BASE}/v1/nfl/games?season=${SEASON}&type=REG&limit=200&offset=${offset}`, { headers });
+    if (!res.ok) {
+      console.error(`Full-season preload failed at offset ${offset}: ${res.status} ${await res.text()}`);
+      return; // flag not set -- retried on a later tick
+    }
+    const data = await res.json();
+    all.push(...(data.data || []));
+  }
+
+  const byWeek = {};
+  for (const raw of all) {
+    if (!raw.week) continue;
+    const normalized = normalizeGame(raw);
+    (byWeek[raw.week] ||= []).push({ id: normalized.id, home: normalized.home, away: normalized.away, kickoffISO: normalized.kickoffISO });
+  }
+
+  for (const [week, games] of Object.entries(byWeek)) {
+    await env.PFPI_KV.put(`schedule:week:${week}`, JSON.stringify(games));
+  }
+
+  await env.PFPI_KV.put(flagKey, JSON.stringify({
+    loadedAt: new Date().toISOString(), totalGames: all.length, weeks: Object.keys(byWeek).length,
+  }));
+  console.log(`Full-season preload complete: ${all.length} games across ${Object.keys(byWeek).length} weeks.`);
 }
 
 // ============================================================
@@ -261,7 +382,11 @@ async function pollAndPublish(env) {
 
   if (!env.BIG_BALLS_API_KEY) {
     console.error("Skipping Big Balls poll: BIG_BALLS_API_KEY not set. No regular-season score/schedule data fetched or published this tick.");
+  } else if (!shouldPollBigBallsThisTick(new Date())) {
+    // Throttled: outside a live window and not a 15-min mark this tick.
   } else {
+    await preloadFullSeasonScheduleIfNeeded(env);
+
     // Poll current week and next week, so next week's kickoff times (and
     // therefore deadlines) are available before Tuesday's picks email goes out.
     const weeksToPoll = [currentWeek, Math.min(currentWeek + 1, 18)];
@@ -287,7 +412,7 @@ async function pollAndPublish(env) {
       weekFiles[week] = await buildWeekPublicJSON(week, normalized, env);
     }
 
-    const { standings, standingsPct } = await computeStandings(currentWeek, env);
+    const { standings, standingsPct, tieNotes } = await computeStandings(currentWeek, env);
 
     for (const [week, games] of Object.entries(weekFiles)) {
       await commitJSONToGitHub(
@@ -300,7 +425,7 @@ async function pollAndPublish(env) {
 
     await commitJSONToGitHub(
       "data/standings.json",
-      { standings, standingsPct, throughWeek: currentWeek, updatedAt: new Date().toISOString() },
+      { standings, standingsPct, tieNotes, throughWeek: currentWeek, updatedAt: new Date().toISOString() },
       `Update standings through Week ${currentWeek} [automated]`,
       env
     );

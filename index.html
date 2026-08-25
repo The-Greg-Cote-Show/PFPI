@@ -37,6 +37,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .wrap{max-width:960px;margin:0 auto;padding:1.25rem 1.5rem 3rem;}
 
 .empty-state{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:2.5rem 1.25rem;text-align:center;color:var(--muted);font-size:.85rem;font-style:italic;}
+.tie-note{background:rgba(232,184,75,.1);border:1px solid rgba(232,184,75,.3);border-radius:10px;padding:.65rem 1rem;margin-bottom:1rem;font-size:.78rem;color:var(--gold2);line-height:1.5;}
 .hidden{display:none !important;}
 /* chart-panel's own padding is tuned for the bar chart's floating value
    labels above each bar — pull the empty state back up so it isn't
@@ -144,6 +145,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="week-label" id="weekLabel"></div>
   </div>
 
+  <div class="tie-note hidden" id="tieNote"></div>
+
   <div class="chart-panel" id="chartPanel">
     <div class="chart-area" id="chartArea">
       <div class="plot-row">
@@ -214,7 +217,7 @@ let CURRENT_WEEK = 1;
 // (kickoff Sept 9 2026), most of this legitimately has nothing to show yet —
 // render() below reflects that honestly (empty states, not fabricated
 // numbers) rather than falling back to placeholder data.
-const REAL = { currentWeek: null, standings: null, standingsPct: null, weeks: {}, briefs: {} };
+const REAL = { currentWeek: null, standings: null, standingsPct: null, weeks: {}, briefs: {}, tieNotes: {} };
 
 async function fetchJSON(path) {
   try {
@@ -240,6 +243,7 @@ async function initRealData() {
     if (st && st.standings) {
       REAL.standings = st.standings;
       REAL.standingsPct = st.standingsPct;
+      REAL.tieNotes = st.tieNotes || {};
     }
   }
   await render();
@@ -352,6 +356,22 @@ async function render(){
   const weekLabelEl = document.getElementById("weekLabel");
   weekLabelEl.textContent = isFinal ? "Final — Week 18" : "Through Week " + currentWeek;
   weekLabelEl.className = "week-label" + (isFinal?" final":"");
+
+  // Tie-game note, per Yeti (2026-08-25): visible near the chart, not
+  // buried in a tooltip, for any week with a real nullified tie. Same
+  // "runs before the games/chart split, shown regardless of category"
+  // placement as the brief below, since a tie affects every category's
+  // numbers for that week, not just one tab. Stays hidden (not a fabricated
+  // example) until a real tie actually happens in real data.
+  const tieNoteEl = document.getElementById("tieNote");
+  const weekTies = REAL.tieNotes[currentWeek];
+  if (weekTies && weekTies.length > 0) {
+    const plural = weekTies.length > 1 ? "s" : "";
+    tieNoteEl.textContent = `Week ${currentWeek}: ${weekTies.join(", ")} ended in a tie${plural} and ${weekTies.length > 1 ? "were" : "was"} nullified for scoring purposes.`;
+    tieNoteEl.classList.remove("hidden");
+  } else {
+    tieNoteEl.classList.add("hidden");
+  }
 
   // Brief shows under the chart regardless of which category tab is active —
   // it's tied to the selected week, not the selected category — so this

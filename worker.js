@@ -177,7 +177,11 @@ function normalizeHighlightlyGame(g) {
     // above and normalizeGame()'s own hasRealTime: false). Lets the
     // frontend show an actual time for preseason games and be honest that
     // it can't for regular-season ones.
-    home, away, homeScore, awayScore, status, kickoffISO: g.date, winner, tie, hasRealTime: true,
+    // picks: {} -- no PFPI picks are ever made against preseason games, but
+    // an empty object keeps this game's shape consistent with regular-season
+    // games (buildWeekPublicJSON always includes one, possibly empty),
+    // which the frontend's picks-breakdown expects to exist.
+    home, away, homeScore, awayScore, status, kickoffISO: g.date, winner, tie, hasRealTime: true, picks: {},
   };
 }
 

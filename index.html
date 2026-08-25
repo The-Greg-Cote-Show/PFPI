@@ -639,7 +639,11 @@ function renderGames(realGames){
       const grid = document.createElement("div");
       grid.className = "picks-grid";
       TEAMS.forEach(team => {
-        const pick = g.picks[team] || null;
+        // Preseason games (Highlightly) have no picks object at all -- no
+        // PFPI picks are ever made against them -- unlike regular-season
+        // games, which always carry one (possibly empty) via
+        // buildWeekPublicJSON(). Guard rather than assume it exists.
+        const pick = (g.picks && g.picks[team]) || null;
         const correct = (pick && isFinal) ? pick === g.winner : null;
         const color = TEAM_COLORS[team];
         const chip = document.createElement("div");

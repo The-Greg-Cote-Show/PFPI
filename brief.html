@@ -52,7 +52,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .forgot-link{font-size:.75rem;text-align:center;margin-top:.85rem;}
 .forgot-link a{color:var(--blue);}
 
-#publishScreen,#resetScreen,#dashboardTabs,#missingPicksScreen{display:none;}
+#publishScreen,#resetScreen,#dashboardTabs,#missingPicksScreen,#digestScreen{display:none;}
 .hidden{display:none !important;}
 
 .char-count{font-size:.68rem;color:var(--muted);text-align:right;margin-top:.35rem;}
@@ -74,6 +74,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .mp-chip{background:var(--panel3);border:1px solid rgba(224,82,82,.35);color:var(--red);font-size:.72rem;font-weight:600;padding:4px 9px;border-radius:6px;}
 .mp-chip-locked{border-color:var(--border2);color:var(--muted);}
 .mp-all-picked{color:var(--green);font-size:.78rem;font-weight:600;}
+
+.digest-output{
+  width:100%;background:var(--panel2);border:1px solid var(--border2);border-radius:8px;
+  color:var(--text);font-size:.78rem;line-height:1.5;padding:.85rem;
+  font-family:"SF Mono",Consolas,"Courier New",monospace;white-space:pre;resize:vertical;
+  margin-bottom:.85rem;
+}
+.digest-actions{display:flex;gap:8px;}
+.digest-btn{width:auto;flex:1;font-size:.8rem;padding:.6rem 1rem;}
 </style>
 </head>
 <body>
@@ -116,6 +125,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
   <div class="dash-tabs" id="dashboardTabs">
     <button class="dash-tab-btn active" id="dashTabMissing" data-tab="missing">Missing Picks</button>
+    <button class="dash-tab-btn" id="dashTabDigest" data-tab="digest">Weekly Digest</button>
     <button class="dash-tab-btn" id="dashTabPublish" data-tab="publish">Publish Brief</button>
   </div>
 
@@ -130,6 +140,19 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     </div>
     <div id="mpContent"></div>
     <div class="status" id="mpStatus"></div>
+  </div>
+
+  <div class="card" id="digestScreen">
+    <div class="field">
+      <label for="digestWeekSelect">Week</label>
+      <select id="digestWeekSelect"></select>
+    </div>
+    <textarea id="digestOutput" class="digest-output" readonly rows="18"></textarea>
+    <div class="digest-actions">
+      <button class="btn digest-btn" id="digestCopyBtn" type="button">Copy to clipboard</button>
+      <button class="btn digest-btn" id="digestInsertBtn" type="button">Insert into brief text</button>
+    </div>
+    <div class="status" id="digestStatus"></div>
   </div>
 
   <div class="card" id="publishScreen">
@@ -498,13 +521,215 @@ document.getElementById("mpByTeamBtn").addEventListener("click", () => {
   renderMissingPicks();
 });
 
+// ============================================================
+// WEEKLY DIGEST — a stats scaffold matching Greg's real house style, pulled
+// from the same real computed data the public charts use (worker.js's
+// computeStandings). Standings, Weekly Titles, Weeks Leading, and Best Week
+// are real; 10-Win Weeks and Unique Hits have no real data source at all
+// (see BUILD_LOG.md) and show an honest "not available" line instead of a
+// fabricated number.
+// ============================================================
+
+const SEASON_YEAR = 2026;
+let standingsData = null; // raw data/standings.json, cached after first fetch
+
+async function fetchStandingsData() {
+  if (standingsData !== null) return standingsData;
+  try {
+    const res = await fetch(`data/standings.json?t=${Date.now()}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    standingsData = (data && data.standings) ? data : null;
+    return standingsData;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Same formatting rule as index.html's fmtPct (duplicated intentionally --
+// it's a formatting helper, not scoring logic, and this is a separate page).
+function fmtPct(v) {
+  const s = v.toFixed(3);
+  return s === "1.000" ? "1.000" : s.replace(/^0/, "");
+}
+
+async function populateDigestWeeks() {
+  const currentWeek = await fetchCurrentWeek();
+  const sel = document.getElementById("digestWeekSelect");
+  sel.innerHTML = "";
+  for (let w = 1; w <= currentWeek; w++) {
+    const opt = document.createElement("option");
+    opt.value = w;
+    opt.textContent = "Week " + w;
+    sel.appendChild(opt);
+  }
+  sel.value = currentWeek;
+  await renderDigest();
+}
+
+// Standings block: sorted by wins descending, GB column, ties show "--".
+// GB simplifies to (leader's wins - this team's wins) because every team
+// has played the exact same games (a shared pick'em slate, not independent
+// schedules like real MLB standings), so losses move in exact lockstep with
+// wins -- the full "(winDiff + lossDiff)/2" formula and this reduce to the
+// same integer here. Verified against Greg's real worked example (177/176/
+// 175/175/168/160/156 wins -> GB 0/1/2/2/9/17/21) before relying on it.
+function buildStandingsBlock(st, week, isFinal) {
+  const wKey = String(week);
+  const gp = (st.gamesPlayed && st.gamesPlayed[wKey]) || 0;
+  const rows = REAL_TEAMS.map(t => {
+    const wins = st.standings[t][wKey];
+    return { team: t, wins, losses: gp - wins, pct: st.standingsPct[t][wKey] };
+  });
+  rows.sort((a, b) => b.wins - a.wins);
+  const leaderWins = rows.length ? rows[0].wins : 0;
+
+  const lines = [];
+  lines.push(isFinal ? `PFPI OFFICIAL FINAL ${SEASON_YEAR} STANDINGS` : `PFPI STANDINGS THROUGH WEEK ${week} ${SEASON_YEAR}`);
+  lines.push(`Team`.padEnd(32) + (isFinal ? "Final Season" : "Season").padEnd(13) + "GB");
+  rows.forEach(r => {
+    const name = TEAM_SHORT[r.team].padEnd(32);
+    const record = `${r.wins}-${r.losses}`;
+    const pct = fmtPct(r.pct);
+    const gb = r.wins === leaderWins ? "--" : String(leaderWins - r.wins);
+    lines.push(`${name}${record}   ${pct}${gb.padStart(6)}`);
+  });
+  return lines.join("\n");
+}
+
+// Weekly Titles / Weeks Leading block: "TEAM X.XX (N), Team X.XX (N), ...".
+// Leader(s) at the max value are ALL CAPS (all of them, if tied for the
+// literal top spot -- same "share the crown rather than arbitrarily pick
+// one" precedent as Best Week's existing tie handling). Teams tied at the
+// exact same cumulative value are joined with "&" and drop the "(N)" count,
+// matching Greg's real example ("Llamas 0.33 & Roughriders 0.33") rather
+// than the more generic prose description elsewhere in the handoff doc.
+// Teams with zero (never held this honor) are omitted -- an unconfirmed but
+// reasonable read of a real example that never shows a 0.00 entry; flagged
+// in BUILD_LOG.md for Greg to correct if his real convention differs.
+function buildPointBlock(label, dataObj, countObj, week) {
+  const wKey = String(week);
+  const entries = REAL_TEAMS
+    .map(t => ({ team: t, value: dataObj[t][wKey], count: countObj[t][wKey] }))
+    .filter(e => e.value > 0);
+
+  if (entries.length === 0) return `${label}: No weeks decided yet.`;
+
+  entries.sort((a, b) => b.value - a.value);
+  const groups = [];
+  for (const e of entries) {
+    const last = groups[groups.length - 1];
+    if (last && last[0].value === e.value) last.push(e);
+    else groups.push([e]);
+  }
+  const maxValue = groups[0][0].value;
+
+  const text = groups.map(group => {
+    const tied = group.length > 1;
+    return group.map(e => {
+      const name = e.value === maxValue ? e.team.toUpperCase() : e.team;
+      const valStr = e.value.toFixed(2);
+      return tied ? `${name} ${valStr}` : `${name} ${valStr} (${e.count})`;
+    }).join(" & ");
+  }).join(", ");
+
+  return `${label}: ${text}.`;
+}
+
+// Best Week block: "Best Week: Lobos .929 (13-1/W12)." Co-holders of an
+// identical season-best pct share the line, joined with "&" -- same crown-
+// sharing rule index.html's isBestWeek rendering already uses.
+function buildBestWeekBlock(st, week) {
+  const wKey = String(week);
+  const entries = REAL_TEAMS
+    .map(t => ({ team: t, ...st.bestWeek[t][wKey] }))
+    .filter(e => e.total > 0);
+
+  if (entries.length === 0) return "Best Week: No weeks decided yet.";
+
+  const maxPct = Math.max(...entries.map(e => e.pct));
+  const holders = entries.filter(e => e.pct === maxPct);
+  const text = holders
+    .map(e => `${e.team} ${fmtPct(e.pct)} (${e.correct}-${e.total - e.correct}/W${e.week})`)
+    .join(" & ");
+  return `Best Week: ${text}.`;
+}
+
+async function renderDigest() {
+  const outputEl = document.getElementById("digestOutput");
+  const statusEl = document.getElementById("digestStatus");
+  const week = parseInt(document.getElementById("digestWeekSelect").value, 10);
+
+  statusEl.textContent = "Loading...";
+  statusEl.className = "status show";
+  outputEl.value = "";
+
+  const st = await fetchStandingsData();
+  if (!st || !st.weeklyTitles || !st.weeksLeading || !st.bestWeek || !st.gamesPlayed) {
+    // Missing new fields specifically (rather than the whole fetch failing)
+    // means a stale cached data/standings.json from before this build --
+    // same GitHub Pages propagation-lag gap noted elsewhere in this file.
+    statusEl.textContent = "Digest data isn't available yet — check back in a few minutes.";
+    statusEl.className = "status show";
+    return;
+  }
+  statusEl.textContent = "";
+  statusEl.className = "status";
+
+  const isFinal = week === NUM_WEEKS;
+  const parts = [
+    buildStandingsBlock(st, week, isFinal),
+    buildPointBlock("Weeks Leading", st.weeksLeading, st.weeksLeadingCount, week),
+    buildPointBlock("Weekly Titles", st.weeklyTitles, st.weeklyTitlesCount, week),
+    "10-Win Weeks: Not available yet — no real data source for this category.",
+    "Unique Hits: Not available yet — no real data source for this category.",
+    buildBestWeekBlock(st, week),
+  ];
+  outputEl.value = parts.join("\n\n");
+}
+
+document.getElementById("digestWeekSelect").addEventListener("change", renderDigest);
+
+document.getElementById("digestCopyBtn").addEventListener("click", async () => {
+  const statusEl = document.getElementById("digestStatus");
+  const text = document.getElementById("digestOutput").value;
+  try {
+    await navigator.clipboard.writeText(text);
+    statusEl.textContent = "Copied to clipboard.";
+    statusEl.className = "status ok show";
+  } catch (e) {
+    // Clipboard API can be blocked in some contexts -- fall back to a
+    // manual select so the user can still Ctrl/Cmd+C it themselves.
+    const outputEl = document.getElementById("digestOutput");
+    outputEl.focus();
+    outputEl.select();
+    statusEl.textContent = "Couldn't copy automatically -- text is selected, press Ctrl/Cmd+C.";
+    statusEl.className = "status warn show";
+  }
+});
+
+document.getElementById("digestInsertBtn").addEventListener("click", () => {
+  document.getElementById("briefText").value = document.getElementById("digestOutput").value;
+  updateCharCount();
+  document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById("dashTabPublish").classList.add("active");
+  document.getElementById("missingPicksScreen").style.display = "none";
+  document.getElementById("digestScreen").style.display = "none";
+  document.getElementById("publishScreen").style.display = "block";
+});
+
 document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     const tab = btn.dataset.tab;
     document.getElementById("missingPicksScreen").style.display = tab === "missing" ? "block" : "none";
+    document.getElementById("digestScreen").style.display = tab === "digest" ? "block" : "none";
     document.getElementById("publishScreen").style.display = tab === "publish" ? "block" : "none";
+    if (tab === "digest" && !digestInitialized) {
+      digestInitialized = true;
+      populateDigestWeeks();
+    }
   });
 });
 

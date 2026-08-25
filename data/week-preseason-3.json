@@ -11,7 +11,10 @@
       "kickoffISO": "2026-08-29T22:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "CHI"
+      }
     },
     {
       "id": "hl-566640",
@@ -23,7 +26,10 @@
       "kickoffISO": "2026-08-29T17:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "DET"
+      }
     },
     {
       "id": "hl-566560",
@@ -35,7 +41,10 @@
       "kickoffISO": "2026-08-29T01:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "DEN"
+      }
     },
     {
       "id": "hl-566557",
@@ -47,7 +56,10 @@
       "kickoffISO": "2026-08-29T00:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "SEA"
+      }
     },
     {
       "id": "hl-566561",
@@ -59,7 +71,10 @@
       "kickoffISO": "2026-08-29T00:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "NO"
+      }
     },
     {
       "id": "hl-566553",
@@ -71,7 +86,10 @@
       "kickoffISO": "2026-08-29T00:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "PHI"
+      }
     },
     {
       "id": "hl-566562",
@@ -83,7 +101,10 @@
       "kickoffISO": "2026-08-29T00:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "GB"
+      }
     },
     {
       "id": "hl-566555",
@@ -95,7 +116,10 @@
       "kickoffISO": "2026-08-28T23:30:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "NYG"
+      }
     },
     {
       "id": "hl-566558",
@@ -107,7 +131,10 @@
       "kickoffISO": "2026-08-28T23:30:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "TB"
+      }
     },
     {
       "id": "hl-566556",
@@ -119,7 +146,10 @@
       "kickoffISO": "2026-08-28T23:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "MIA"
+      }
     },
     {
       "id": "hl-566559",
@@ -131,7 +161,10 @@
       "kickoffISO": "2026-08-28T23:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "HOU"
+      }
     },
     {
       "id": "hl-566554",
@@ -143,7 +176,10 @@
       "kickoffISO": "2026-08-28T22:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "BAL"
+      }
     },
     {
       "id": "hl-566531",
@@ -155,7 +191,10 @@
       "kickoffISO": "2026-08-28T02:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "LAR"
+      }
     },
     {
       "id": "hl-566530",
@@ -167,7 +206,10 @@
       "kickoffISO": "2026-08-28T00:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "NE"
+      }
     },
     {
       "id": "hl-566532",
@@ -179,7 +221,10 @@
       "kickoffISO": "2026-08-28T00:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "SF"
+      }
     },
     {
       "id": "hl-566529",
@@ -191,8 +236,12 @@
       "kickoffISO": "2026-08-27T23:00:00.000Z",
       "winner": null,
       "tie": false,
-      "hasRealTime": true
+      "hasRealTime": true,
+      "picks": {
+        "Roughriders": "BUF",
+        "Gentry's Neanderbrows": "PIT"
+      }
     }
   ],
-  "updatedAt": "2026-08-25T13:23:48.704Z"
+  "updatedAt": "2026-08-25T16:23:51.278Z"
 }

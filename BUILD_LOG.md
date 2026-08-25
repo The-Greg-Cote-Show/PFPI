@@ -844,3 +844,59 @@ inspected by eye.
 All four workers/files (`picks-worker.js`, `worker.js`, `index.html`,
 `brief.html`) deployed/pushed together as one commit (`a3ca71a`) after
 individual verification of each piece above.
+
+## 2026-08-25 (continued) — Public Preseason week, real kickoff times, narrower picks grid
+
+Per Yeti, in follow-up to asking why he wasn't seeing preseason info: the
+Highlightly data pipeline had been intentionally built as raw data only
+(`data/week-preseason-3.json` / KV), not wired into any UI — explained that
+directly, then built the UI on request.
+
+- **`index.html`**: new "Preseason" button in the week row, left of Wk 1
+  (chronologically before the season). Selecting it forces the Games
+  category (the only one that applies — no PFPI picks are scored against
+  preseason) and bypasses the normal `currentWeek` gate in `loadRealWeek()`
+  to load real Highlightly data regardless of the actual season's current
+  week. Standings/other categories and the brief panel fall back to their
+  existing empty-state/hidden behavior rather than showing anything
+  preseason-specific.
+- **Real kickoff times, honestly scoped**: `worker.js` games now carry
+  `hasRealTime` — `true` for Highlightly (preseason has genuine kickoff
+  timestamps), `false` for Big Balls (regular season only has a real date,
+  never a real hour — see the earlier `normalizeGame()` gap notice).
+  `formatKickoff()` in `index.html` only ever shows a time when
+  `hasRealTime` is true; regular-season games get a date only, never a
+  fabricated hour. Shown in place of "Upcoming" for scheduled games.
+  Verified live: preseason games show real times ("SAT, AUG 29, 6:00 PM
+  ET") matching the real ESPN schedule exactly; regular-season Week 1 games
+  show date-only ("WED, SEP 9"), honestly, with no time.
+- **`.picks-grid` is now a fixed 4-column grid** (2 on mobile) instead of
+  `auto-fill(minmax(120px))`, which was landing at 6 per row — narrower
+  pick chips, same 2-row height for the 8-team roster.
+- **[BUG FOUND / FIXED via live browser testing, not just inspection]**
+  Clicking any preseason game to expand its picks breakdown threw
+  `TypeError: Cannot read properties of undefined (reading 'Lobos')` and
+  blanked the entire games list — caught immediately by actually clicking
+  through the feature in a real Chrome tab, not just reading the code.
+  Root cause: preseason games (from Highlightly) never had a `picks` field
+  at all — regular-season games always carry one (possibly empty) via
+  `buildWeekPublicJSON()`, but the picks-breakdown code assumed every game
+  has one. Fixed at both ends: guarded the read in `index.html`
+  (`g.picks && g.picks[team]`), and added `picks: {}` in
+  `normalizeHighlightlyGame()` so preseason games' shape matches
+  regular-season games' shape going forward, not just patched at the call
+  site. Re-verified live after the fix: preseason games expand cleanly,
+  showing "No pick yet" for all 8 teams in the new 4-column layout;
+  regular-season Week 1 games still expand correctly too (no regression).
+- Also fixed the same tie-scoring bug in `normalizeHighlightlyGame()`
+  already fixed in `normalizeGame()` earlier today (a tie fell through to
+  an away-team win) — preseason isn't scored for PFPI picks, but a wrong
+  displayed winner would still be a real bug if any of these 16 games ties.
+- **Manual one-time data refresh**: the already-cached preseason data
+  predated the `hasRealTime`/`picks` fields, and the Highlightly poll
+  window throttle wouldn't fire again until Aug 27. Temporarily bypassed
+  `shouldPollHighlightlyThisTick()` (`return true`) for exactly one real
+  cron tick to refresh the live data with the new fields, confirmed
+  `hasRealTime:true` landed in the real published JSON, then reverted the
+  bypass and redeployed before committing — the throttle itself was never
+  weakened, just paused for one tick under direct supervision.

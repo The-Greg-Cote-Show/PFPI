@@ -96,13 +96,13 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .game-team.winner{color:var(--gold2);}
 .game-score{font-size:.95rem;font-weight:800;min-width:1.4em;text-align:center;}
 .game-at{color:var(--muted);font-size:.68rem;font-weight:600;}
-.game-status{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;min-width:52px;text-align:right;flex-shrink:0;}
+.game-status{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;min-width:78px;text-align:right;flex-shrink:0;line-height:1.3;}
 .game-status.final{color:var(--green);}
 .game-expand-icon{color:var(--muted);font-size:.7rem;flex-shrink:0;transition:transform .15s;width:14px;text-align:center;}
 .game-card.expanded .game-expand-icon{transform:rotate(180deg);}
 
 .picks-breakdown{border-top:1px solid var(--border);padding:.75rem .9rem .9rem;background:var(--panel2);}
-.picks-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;}
+.picks-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
 .pick-chip{display:flex;align-items:center;gap:6px;background:var(--panel3);border:1px solid var(--border);border-radius:8px;padding:6px 8px;}
 .pick-chip.correct{border-color:rgba(62,207,116,.4);}
 .pick-chip.incorrect{border-color:rgba(224,82,82,.3);opacity:.75;}
@@ -120,6 +120,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   .plot-row{height:220px;}
   .bars-area{gap:5px;}
   .bar-team-name{display:none;}
+  .picks-grid{grid-template-columns:repeat(2,1fr);}
 }
 </style>
 </head>
@@ -200,6 +201,13 @@ function fmtPct(v){
 
 const NUM_WEEKS = 18;
 
+// Preseason Week 3 (Aug 27-29, 2026) is a real, live-updating data source
+// (Highlightly — see worker.js/BUILD_LOG.md) but not a numbered PFPI week:
+// no picks are scored against it, it's a stress-test surface for Yeti. Its
+// own button sits to the left of Wk 1 in the week row, chronologically
+// before the season, per Yeti (2026-08-25).
+const PRESEASON_WEEK_KEY = "preseason-3";
+
 // The 2026 season is now the live site (2025-simulation.html in /archive is
 // the retired design/testing tool this replaced — see BUILD_LOG.md). Whatever
 // week is currently in progress (or the most recently completed one) is
@@ -251,6 +259,14 @@ async function initRealData() {
 
 async function loadRealWeek(week) {
   if (REAL.weeks[week] !== undefined) return REAL.weeks[week];
+  // Preseason isn't a numbered PFPI week, so it skips the currentWeek gate
+  // below entirely — it's real data with real games, just not part of the
+  // regular season's progressive reveal.
+  if (week === PRESEASON_WEEK_KEY) {
+    const data = await fetchJSON(`data/week-${week}.json`);
+    REAL.weeks[week] = (data && Array.isArray(data.games)) ? data.games : null;
+    return REAL.weeks[week];
+  }
   if (!REAL.currentWeek || week > REAL.currentWeek) { REAL.weeks[week] = null; return null; }
   const data = await fetchJSON(`data/week-${week}.json`);
   REAL.weeks[week] = (data && Array.isArray(data.games)) ? data.games : null;
@@ -338,6 +354,17 @@ function renderTabs(){
 
 function renderWeekRow(){
   const el = document.getElementById("weekRow"); el.innerHTML = "";
+
+  const preseasonBtn = document.createElement("button");
+  preseasonBtn.className = "week-btn" + (currentWeek === PRESEASON_WEEK_KEY ? " active" : "");
+  preseasonBtn.textContent = "Preseason";
+  // Games is the only category that makes sense for preseason -- no PFPI
+  // picks are scored against it, so Standings/etc. would just show an
+  // honest "no data" empty state. Switching straight to Games is the more
+  // useful default than making a visitor click over themselves.
+  preseasonBtn.onclick = () => { currentWeek = PRESEASON_WEEK_KEY; currentCat = "games"; render(); };
+  el.appendChild(preseasonBtn);
+
   for (let w=1; w<=CURRENT_WEEK; w++){
     const btn = document.createElement("button");
     const isCurrent = w === CURRENT_WEEK;
@@ -352,9 +379,10 @@ function renderWeekRow(){
 async function render(){
   renderTabs(); renderWeekRow();
 
-  const isFinal = currentWeek === NUM_WEEKS;
+  const isPreseason = currentWeek === PRESEASON_WEEK_KEY;
+  const isFinal = !isPreseason && currentWeek === NUM_WEEKS;
   const weekLabelEl = document.getElementById("weekLabel");
-  weekLabelEl.textContent = isFinal ? "Final — Week 18" : "Through Week " + currentWeek;
+  weekLabelEl.textContent = isPreseason ? "Preseason Week 3" : isFinal ? "Final — Week 18" : "Through Week " + currentWeek;
   weekLabelEl.className = "week-label" + (isFinal?" final":"");
 
   // Tie-game note, per Yeti (2026-08-25): visible near the chart, not
@@ -376,16 +404,24 @@ async function render(){
   // Brief shows under the chart regardless of which category tab is active —
   // it's tied to the selected week, not the selected category — so this
   // runs before the games/chart branch split below, not inside either one.
-  const briefBodyEl = document.getElementById("briefBody");
-  const briefWeekTagEl = document.getElementById("briefWeekTag");
-  briefWeekTagEl.textContent = isFinal ? "Week " + NUM_WEEKS + " — Final" : "Week " + currentWeek;
-  const brief = await loadRealBrief(currentWeek);
-  if (brief) {
-    briefBodyEl.textContent = brief;
-    briefBodyEl.className = "brief-body";
+  // Doesn't apply to preseason at all (Greg's brief is a real-season thing),
+  // so it's hidden outright rather than showing a not-applicable empty state.
+  const briefPanelEl = document.getElementById("briefPanel");
+  if (isPreseason) {
+    briefPanelEl.classList.add("hidden");
   } else {
-    briefBodyEl.textContent = "Greg hasn't published a brief for this week yet.";
-    briefBodyEl.className = "brief-body empty";
+    briefPanelEl.classList.remove("hidden");
+    const briefBodyEl = document.getElementById("briefBody");
+    const briefWeekTagEl = document.getElementById("briefWeekTag");
+    briefWeekTagEl.textContent = isFinal ? "Week " + NUM_WEEKS + " — Final" : "Week " + currentWeek;
+    const brief = await loadRealBrief(currentWeek);
+    if (brief) {
+      briefBodyEl.textContent = brief;
+      briefBodyEl.className = "brief-body";
+    } else {
+      briefBodyEl.textContent = "Greg hasn't published a brief for this week yet.";
+      briefBodyEl.className = "brief-body empty";
+    }
   }
 
   const chartPanel = document.getElementById("chartPanel");
@@ -394,7 +430,7 @@ async function render(){
   if (currentCat === "games") {
     chartPanel.style.display = "none";
     gamesPanel.className = "games-panel active";
-    document.getElementById("catTitle").textContent = "Week " + currentWeek + " games";
+    document.getElementById("catTitle").textContent = isPreseason ? "Preseason Week 3 games" : "Week " + currentWeek + " games";
     document.getElementById("catDesc").textContent = "Tap a game to see everyone's pick.";
 
     const realGames = await loadRealWeek(currentWeek);
@@ -403,8 +439,9 @@ async function render(){
     if (realGames && realGames.length > 0) {
       gamesListEl.classList.remove("hidden");
       gamesEmptyEl.classList.add("hidden");
-      document.getElementById("legendNote").textContent =
-        "Live NFL scores and real picks for this week.";
+      document.getElementById("legendNote").textContent = isPreseason
+        ? "Live preseason NFL scores. No PFPI picks are made for preseason games."
+        : "Live NFL scores and real picks for this week.";
       renderGames(realGames);
     } else {
       gamesListEl.classList.add("hidden");
@@ -540,6 +577,20 @@ async function render(){
 
 let expandedGameIdx = null;
 
+// Highlightly (preseason) gives a real kickoff timestamp; Big Balls
+// (regular season) only gives a real calendar date, anchored to a
+// placeholder noon-UTC time for deadline math (see worker.js's gap
+// notice) — hasRealTime tells these apart so a fabricated time is never
+// shown for regular-season games, only a real one for preseason.
+function formatKickoff(g) {
+  if (!g.kickoffISO) return null;
+  const d = new Date(g.kickoffISO);
+  const opts = g.hasRealTime
+    ? { timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }
+    : { timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric" };
+  return new Intl.DateTimeFormat("en-US", opts).format(d) + (g.hasRealTime ? " ET" : "");
+}
+
 // Only ever called with real, non-empty game data (render() shows the empty
 // state itself otherwise) — see BUILD_LOG.md for the 2025-sim archival that
 // removed the simulated-schedule fallback this used to have.
@@ -557,7 +608,9 @@ function renderGames(realGames){
     const isFinal = g.status === "final";
     const homeWon = isFinal && g.winner === g.home;
     const awayWon = isFinal && g.winner === g.away;
-    const statusLabel = g.status === "final" ? "Final" : g.status === "in_progress" ? "Live" : "Upcoming";
+    const statusLabel = g.status === "final" ? "Final"
+      : g.status === "in_progress" ? "Live"
+      : (formatKickoff(g) || "Upcoming");
     const homeDisplay = g.homeScore ?? (isFinal ? "" : "-");
     const awayDisplay = g.awayScore ?? (isFinal ? "" : "-");
 

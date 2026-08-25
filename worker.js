@@ -92,7 +92,13 @@ function normalizeGame(raw) {
 
   return {
     id: raw.game_id || raw.id,
-    home, away, homeScore, awayScore, status, kickoffISO, winner, tie,
+    // hasRealTime: false -- kickoffISO above is a noon-UTC placeholder
+    // anchored to the real calendar date, not a real kickoff hour (see
+    // the gap notice above). The frontend uses this flag to show a date
+    // only for these games, never a fabricated time -- contrast
+    // normalizeHighlightlyGame()'s hasRealTime: true, which has genuine
+    // kickoff timestamps.
+    home, away, homeScore, awayScore, status, kickoffISO, winner, tie, hasRealTime: false,
   };
 }
 
@@ -154,14 +160,24 @@ function normalizeHighlightlyGame(g) {
     }
   }
 
+  // Same tie fix as normalizeGame() above -- a tie must not fall through to
+  // the away-team branch. Preseason games aren't scored for PFPI picks, but
+  // a wrong "winner" would still be a real display bug if any of these 16
+  // games ties (plausible in real preseason play).
+  const tie = status === "final" && homeScore !== null && awayScore !== null && homeScore === awayScore;
   let winner = null;
-  if (status === "final" && homeScore !== null && awayScore !== null) {
+  if (status === "final" && homeScore !== null && awayScore !== null && !tie) {
     winner = homeScore > awayScore ? home : away;
   }
 
   return {
     id: `hl-${g.id}`,
-    home, away, homeScore, awayScore, status, kickoffISO: g.date, winner,
+    // hasRealTime: true -- unlike Big Balls, Highlightly's `date` is a real
+    // kickoff timestamp, not a synthesized placeholder (see gap notice
+    // above and normalizeGame()'s own hasRealTime: false). Lets the
+    // frontend show an actual time for preseason games and be honest that
+    // it can't for regular-season ones.
+    home, away, homeScore, awayScore, status, kickoffISO: g.date, winner, tie, hasRealTime: true,
   };
 }
 
@@ -289,7 +305,7 @@ async function buildWeekPublicJSON(week, results, env) {
     }
     return {
       id: g.id, home: g.home, away: g.away,
-      kickoffISO: g.kickoffISO, status: g.status,
+      kickoffISO: g.kickoffISO, hasRealTime: !!g.hasRealTime, status: g.status,
       homeScore: g.homeScore, awayScore: g.awayScore,
       winner: g.winner, tie: !!g.tie, picks,
     };

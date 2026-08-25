@@ -7,19 +7,19 @@ this repo) for the full spec this build follows.
 
 ## Start here: what's live vs. what needs you
 
-**Working right now:** repo public at github.com/The-Greg-Cote-Show/PFPI,
-both Workers deployed and tested (picks/admin endpoints all verified live,
-including a real browser click-through), GitHub Pages built and serving
-`index.html` / `picks.html` / `admin.html` / `brief.html` correctly, frontend
-gracefully running on the original simulated mockup data since no real data
-exists yet. Admin login (self-service reset, brute-force lockout + alert
-email) and Greg's Brief publisher (own independent login, same reset/lockout
-protection, admin correction path in `admin.html`) are both live and tested
-against the real deployed Worker — see the 2026-08-24 entries below for the
-admin-login incident and the brief-publisher build.
+**Working right now:** repo public at github.com/The-Greg-Cote-Show/PFPI, both
+Workers deployed with cron triggers actually running (confirmed live in the
+Cloudflare dashboard 2026-08-25, not just configured), GitHub Pages serving
+`index.html` / `picks.html` / `admin.html` / `brief.html`. **The site is now
+genuinely 2026-scoped** — the 2025 simulation that used to be the default
+view is archived (`archive/2025-simulation.html`), and the live site shows
+real 2026 data where it exists and honest empty states where it doesn't
+(expected right now, season hasn't started). Admin login (self-service reset,
+brute-force lockout + alert email) and Greg's Brief publisher (own
+independent login, same protections, admin correction path in `admin.html`)
+are both live and tested against the real deployed Worker.
 
-**Three things still need you (2 of the original 5 are now done — see
-2026-08-25 entries):**
+**Two things still need you:**
 1. **DNS** — add a CNAME record `pfpi` -> `the-greg-cote-show.github.io` (same
    pattern as `cotecup`). Nothing at `pfpi.thegregcoteshow.com` will load
    until this is done.
@@ -28,14 +28,14 @@ admin-login incident and the brief-publisher build.
    account emails — login reset links, brute-force alerts — work today via
    Resend's default sender regardless, since those always go to a fixed
    internal address; see the 2026-08-24 entries.)
-3. **Cron triggers** — add in the Cloudflare dashboard Triggers tab for both
-   Workers (exact strings below, in the CLOUDFLARE section). Nothing runs on
-   a schedule until this is done.
 
 **Done as of 2026-08-25:** `BIG_BALLS_API_KEY` and `GITHUB_PAT` are both set
-on their Workers now. Real scores/schedule polling and Greg's Brief
-publishing are fully live — see the 2026-08-25 entries for what got
-verified/fixed once real data was actually reachable.
+on both Workers; cron triggers are confirmed live in the dashboard for both
+(picks-worker hourly, scores-worker every minute — neither had ever actually
+been added, despite being flagged since the original build); the 2025->2026
+switchover is done; the Big Balls preseason API was tested and found to
+return zero PRE-type games (see that entry below for exact numbers — this
+affects how you can stress-test the picks flow before kickoff).
 
 Full detail, reasoning, and exact commands for each are in the log below, in
 the order they came up.
@@ -489,3 +489,97 @@ the order they came up.
     exactly — no changes needed there.
   - Redeployed `pfpi-scores-worker` with the fix before any real cron tick
     could poll and cache the broken version.
+- **[TESTED]** Big Balls preseason data, per Yeti's ask: does
+  `GET /v1/nfl/games?season=2026&type=PRE` return real preseason games?
+  Concrete findings, not just pass/fail:
+  - `season=2026&type=PRE` (no week), `season=2026&type=PRE&week=1`,
+    `season=2025&type=PRE` (no week), `season=2025&type=PRE&week=1`, and
+    `season=2024&type=PRE` **all returned `total: 0`** — zero preseason
+    games, across every season/week combination tried, not just 2026.
+  - Sanity-checked the `type` filter itself isn't broken: `season=2025&type=REG`
+    returned `total: 272` (17 weeks x 16 games, correct for a full 32-team
+    regular season) — the parameter works, real games with real scores come
+    back (confirmed against `2025_01_DAL_PHI`, real 24-20 final). `type=POST`
+    for 2025 also returned `total: 0`, even though the 2025 playoffs
+    genuinely already happened by now (it's 2026-08-25) — so this isn't a
+    preseason-specific gap either.
+  - Confirmed the `type` param and its `REG`/`POST`/`PRE` enum are real
+    (fetched Big Balls' own `/openapi.json` and read the actual endpoint
+    definition, not just trusting the marketing page) — the parameter exists
+    and is documented correctly, the underlying dataset simply doesn't
+    contain any non-regular-season games. The endpoint's own OpenAPI summary
+    calls it *"NFL schedule rows (nflverse historical)"*, consistent with a
+    regular-season-only source.
+  - **Bottom line for Yeti:** you cannot stress-test picks/scoring against
+    real preseason results through this API — there's no PRE (or POST) data
+    in it at all, this looks like a permanent characteristic of the dataset,
+    not something that fills in later. If you still want a live-data stress
+    test before kickoff, it'd have to use real *regular*-season data from a
+    prior year (`season=2025&type=REG` is confirmed real and complete) rather
+    than actual 2026 preseason games.
+- **[CLOUDFLARE]** Cron triggers, per Yeti's ask to confirm what's actually
+  set in the dashboard (not visible via `wrangler.toml` or the API by design
+  — see the original build's note on why cron timing was deliberately kept
+  dashboard-only). Checked both Workers' Settings > Triggers via a real
+  browser session: **neither had a cron trigger configured**, despite being
+  flagged as needed since the very first build session. Added both, using
+  the exact strings already documented here:
+  - `pfpi-picks-worker`: `0 * * * *` (Cron expression tab, not the
+    Schedule-picker tab — same result, but typing the literal string is less
+    error-prone). Confirmed via the dashboard's own "Estimated upcoming
+    events" preview showing hourly-on-the-hour firing, and confirmed saved
+    (banner cleared, trigger persisted after reload).
+  - `pfpi-scores-worker`: `* * * * *`. Same confirmation process — estimated
+    events showed every-minute firing, saved and persisted.
+  - Both are live now, so the `current-week` KV value, schedule cache, and
+    (once the season has real games) standings/results will actually start
+    updating on their own instead of only updating when manually triggered.
+- **[FEATURE]** 2026 switchover, from `PFPI_2026_switchover_handoff.md`.
+  Archived the 2025 simulation and made `index.html` genuinely track the
+  real 2026 season instead of defaulting to simulated data.
+  - **Archive location:** `archive/2025-simulation.html` (the exact working
+    `index.html` as it existed right before this change — still fully
+    self-sufficient if Yeti opens it directly; its own real-data fetches
+    just fail gracefully and it falls back to its embedded 2025 data exactly
+    as it always did) and `archive/pfpi_mockup_v3.html` (the original design
+    mockup the simulation was built from). Neither was deleted, both still
+    open and work standalone, matching Yeti's explicit "don't delete, I want
+    to pull it back up later" instruction.
+  - **`index.html` changes:** removed the ~90KB embedded `SIM`/`SCHEDULE`
+    data and every fallback path to it (page dropped from ~116KB to ~27KB).
+    `CURRENT_WEEK` is now genuinely dynamic — starts at `1` (matching
+    `shared.js`'s own pre-season fallback formula) and gets corrected to the
+    real value from `data/current.json` once that loads, instead of being
+    hardcoded to the season finale the way the locked mockup had it. Category
+    definitions and chart rules are unchanged, per Yeti's explicit "data-source
+    swap, not a rules change" instruction — `weeksLeading`, `weeklyTitles`,
+    `tenWin`, `uniqueHits`, and `bestWeek` still have no real computation
+    behind them (the tie-splitting rule they'd need was never defined — same
+    open item flagged in the very first build's SCOPE NOTE, still
+    unresolved), so they now show an honest "no data yet" empty state
+    instead of simulated numbers, the same honesty principle already used
+    for Greg's Brief's empty state. The Games tab and every chart category
+    get this same real empty-state treatment when there's genuinely nothing
+    to show, which is expected and correct right now (season hasn't
+    started) — not fabricated placeholder numbers.
+  - **[BUG FOUND / FIXED]** While visually verifying the empty states in a
+    real browser (served locally, `fetch()` to `data/*.json` genuinely
+    failing — the actual pre-season condition), found stale chart axis
+    lines and list borders bleeding through behind the "no data" message.
+    Root cause: `.hidden{display:none}` was declared *before*
+    `.chart-area{display:flex}` and `.games-list{display:flex}` in the
+    stylesheet — plain CSS cascade rules on equal specificity, so the
+    later-declared `display:flex` rules won regardless of which class was
+    added last via JS. Fixed with `.hidden{display:none !important;}`,
+    which is the correct fix for a hide-utility class generally (it should
+    never depend on declaration order relative to whatever it's hiding),
+    not just a one-off patch. Re-verified visually after the fix — clean,
+    no artifacts, across Standings/Games/Best Week and the Wk 1-only week
+    row (correctly reflecting the honest pre-season state).
+  - **Tested:** served the real post-change `index.html` locally (Python's
+    `http.server`, matching the same local-serving pattern used for the
+    original build's browser testing) and drove a real Chrome tab through
+    it — title bar reads "PFPI 2026", only "Wk 1" is selectable (no fake
+    future weeks), every category and the Games tab show the correct honest
+    empty-state copy, Greg's real published Week 1 brief still displays
+    correctly underneath regardless of tab, zero console errors.

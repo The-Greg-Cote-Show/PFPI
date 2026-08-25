@@ -10,19 +10,30 @@
 // commit-to-CDN propagation lag, which the architecture doc flags as
 // variable/untested.
 //
-// KNOWN GAP, FLAGGED NOT GUESSED (see BUILD_LOG.md):
-// Big Balls Sports Data's own marketing page (bigballsdata.com/nfl-api)
-// documents GET /v1/nfl/games returning "schedules + finals" and a game_id
-// format of YYYY_WW_AWAY_HOME (which does encode real home/away, resolving
-// the "home/away accuracy unverified" item from the checklist) with Bearer
-// auth. Its published OpenAPI spec, however, does not actually list any
-// /v1/nfl path (only /v1/nba/games and sport-agnostic /v1/matches), so the
-// exact response field names for score/status/kickoff below are BEST-EFFORT
-// GUESSES from common sports-API conventions, not confirmed docs. They are
-// isolated entirely inside normalizeGame() below so they're a one-function
-// fix once BIG_BALLS_API_KEY exists and a real response can be inspected.
-// Also: BIG_BALLS_API_KEY was not available tonight, so the fetch step is
-// stubbed to log-and-skip rather than fabricate any score/schedule data.
+// VERIFIED AGAINST REAL RESPONSES (2026-08-25, once BIG_BALLS_API_KEY was
+// set) — see BUILD_LOG.md. Checked both an upcoming 2026 week (all-null
+// scores) and a genuinely completed 2025 week (real final score) so this
+// isn't a pre-season artifact. Real shape:
+//   { game_id, season, week, game_date, game_type, home_team, away_team,
+//     home_score, away_score, stadium, roof, surface, home_rest, away_rest }
+// Two of the original best-effort field-name guesses were wrong and are
+// fixed in normalizeGame() below:
+//   - There is NO status/game_status field, ever (confirmed on the
+//     completed 2025 game too) -> status is derived from score presence
+//     instead. Residual known limitation: Big Balls exposes no live/
+//     in-progress signal at all, so a partial in-progress score would be
+//     misread as final if this Worker ever polls mid-game. Not fixable
+//     without an API field that doesn't exist; flagged, not silently
+//     assumed safe.
+//   - There is NO kickoff time-of-day field, only a date-only `game_date`
+//     (e.g. "2025-09-04") -> kickoffISO is synthesized as noon UTC on that
+//     date, which is safely the same US calendar day in every NFL timezone
+//     (no midnight-boundary rollover risk) and is sufficient for
+//     computeGameDeadline(), which only needs the calendar day, not the
+//     exact kickoff hour. The exact kickoff hour is genuinely unknown from
+//     this API and isn't fabricated anywhere.
+// home_team/away_team and home_score/away_score matched the original
+// guesses exactly, including the game_id's YYYY_WW_AWAY_HOME format.
 // ============================================================
 
 import { TEAMS, computeCurrentWeekFromDate, commitJSONToGitHub } from "./shared.js";
@@ -57,8 +68,14 @@ function normalizeGame(raw) {
   const away = raw.away_team || raw.away || awayFromId || null;
   const homeScore = raw.home_score ?? raw.homeScore ?? null;
   const awayScore = raw.away_score ?? raw.awayScore ?? null;
-  const status = raw.status || raw.game_status || "scheduled"; // e.g. scheduled | in_progress | final
-  const kickoffISO = raw.kickoff || raw.start_time || raw.game_time || raw.date || null;
+  // No status field exists in real responses (see gap notice above) — the
+  // only signal available is whether both scores are populated.
+  const status = (homeScore !== null && awayScore !== null) ? "final" : "scheduled";
+  // No kickoff time-of-day exists in real responses either, only a
+  // date-only game_date — anchored at noon UTC so the calendar day is
+  // unambiguous in every US timezone (see gap notice above).
+  const kickoffISO = raw.kickoff || raw.start_time || raw.game_time
+    || (raw.game_date ? `${raw.game_date}T12:00:00.000Z` : null);
 
   let winner = null;
   if (status === "final" && homeScore !== null && awayScore !== null) {

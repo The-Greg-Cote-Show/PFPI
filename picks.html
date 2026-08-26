@@ -133,6 +133,19 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
 </div>
 
+<!-- Separate confirmation popup shown after a successful send, per Yeti
+     (2026-08-26 3:20pm round) -- the form itself closes entirely rather
+     than staying on screen with an inline "Sent." message. -->
+<div class="modal-overlay hidden" id="contactSentModal">
+  <div class="modal-box">
+    <div class="modal-title">Message sent</div>
+    <div class="modal-text">Sent. Yeti will get back to you.</div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" id="contactSentOkBtn" type="button">OK</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // Points at the deployed picks-worker directly (a different origin than this
 // static page). Bird Feeder principle is unaffected: this is a write action
@@ -428,6 +441,9 @@ document.getElementById("contactYetiBtn").onclick = () => {
 document.getElementById("contactCancelBtn").onclick = () => {
   document.getElementById("contactModal").classList.add("hidden");
 };
+document.getElementById("contactSentOkBtn").onclick = () => {
+  document.getElementById("contactSentModal").classList.add("hidden");
+};
 document.getElementById("contactSendBtn").onclick = async () => {
   const email = document.getElementById("contactEmail").value.trim();
   const message = document.getElementById("contactMessage").value.trim();
@@ -459,9 +475,16 @@ document.getElementById("contactSendBtn").onclick = async () => {
       statusEl.className = "submit-status rejected";
       return;
     }
-    statusEl.textContent = "Sent. Yeti will get back to you.";
-    statusEl.className = "submit-status saved";
+    // Per Yeti (2026-08-26, 3:20pm round): on success, the form itself
+    // closes entirely rather than staying open with an inline "Sent."
+    // message -- a separate confirmation popup takes over instead, which
+    // the visitor dismisses themselves.
+    document.getElementById("contactEmail").value = "";
     document.getElementById("contactMessage").value = "";
+    statusEl.textContent = "";
+    statusEl.className = "submit-status";
+    document.getElementById("contactModal").classList.add("hidden");
+    document.getElementById("contactSentModal").classList.remove("hidden");
   } catch (e) {
     btn.disabled = false;
     btn.textContent = "Send";

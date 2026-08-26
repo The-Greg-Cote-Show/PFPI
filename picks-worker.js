@@ -658,8 +658,13 @@ const AUTH_CONFIG = {
     resetKvPrefix: "greg-reset",
     resetPage: "brief.html",
     resetEmail: GREG_EMAIL,
-    label: "Greg's Brief",
-    pageDescription: "the PFPI Brief publisher",
+    // Matches brief.html's own established page name/description exactly
+    // ("PFPI Commissioner Portal") -- these feed real user-facing email
+    // text (password reset, brute-force alert), so they'd drifted from the
+    // naming rounds that already renamed the page itself. Was "Greg's
+    // Brief" / "the PFPI Brief publisher" (pre-rename terminology).
+    label: "Commissioner Portal",
+    pageDescription: "the PFPI Commissioner Portal",
   },
 };
 

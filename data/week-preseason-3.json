@@ -13,7 +13,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "CHI"
+        "Roughriders": "CHI",
+        "Chickens": "TEN",
+        "Giraffes": "TEN"
       }
     },
     {
@@ -28,7 +30,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "DET"
+        "Roughriders": "DET",
+        "Chickens": "DET",
+        "Giraffes": "DET"
       }
     },
     {
@@ -43,7 +47,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "DEN"
+        "Roughriders": "DEN",
+        "Chickens": "DEN",
+        "Giraffes": "MIN"
       }
     },
     {
@@ -58,7 +64,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "SEA"
+        "Roughriders": "SEA",
+        "Chickens": "KC",
+        "Giraffes": "SEA"
       }
     },
     {
@@ -73,7 +81,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "NO"
+        "Roughriders": "NO",
+        "Chickens": "DAL",
+        "Giraffes": "NO"
       }
     },
     {
@@ -88,7 +98,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "PHI"
+        "Roughriders": "PHI",
+        "Chickens": "CIN",
+        "Giraffes": "PHI"
       }
     },
     {
@@ -103,7 +115,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "GB"
+        "Roughriders": "GB",
+        "Chickens": "GB",
+        "Giraffes": "GB"
       }
     },
     {
@@ -118,7 +132,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "NYG"
+        "Roughriders": "NYG",
+        "Chickens": "NYG",
+        "Giraffes": "NYG"
       }
     },
     {
@@ -133,7 +149,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "TB"
+        "Roughriders": "TB",
+        "Chickens": "JAX",
+        "Giraffes": "TB"
       }
     },
     {
@@ -148,7 +166,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "MIA"
+        "Roughriders": "MIA",
+        "Chickens": "ATL",
+        "Giraffes": "MIA"
       }
     },
     {
@@ -163,7 +183,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "HOU"
+        "Roughriders": "HOU",
+        "Chickens": "CAR",
+        "Giraffes": "HOU"
       }
     },
     {
@@ -178,7 +200,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "BAL"
+        "Roughriders": "BAL",
+        "Chickens": "BAL",
+        "Giraffes": "WSH"
       }
     },
     {
@@ -193,7 +217,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "LAR"
+        "Roughriders": "LAR",
+        "Chickens": "LAC",
+        "Giraffes": "LAC"
       }
     },
     {
@@ -208,7 +234,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "NE"
+        "Roughriders": "NE",
+        "Chickens": "CLE",
+        "Giraffes": "NE"
       }
     },
     {
@@ -223,7 +251,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Roughriders": "SF"
+        "Roughriders": "SF",
+        "Chickens": "SF",
+        "Giraffes": "LV"
       }
     },
     {
@@ -239,9 +269,11 @@
       "hasRealTime": true,
       "picks": {
         "Roughriders": "BUF",
+        "Chickens": "BUF",
+        "Giraffes": "BUF",
         "Gentry's Neanderbrows": "PIT"
       }
     }
   ],
-  "updatedAt": "2026-08-25T16:24:48.663Z"
+  "updatedAt": "2026-08-26T04:15:40.622Z"
 }

@@ -15,6 +15,7 @@
       "picks": {
         "Roughriders": "CHI",
         "Chickens": "TEN",
+        "Ferraris": "CHI",
         "Giraffes": "TEN"
       }
     },
@@ -32,6 +33,7 @@
       "picks": {
         "Roughriders": "DET",
         "Chickens": "DET",
+        "Ferraris": "DET",
         "Giraffes": "DET"
       }
     },
@@ -49,6 +51,7 @@
       "picks": {
         "Roughriders": "DEN",
         "Chickens": "DEN",
+        "Ferraris": "DEN",
         "Giraffes": "MIN"
       }
     },
@@ -65,7 +68,8 @@
       "hasRealTime": true,
       "picks": {
         "Roughriders": "SEA",
-        "Chickens": "KC",
+        "Chickens": "SEA",
+        "Ferraris": "KC",
         "Giraffes": "SEA"
       }
     },
@@ -83,6 +87,7 @@
       "picks": {
         "Roughriders": "NO",
         "Chickens": "DAL",
+        "Ferraris": "NO",
         "Giraffes": "NO"
       }
     },
@@ -100,6 +105,7 @@
       "picks": {
         "Roughriders": "PHI",
         "Chickens": "CIN",
+        "Ferraris": "PHI",
         "Giraffes": "PHI"
       }
     },
@@ -117,6 +123,7 @@
       "picks": {
         "Roughriders": "GB",
         "Chickens": "GB",
+        "Ferraris": "ARI",
         "Giraffes": "GB"
       }
     },
@@ -134,6 +141,7 @@
       "picks": {
         "Roughriders": "NYG",
         "Chickens": "NYG",
+        "Ferraris": "NYG",
         "Giraffes": "NYG"
       }
     },
@@ -151,6 +159,7 @@
       "picks": {
         "Roughriders": "TB",
         "Chickens": "JAX",
+        "Ferraris": "JAX",
         "Giraffes": "TB"
       }
     },
@@ -168,6 +177,7 @@
       "picks": {
         "Roughriders": "MIA",
         "Chickens": "ATL",
+        "Ferraris": "MIA",
         "Giraffes": "MIA"
       }
     },
@@ -185,6 +195,7 @@
       "picks": {
         "Roughriders": "HOU",
         "Chickens": "CAR",
+        "Ferraris": "HOU",
         "Giraffes": "HOU"
       }
     },
@@ -202,6 +213,7 @@
       "picks": {
         "Roughriders": "BAL",
         "Chickens": "BAL",
+        "Ferraris": "BAL",
         "Giraffes": "WSH"
       }
     },
@@ -219,6 +231,7 @@
       "picks": {
         "Roughriders": "LAR",
         "Chickens": "LAC",
+        "Ferraris": "LAR",
         "Giraffes": "LAC"
       }
     },
@@ -235,7 +248,8 @@
       "hasRealTime": true,
       "picks": {
         "Roughriders": "NE",
-        "Chickens": "CLE",
+        "Chickens": "NE",
+        "Ferraris": "NE",
         "Giraffes": "NE"
       }
     },
@@ -253,6 +267,7 @@
       "picks": {
         "Roughriders": "SF",
         "Chickens": "SF",
+        "Ferraris": "LV",
         "Giraffes": "LV"
       }
     },
@@ -270,10 +285,11 @@
       "picks": {
         "Roughriders": "BUF",
         "Chickens": "BUF",
+        "Ferraris": "BUF",
         "Giraffes": "BUF",
         "Gentry's Neanderbrows": "PIT"
       }
     }
   ],
-  "updatedAt": "2026-08-26T04:30:42.191Z"
+  "updatedAt": "2026-08-26T04:35:35.330Z"
 }

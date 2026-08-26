@@ -464,7 +464,20 @@ async function render(){
     championTeam = holders; // array, supports shared crown on a tie
   }
 
-  TEAMS.forEach(team => {
+  // Dynamic bar sorting (per Greg via Yeti, 2026-08-26 big feedback round --
+  // applied here too, not just the live 2026 site, specifically so Greg can
+  // see the pattern play out against a full real season's worth of 2025
+  // data). Same rule as index.html: ranked by this category's value,
+  // highest first, alphabetical by team name on an exact tie, recomputed
+  // every render() call. See index.html for items 9-12 (crowns on every
+  // category, vertical mascot lettering, etc.) -- those weren't asked for
+  // here, only the sorting.
+  const sortedTeams = [...TEAMS].sort((a, b) => {
+    if (values[b] !== values[a]) return values[b] - values[a];
+    return TEAM_SHORT[a].localeCompare(TEAM_SHORT[b]);
+  });
+
+  sortedTeams.forEach(team => {
     const val = values[team];
     const pct = Math.max(2, Math.round((val/maxVal)*1000)/10);
     const color = TEAM_COLORS[team];
@@ -496,8 +509,8 @@ async function render(){
   const isRealStandings = cat.isStandings && hasRealStandingsForWeek(currentWeek);
   simBanner.style.display = isRealStandings ? "none" : "";
   document.getElementById("legendNote").textContent = isRealStandings
-    ? "Live standings. Team order is fixed and never re-sorted by score."
-    : "Simulated data from real 2025 NFL results with randomized picks. Team order is fixed and never re-sorted by score.";
+    ? "Live standings. Bars are sorted by rank in this category (highest first); ties break alphabetically."
+    : "Simulated data from real 2025 NFL results with randomized picks. Bars are sorted by rank in this category (highest first); ties break alphabetically.";
 }
 
 let expandedGameIdx = null;

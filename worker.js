@@ -566,47 +566,80 @@ async function pollAndPublish(env) {
   }
 
   // Preseason Week 3 stopgap (Aug 27-29, 2026 only) — see scope notice above
-  // fetchHighlightlyPreseasonWeek3(). Independent of the Big Balls block
-  // above: this runs every poll tick regardless, guarded only by its own
-  // HIGHLIGHTLY_API_KEY check, so it keeps updating with live scores through
-  // Aug 27-29 on the same cron cadence as everything else.
-  const preseasonGames = await fetchHighlightlyPreseasonWeek3(env);
-  if (preseasonGames) {
+  // fetchHighlightlyPreseasonWeek3(). Schedule/score refresh stays on its
+  // own tight Highlightly budget (shouldPollHighlightlyThisTick only calls
+  // the API during the real game windows). Re-merging + republishing PICKS
+  // is deliberately decoupled from that below.
+  //
+  // [BUG FOUND 2026-08-25/26, root-caused fresh per Yeti's handoff doc --
+  // NOT the apostrophe/team-name theory it flagged as worth checking, and
+  // NOT a KV or merge-logic bug either]: Yeti reported picks missing for
+  // Gracelin's Giraffes and Mike's Chickens but not Dick's Roughriders.
+  // Direct KV reads (`wrangler kv key get picks:preseason-3:Giraffes` /
+  // `...:Chickens`) proved both teams' picks were saved correctly, all 16
+  // games each -- so submission and storage were never the problem for any
+  // team. The real cause: this whole picks-merge-and-republish block used
+  // to live INSIDE `if (preseasonGames)`, gated on a fresh, successful
+  // Highlightly fetch -- and that fetch is intentionally throttled to only
+  // ever hit the API during the Aug 27/28/29 game windows (100/day budget).
+  // Outside those windows (i.e. right now, Aug 25), the fetch always
+  // returns null, so the merge+publish step never ran at all -- confirmed
+  // by the committed data/week-preseason-3.json being frozen at whatever
+  // picks existed at the *last* successful Highlightly fetch, not the real
+  // current KV state. Roughriders had been tested before that last fetch
+  // and got captured in the frozen snapshot; Giraffes/Chickens were tested
+  // afterward and simply never got a chance to publish -- not team-specific
+  // at all, any team tested after that point would have "disappeared" the
+  // same way. Fix: fall back to the last cached schedule
+  // (schedule:week:preseason-3) when Highlightly isn't polled this tick,
+  // and re-merge+republish picks on their own 5-minute cadence -- cheap
+  // (KV reads only, no external API call) and no longer dependent on a
+  // live score fetch to "unlock" a picks update.
+  const freshPreseasonGames = await fetchHighlightlyPreseasonWeek3(env);
+  if (freshPreseasonGames) {
     // Schedule cache stays picks-free, matching schedule:week:N's existing
     // shape (kickoff-math only, not for public reading).
-    await env.PFPI_KV.put("schedule:week:preseason-3", JSON.stringify(preseasonGames));
+    await env.PFPI_KV.put("schedule:week:preseason-3", JSON.stringify(freshPreseasonGames));
+  }
 
-    // [BUG FIX 2026-08-25, found by Yeti actually testing picks against
-    // preseason] The published JSON was never merging in saved picks --
-    // every poll simply overwrote it with Highlightly's raw response,
-    // which has no concept of PFPI picks at all. Regular-season weeks
-    // never had this problem because buildWeekPublicJSON() always merges
-    // picks in; preseason skipped that function entirely. Mirrors the
-    // same one-KV-read-per-team approach, but merges BOTH the real
-    // 8-team roster and the two sandboxed FAMILY_MEMBERS test teams
-    // (imported from shared.js, not duplicated), since preseason-3 is
-    // specifically Yeti's cross-team testing sandbox -- whichever team he
-    // tests as, the picks need to actually show up.
-    const preseasonPicksTeams = [...TEAMS, ...FAMILY_MEMBERS.map(m => m.team)];
-    const picksByTeam = {};
-    for (const team of preseasonPicksTeams) {
-      const picksRaw = await env.PFPI_KV.get(`picks:preseason-3:${team}`);
-      picksByTeam[team] = picksRaw ? JSON.parse(picksRaw) : {};
+  if (new Date().getUTCMinutes() % 5 === 0) {
+    let preseasonGames = freshPreseasonGames;
+    if (!preseasonGames) {
+      const cachedRaw = await env.PFPI_KV.get("schedule:week:preseason-3");
+      preseasonGames = cachedRaw ? JSON.parse(cachedRaw) : null;
     }
-    const preseasonGamesWithPicks = preseasonGames.map(g => {
-      const picks = {};
-      for (const team of preseasonPicksTeams) {
-        if (picksByTeam[team][g.id]) picks[team] = picksByTeam[team][g.id];
-      }
-      return { ...g, picks };
-    });
 
-    await commitJSONToGitHub(
-      "data/week-preseason-3.json",
-      { week: "preseason-3", games: preseasonGamesWithPicks, updatedAt: new Date().toISOString() },
-      "Update preseason Week 3 (Highlightly) [automated]",
-      env
-    );
+    if (preseasonGames) {
+      // The published JSON must merge in saved picks -- Highlightly's raw
+      // response has no concept of PFPI picks at all. Regular-season weeks
+      // never had this problem because buildWeekPublicJSON() always merges
+      // picks in; preseason skipped that function entirely. Mirrors the
+      // same one-KV-read-per-team approach, but merges BOTH the real
+      // 8-team roster and the two sandboxed FAMILY_MEMBERS test teams
+      // (imported from shared.js, not duplicated), since preseason-3 is
+      // specifically Yeti's cross-team testing sandbox -- whichever team he
+      // tests as, the picks need to actually show up.
+      const preseasonPicksTeams = [...TEAMS, ...FAMILY_MEMBERS.map(m => m.team)];
+      const picksByTeam = {};
+      for (const team of preseasonPicksTeams) {
+        const picksRaw = await env.PFPI_KV.get(`picks:preseason-3:${team}`);
+        picksByTeam[team] = picksRaw ? JSON.parse(picksRaw) : {};
+      }
+      const preseasonGamesWithPicks = preseasonGames.map(g => {
+        const picks = {};
+        for (const team of preseasonPicksTeams) {
+          if (picksByTeam[team][g.id]) picks[team] = picksByTeam[team][g.id];
+        }
+        return { ...g, picks };
+      });
+
+      await commitJSONToGitHub(
+        "data/week-preseason-3.json",
+        { week: "preseason-3", games: preseasonGamesWithPicks, updatedAt: new Date().toISOString() },
+        "Update preseason Week 3 (Highlightly) [automated]",
+        env
+      );
+    }
   }
 }
 

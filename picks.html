@@ -62,6 +62,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .submit-status{font-size:.75rem;margin-top:.75rem;min-height:1em;text-align:center;}
 .submit-status.saved{color:var(--green);}
 .submit-status.rejected{color:var(--red);}
+.support-btn{display:inline-block;background:var(--panel2);border:1.5px solid var(--border2);color:var(--text);font-size:.8rem;font-weight:700;padding:.6rem 1.1rem;border-radius:8px;text-decoration:none;margin-bottom:1rem;}
+.support-btn:hover{border-color:var(--blue);}
 </style>
 </head>
 <body>
@@ -72,7 +74,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
   <div id="content"><div class="loading">Loading...</div></div>
   <div class="submit-section hidden" id="submitSection">
-    <div class="submit-note">Picks will be sent to the commissioner. If a mistake was noticed after the deadline, please contact the commissioner and email yeti@yetiblanc.com for edit approval.</div>
+    <div class="submit-note">Picks will be sent to the commissioner. If you need technical support, please contact Yeti.</div>
+    <a class="support-btn" href="mailto:yeti@yetiblanc.com?subject=PFPI%20Picks%20-%20Technical%20Support">Contact Yeti</a>
     <button class="submit-btn" id="submitBtn">Submit picks</button>
     <div class="submit-status" id="submitStatus"></div>
   </div>

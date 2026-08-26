@@ -74,6 +74,24 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .bar-col.is-champion .bar-value-label{color:var(--gold2);}
 .bar-col.is-champion .bar-team-avatar{border-width:2px;box-shadow:0 0 0 3px rgba(232,184,75,.15);}
 
+/* Unique Hits' leader icon -- a coon-skin hat, not a crown. Deliberate nod
+   to Ruth Cote ("Ruth's Raccoons"), PFPI's all-time Unique Hits leader --
+   see BUILD_LOG.md. Same positioning/animation/tie-sharing as the crown. */
+.coon-hat{width:26px;height:20px;filter:drop-shadow(0 0 5px rgba(139,90,52,.55));animation:crownFloat 2.2s ease-in-out infinite;z-index:5;}
+
+/* Vertical mascot lettering inside each bar (item 10). Font size is set
+   per-team inline by JS, scaled to that bar's actual rendered height and
+   the mascot name's length -- see render()'s sizeMascotLabels(). */
+.bar-mascot-label{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(180deg);
+  writing-mode:vertical-rl;font-weight:800;letter-spacing:.03em;
+  color:rgba(8,12,20,.55);white-space:nowrap;pointer-events:none;
+  max-height:calc(100% - 6px);overflow:hidden;
+}
+/* Nudged up a bit so it doesn't collide with the win-pct bottom label
+   (Standings/Best Week) sitting near the bottom of the same bar. */
+.bar-mascot-label.with-bottom-label{top:calc(50% - 9px);}
+
 .legend-note{font-size:.68rem;color:var(--muted);margin-top:1.25rem;padding-top:.75rem;border-top:1px solid var(--border);}
 
 .brief-panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.4rem;margin-top:1rem;}
@@ -194,9 +212,16 @@ function initials(fullName){
   if (words.length < 2) return fullName.slice(0,2).toUpperCase();
   return (words[0][0] + words[1][0]).toUpperCase();
 }
+// Best Week keeps its existing 3-digit format (e.g. ".875") -- the sole
+// exception per Yeti (2026-08-26 big feedback round). Everything else
+// showing a fractional value uses fmtPct2 (2-digit) instead.
 function fmtPct(v){
   const s = v.toFixed(3);
   return s === "1.000" ? "1.000" : s.replace(/^0/, "");
+}
+function fmtPct2(v){
+  const s = v.toFixed(2);
+  return s === "1.00" ? "1.00" : s.replace(/^0/, "");
 }
 
 const NUM_WEEKS = 18;
@@ -507,7 +532,7 @@ async function render(){
       const d = dataset[t][wKey];
       values[t] = d.pct;
       labels[t] = `${d.correct}-${d.total-d.correct}\n(Wk ${d.week})`;
-      bottomLabels[t] = fmtPct(d.pct);
+      bottomLabels[t] = fmtPct(d.pct); // 3-digit -- the one exception (item 12)
     });
   } else if (cat.isHitsOpps) {
     TEAMS.forEach(t => {
@@ -524,13 +549,20 @@ async function render(){
       const v = dataset[t][wKey];
       values[t] = v;
       labels[t] = String(v);
-      bottomLabels[t] = fmtPct(pctSource[t][wKey]);
+      bottomLabels[t] = fmtPct2(pctSource[t][wKey]); // 2-digit (item 12)
     });
   } else {
+    // Weeks Leading / Weekly Titles are real fractional point totals (tie-
+    // split, e.g. 8.33) -- two decimals always, so a value that happens to
+    // land on a whole number (e.g. 2) still shows "2.00", consistent with
+    // "8.33" in the same column (item 12). 10-Win Weeks is a plain week
+    // COUNT, not a fractional metric, so it's left as an integer -- flagged
+    // in BUILD_LOG as a judgment call since it has no real data yet either
+    // way to confirm against.
     TEAMS.forEach(t => {
       const v = dataset[t][wKey];
       values[t] = v;
-      labels[t] = String(v);
+      labels[t] = cat.unit === "pts" ? v.toFixed(2) : String(v);
     });
   }
 
@@ -538,8 +570,7 @@ async function render(){
   const ticks = 4;
   for (let i=ticks; i>=0; i--){
     const d = document.createElement("div");
-    const tickVal = cat.isBestWeek ? (maxVal/ticks*i).toFixed(2) : Math.round(maxVal/ticks*i*100)/100;
-    d.textContent = tickVal;
+    d.textContent = (maxVal/ticks*i).toFixed(2);
     yAxis.appendChild(d);
   }
   for (let i=1; i<ticks; i++){
@@ -549,30 +580,50 @@ async function render(){
     barsArea.appendChild(line);
   }
 
-  // For Best Week, find whichever team currently holds the season's best pct.
-  // Ties (identical pct) get the crown too, rather than arbitrarily picking one.
-  let championTeam = null;
-  if (cat.isBestWeek) {
-    const topPct = Math.max(...TEAMS.map(t => values[t]));
-    const holders = TEAMS.filter(t => values[t] === topPct);
-    championTeam = holders; // array, supports shared crown on a tie
-  }
+  // Leader icon for every category's current top value (item 9), shared by
+  // every co-leader on an exact tie -- same rule Best Week already used,
+  // now generalized instead of being Best-Week-only. Unique Hits gets a
+  // coon-skin hat instead of a crown (item 11) -- a deliberate nod to Ruth
+  // Cote ("Ruth's Raccoons"), PFPI's all-time Unique Hits leader; not a bug
+  // if it looks different from every other category's crown.
+  const topValue = Math.max(...TEAMS.map(t => values[t]));
+  const leaderTeams = TEAMS.filter(t => values[t] === topValue);
+  const isCoonHat = currentCat === "uniqueHits";
+  const leaderIconHtml = isCoonHat
+    ? `<div class="coon-hat"><svg viewBox="0 0 32 24" width="26" height="20" xmlns="http://www.w3.org/2000/svg">
+         <ellipse cx="12" cy="10" rx="10" ry="8" fill="#8a5a34"/>
+         <ellipse cx="12" cy="16" rx="10" ry="3" fill="#5c3a1e"/>
+         <rect x="14" y="7" width="14" height="6" rx="3" fill="#8a5a34" transform="rotate(18 18 10)"/>
+         <rect x="18" y="6" width="4" height="6" rx="2" fill="#e9dcc7" transform="rotate(18 18 10)"/>
+         <rect x="22" y="9" width="4" height="6" rx="2" fill="#3d2814" transform="rotate(18 18 10)"/>
+       </svg></div>`
+    : '<div class="crown">&#128081;</div>';
 
-  TEAMS.forEach(team => {
+  // Dynamic bar sorting (item 8, reverses the earlier locked "fixed order"
+  // decision per Greg via Yeti): ranked by this category's value, highest
+  // first, alphabetical by team name on an exact tie. Recomputed every
+  // render() call, so it re-sorts as the selected week changes.
+  const sortedTeams = [...TEAMS].sort((a, b) => {
+    if (values[b] !== values[a]) return values[b] - values[a];
+    return TEAM_SHORT[a].localeCompare(TEAM_SHORT[b]);
+  });
+
+  sortedTeams.forEach(team => {
     const val = values[team];
-    const pct = Math.max(2, Math.round((val/maxVal)*1000)/10);
+    const pct = Math.max(12, Math.round((val/maxVal)*1000)/10);
     const color = TEAM_COLORS[team];
-    const isChamp = championTeam && championTeam.includes(team);
+    const isLeader = leaderTeams.includes(team);
     const bottomLabel = bottomLabels[team];
 
     const col = document.createElement("div");
-    col.className = "bar-col" + (isChamp ? " is-champion" : "");
+    col.className = "bar-col" + (isLeader ? " is-champion" : "");
     col.innerHTML = `
       <div class="bar-el" style="height:${pct}%;background:${color}">
         <div class="bar-value-label">
-          ${isChamp ? '<div class="crown">&#128081;</div>' : ""}
+          ${isLeader ? leaderIconHtml : ""}
           <div>${labels[team].replace("\n","<br>")}</div>
         </div>
+        <div class="bar-mascot-label${bottomLabel ? " with-bottom-label" : ""}">${team.toUpperCase()}</div>
         ${bottomLabel ? `<div class="bar-bottom-label">${bottomLabel}</div>` : ""}
       </div>
     `;
@@ -587,10 +638,31 @@ async function render(){
     labelsCols.appendChild(labelCol);
   });
 
+  sizeMascotLabels(barsArea);
+
   // Every category reaching this point already passed the !dataset early
   // return above, so this is always real data, never a placeholder.
   document.getElementById("legendNote").textContent =
-    "Live data. Team order is fixed and never re-sorted by score.";
+    "Live data. Bars are sorted by rank in this category (highest first); ties break alphabetically.";
+}
+
+// Item 10: vertical mascot lettering must stay legible at any bar height.
+// Bar height is enforced with a 12% floor above (was 2%) to give short
+// bars some room, but the longest mascot names (e.g. ROUGHRIDERS, 11
+// letters) still can't always fit at a fixed font size -- so font size is
+// computed per-bar, per-team, from the bar's real rendered pixel height
+// (read after layout, since bar heights are percentages) divided by the
+// name's length, clamped to a legible 6-11px range. A team with a long
+// name on a short bar will render at the 6px floor rather than overflow —
+// flagged in BUILD_LOG.md as an accepted trade-off, not silently hidden.
+function sizeMascotLabels(barsArea) {
+  barsArea.querySelectorAll(".bar-mascot-label").forEach(el => {
+    const barEl = el.closest(".bar-el");
+    const heightPx = barEl.getBoundingClientRect().height;
+    const available = heightPx - 8;
+    const size = Math.max(6, Math.min(11, available / (el.textContent.length * 1.05)));
+    el.style.fontSize = size + "px";
+  });
 }
 
 let expandedGameIdx = null;

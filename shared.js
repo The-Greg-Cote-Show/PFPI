@@ -53,30 +53,54 @@ export function isTargetLocalTime(targetHour, targetDayOfWeek, ianaZone) {
   return hour === targetHour && dayMap[weekday] === targetDayOfWeek;
 }
 
-// Per-game deadline: 6:00 PM ET the day before kickoff. Weekend hybrid rule
-// (one shared deadline for Sat/Sun/Mon games) is still unconfirmed with
-// Greg — built generically so that stays a data change, not a rework. Do
-// not add weekend-specific logic here.
-export function computeGameDeadline(gameKickoffISO) {
-  const kickoff = new Date(gameKickoffISO);
-  const kickoffEastern = getEasternDateParts(kickoff);
-  const dayBeforeUTC = new Date(Date.UTC(
-    parseInt(kickoffEastern.year), parseInt(kickoffEastern.month) - 1,
-    parseInt(kickoffEastern.day) - 1
-  ));
-
+// DST-safe: resolves a specific ET wall-clock hour on a given ET calendar
+// date to its real UTC instant, by trying both possible UTC offsets and
+// keeping whichever one actually lands back on that hour/date in America/
+// New_York (handles the EDT/EST transition without hardcoding which is in
+// effect). Shared by both branches of computeGameDeadline() below.
+function etWallClockToISO(year, month, day, hour) {
   for (const offsetHours of [4, 5]) { // EDT is UTC-4, EST is UTC-5
-    const candidate = new Date(Date.UTC(
-      dayBeforeUTC.getUTCFullYear(), dayBeforeUTC.getUTCMonth(), dayBeforeUTC.getUTCDate(),
-      18 + offsetHours, 0, 0
-    ));
+    const candidate = new Date(Date.UTC(year, month - 1, day, hour + offsetHours, 0, 0));
     const check = getEasternDateParts(candidate);
-    if (parseInt(check.hour) === 18 && check.day === String(dayBeforeUTC.getUTCDate()).padStart(2, "0")) {
+    if (parseInt(check.hour, 10) === hour && parseInt(check.day, 10) === day && parseInt(check.month, 10) === month) {
       return candidate.toISOString();
     }
   }
+  throw new Error(`Could not resolve ${hour}:00 ET for ${year}-${month}-${day}`);
+}
 
-  throw new Error(`Could not resolve 6pm ET deadline for kickoff ${gameKickoffISO}`);
+// Calendar-day-only subtraction (not a real elapsed-time subtraction) --
+// used to walk back from a Sun/Mon kickoff to that same week's Saturday.
+function subtractEasternCalendarDays(easternParts, days) {
+  const d = new Date(Date.UTC(parseInt(easternParts.year, 10), parseInt(easternParts.month, 10) - 1, parseInt(easternParts.day, 10)));
+  d.setUTCDate(d.getUTCDate() - days);
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+
+// Per-game deadline (revised structure, confirmed by Greg via Yeti,
+// 2026-08-25 big feedback round -- fully replaces the old flat "6pm ET the
+// day before" rule everywhere it applied):
+//   - Wed/Thu/Fri/Tue kickoffs: exactly 2 hours before that game's own
+//     kickoff (Tuesday is a rare real edge case, confirmed to follow this
+//     branch, not the weekend one).
+//   - Sat/Sun/Mon kickoffs: one flat shared cutoff regardless of the game's
+//     actual kickoff time -- Saturday 1:00 PM ET of that same week. A
+//     Saturday game's own deadline is same-day; Sunday backs up one
+//     calendar day, Monday backs up two -- always landing on that week's
+//     single Saturday (verified against Greg's worked example: Sun Sept 13
+//     and Mon Sept 14 games both deadline Sat Sept 12 1:00 PM ET).
+export function computeGameDeadline(gameKickoffISO) {
+  const kickoff = new Date(gameKickoffISO);
+  const kickoffEastern = getEasternDateParts(kickoff);
+  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(kickoff);
+
+  if (weekday === "Sat" || weekday === "Sun" || weekday === "Mon") {
+    const daysBackToSaturday = weekday === "Sat" ? 0 : weekday === "Sun" ? 1 : 2;
+    const saturday = subtractEasternCalendarDays(kickoffEastern, daysBackToSaturday);
+    return etWallClockToISO(saturday.year, saturday.month, saturday.day, 13);
+  }
+
+  return new Date(kickoff.getTime() - 2 * 60 * 60 * 1000).toISOString();
 }
 
 export function isGameLocked(gameDeadlineISO) {

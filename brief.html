@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PFPI Brief | The Greg Cote Show</title>
+<title>PFPI Commissioner Portal | The Greg Cote Show</title>
 <style>
 :root {
   --bg:#080c14; --panel:#0f1623; --panel2:#141d2e; --panel3:#1a2540;
@@ -74,6 +74,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .mp-chip{background:var(--panel3);border:1px solid rgba(224,82,82,.35);color:var(--red);font-size:.72rem;font-weight:600;padding:4px 9px;border-radius:6px;}
 .mp-chip-locked{border-color:var(--border2);color:var(--muted);}
 .mp-all-picked{color:var(--green);font-size:.78rem;font-weight:600;}
+.mp-reminder-btn{width:auto;margin-top:.7rem;font-size:.75rem;padding:.5rem .9rem;}
+.mp-reminder-status{font-size:.7rem;margin-top:.4rem;}
+.mp-reminder-status.ok{color:var(--green);}
+.mp-reminder-status.err{color:var(--red);}
 
 .digest-output{
   width:100%;min-height:22rem;max-height:32rem;overflow:auto;box-sizing:border-box;
@@ -90,8 +94,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 <body>
 
 <div class="wrap">
-  <div class="title-main">PFPI <span>Brief</span></div>
-  <div class="title-sub">Weekly publisher &bull; The Greg Cote Show</div>
+  <div class="title-main">PFPI <span>Commissioner Portal</span></div>
+  <div class="title-sub">PFPI Commissioner &bull; Greg Cote</div>
 
   <div class="card" id="gateScreen">
     <form id="gateForm">
@@ -128,17 +132,13 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="dash-tabs" id="dashboardTabs">
     <button class="dash-tab-btn active" id="dashTabMissing" data-tab="missing">Missing Picks</button>
     <button class="dash-tab-btn" id="dashTabDigest" data-tab="digest">Weekly Digest</button>
-    <button class="dash-tab-btn" id="dashTabPublish" data-tab="publish">Publish Brief</button>
+    <button class="dash-tab-btn" id="dashTabPublish" data-tab="publish">Weekly Brief</button>
   </div>
 
   <div class="card" id="missingPicksScreen">
     <div class="field">
       <label for="mpWeekSelect">Week</label>
       <select id="mpWeekSelect"></select>
-    </div>
-    <div class="toggle-row">
-      <button class="toggle-btn active" id="mpByGameBtn">By game</button>
-      <button class="toggle-btn" id="mpByTeamBtn">By team</button>
     </div>
     <div id="mpContent"></div>
     <div class="status" id="mpStatus"></div>
@@ -162,12 +162,31 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <label for="weekSelect">Week</label>
       <select id="weekSelect"></select>
     </div>
-    <div class="field">
-      <label for="briefText">This week's brief</label>
-      <textarea id="briefText" placeholder="Write this week's PFPI brief..."></textarea>
-      <div class="char-count" id="charCount">0 characters</div>
+
+    <div id="briefSavedView" class="hidden">
+      <div class="field">
+        <label>This week's brief (saved)</label>
+        <div class="digest-output" id="briefSavedText" style="min-height:8rem;"></div>
+        <div class="char-count" id="briefSavedMeta" style="text-align:left;"></div>
+      </div>
+      <div class="field hidden" id="briefVersionsField">
+        <label for="briefVersionSelect">Previous versions</label>
+        <select id="briefVersionSelect"></select>
+        <div class="digest-output hidden" id="briefVersionPreview" style="min-height:6rem;margin-top:.6rem;"></div>
+        <button class="btn hidden" id="briefVersionLoadBtn" type="button" style="margin-top:.6rem;">Load this version into editor</button>
+      </div>
+      <button class="btn" id="briefEditBtn" type="button">Edit</button>
     </div>
-    <button class="btn" id="publishBtn">Publish brief</button>
+
+    <div id="briefEditView">
+      <div class="field">
+        <label for="briefText">This week's brief</label>
+        <textarea id="briefText" placeholder="Write this week's PFPI brief..."></textarea>
+        <div class="char-count" id="charCount">0 characters</div>
+      </div>
+      <button class="btn" id="publishBtn">Publish brief</button>
+      <button class="btn hidden" id="briefCancelEditBtn" type="button" style="background:var(--panel3);color:var(--text);margin-top:.6rem;">Cancel</button>
+    </div>
     <div class="status" id="publishStatus"></div>
   </div>
 </div>
@@ -219,6 +238,7 @@ async function tryUnlock(e) {
     document.getElementById("dashboardTabs").style.display = "flex";
     document.getElementById("missingPicksScreen").style.display = "block";
     await populateWeeks();
+    await renderPublishTab();
     await populateMissingPicksWeeks();
   } catch (e) {
     statusEl.textContent = "Could not reach the server.";
@@ -340,6 +360,117 @@ function updateCharCount() {
   document.getElementById("charCount").textContent = text.length + " characters";
 }
 
+function fmtBriefTimestamp(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric",
+    year: "numeric", hour: "numeric", minute: "2-digit",
+  }).format(d) + " ET";
+}
+
+// ============================================================
+// PUBLISH TAB — saved state / Edit / per-week version history.
+// Each week's brief has its own independent history (KV key
+// `brief-version:{week}:{timestamp}`, see picks-worker.js) -- switching
+// weeks here always re-fetches that week's own history, never mixes weeks.
+// ============================================================
+
+function showBriefEditView(prefillText) {
+  document.getElementById("briefSavedView").classList.add("hidden");
+  document.getElementById("briefEditView").classList.remove("hidden");
+  const textarea = document.getElementById("briefText");
+  textarea.value = prefillText || "";
+  updateCharCount();
+}
+
+async function renderPublishTab() {
+  const week = document.getElementById("weekSelect").value;
+  const statusEl = document.getElementById("publishStatus");
+  if (!week) return;
+
+  statusEl.textContent = "";
+  statusEl.className = "status";
+
+  let data;
+  try {
+    const res = await fetch(`${WORKER_BASE}/greg/brief-history?week=${week}`, {
+      headers: { "X-Session-Token": sessionToken },
+    });
+    data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not load this week's brief.");
+  } catch (e) {
+    // Treat as "nothing saved yet" rather than blocking Greg from writing --
+    // an editor he can still type into and publish is safer than a dead end.
+    showBriefEditView("");
+    return;
+  }
+
+  if (!data.current) {
+    showBriefEditView("");
+    return;
+  }
+
+  document.getElementById("briefEditView").classList.add("hidden");
+  document.getElementById("briefSavedView").classList.remove("hidden");
+  document.getElementById("briefSavedText").textContent = data.current.text;
+  const who = data.current.source === "admin" ? `admin override (${data.current.adminName || "Yeti"})` : "Greg";
+  document.getElementById("briefSavedMeta").textContent =
+    `Last saved ${fmtBriefTimestamp(data.current.updatedAt)} — ${who}`;
+
+  const versionsField = document.getElementById("briefVersionsField");
+  const versionSelect = document.getElementById("briefVersionSelect");
+  const versionPreview = document.getElementById("briefVersionPreview");
+  const versionLoadBtn = document.getElementById("briefVersionLoadBtn");
+  versionPreview.classList.add("hidden");
+  versionLoadBtn.classList.add("hidden");
+
+  if (data.versions && data.versions.length > 1) {
+    versionsField.classList.remove("hidden");
+    versionSelect.innerHTML = '<option value="">Select a version to view...</option>' +
+      data.versions.map((v, i) => {
+        const who2 = v.source === "admin" ? ` (admin: ${v.adminName || "Yeti"})` : "";
+        return `<option value="${i}">${fmtBriefTimestamp(v.updatedAt)}${who2}${i === 0 ? " (current)" : ""}</option>`;
+      }).join("");
+    versionSelect.dataset.versions = JSON.stringify(data.versions);
+  } else {
+    versionsField.classList.add("hidden");
+  }
+}
+
+document.getElementById("weekSelect").addEventListener("change", renderPublishTab);
+
+document.getElementById("briefEditBtn").addEventListener("click", () => {
+  showBriefEditView(document.getElementById("briefSavedText").textContent);
+  document.getElementById("briefCancelEditBtn").classList.remove("hidden");
+});
+
+document.getElementById("briefCancelEditBtn").addEventListener("click", () => {
+  document.getElementById("briefCancelEditBtn").classList.add("hidden");
+  document.getElementById("publishStatus").className = "status";
+  renderPublishTab();
+});
+
+document.getElementById("briefVersionSelect").addEventListener("change", (e) => {
+  const versions = JSON.parse(e.target.dataset.versions || "[]");
+  const preview = document.getElementById("briefVersionPreview");
+  const loadBtn = document.getElementById("briefVersionLoadBtn");
+  const idx = e.target.value;
+  if (idx === "") {
+    preview.classList.add("hidden");
+    loadBtn.classList.add("hidden");
+    return;
+  }
+  const v = versions[parseInt(idx, 10)];
+  preview.textContent = v.text;
+  preview.classList.remove("hidden");
+  loadBtn.classList.remove("hidden");
+  loadBtn.onclick = () => {
+    showBriefEditView(v.text);
+    document.getElementById("briefCancelEditBtn").classList.remove("hidden");
+  };
+});
+
 async function publish() {
   const week = document.getElementById("weekSelect").value;
   const text = document.getElementById("briefText").value.trim();
@@ -379,6 +510,8 @@ async function publish() {
     }
     statusEl.textContent = "Published for Week " + week + ". It's now live under that week's chart.";
     statusEl.className = "status ok show";
+    document.getElementById("briefCancelEditBtn").classList.add("hidden");
+    await renderPublishTab();
   } catch (e) {
     btn.disabled = false;
     btn.textContent = "Publish brief";
@@ -388,10 +521,10 @@ async function publish() {
 }
 
 // ============================================================
-// MISSING-PICKS TRACKER
+// MISSING-PICKS TRACKER — By team only (per Yeti, 2026-08-25: the "By game"
+// view is removed entirely, not just hidden).
 // ============================================================
 
-let mpView = "byGame";
 const mpGamesCache = {};
 
 // Pulls the same public data/week-N.json games+picks that index.html's
@@ -465,63 +598,83 @@ async function renderMissingPicks() {
   statusEl.textContent = "";
   statusEl.className = "status";
 
-  // Soonest deadline first, in both views. Missing/invalid deadlines (see
-  // fmtDeadline's note) sort last rather than corrupting the order.
+  // Soonest deadline first. Missing/invalid deadlines (see fmtDeadline's
+  // note) sort last rather than corrupting the order.
   const deadlineMs = g => { const t = new Date(g.deadline).getTime(); return isNaN(t) ? Infinity : t; };
   const sorted = [...games].sort((a, b) => deadlineMs(a) - deadlineMs(b));
 
-  if (mpView === "byGame") {
-    contentEl.innerHTML = sorted.map(g => {
-      const missing = REAL_TEAMS.filter(t => !(g.picks && g.picks[t]));
-      const locked = isPastDeadline(g.deadline);
-      const chipsHtml = missing.length === 0
-        ? `<span class="mp-all-picked">Everyone's picked</span>`
-        : missing.map(t => `<span class="mp-chip${locked ? " mp-chip-locked" : ""}">${TEAM_SHORT[t]}</span>`).join("");
-      return `
-        <div class="mp-row">
-          <div class="mp-row-header">
-            <span class="mp-matchup">${g.away} @ ${g.home}</span>
-            <span class="mp-deadline${locked ? " mp-locked" : ""}">${locked ? "Deadline passed" : fmtDeadline(g.deadline)}</span>
-          </div>
-          <div class="mp-chips">${chipsHtml}</div>
-        </div>
-      `;
-    }).join("");
-  } else {
-    // Team order stays fixed (REAL_TEAMS), matching the "never re-sorted"
-    // convention index.html's charts already use -- only each team's list of
-    // missing games is sorted by urgency.
-    contentEl.innerHTML = REAL_TEAMS.map(team => {
-      const missingGames = sorted.filter(g => !(g.picks && g.picks[team]));
-      const gamesHtml = missingGames.length === 0
-        ? `<span class="mp-all-picked">All picked</span>`
-        : missingGames.map(g => {
-            const locked = isPastDeadline(g.deadline);
-            return `<span class="mp-chip${locked ? " mp-chip-locked" : ""}">${g.away} @ ${g.home} — ${locked ? "deadline passed" : fmtDeadline(g.deadline)}</span>`;
-          }).join("");
-      return `
-        <div class="mp-row">
-          <div class="mp-row-header"><span class="mp-matchup">${TEAM_SHORT[team]}</span></div>
-          <div class="mp-chips">${gamesHtml}</div>
-        </div>
-      `;
-    }).join("");
+  // Team order stays fixed (REAL_TEAMS), matching the "never re-sorted"
+  // convention index.html's charts already use -- only each team's list of
+  // missing games is sorted by urgency. A "Send reminder" button appears for
+  // any team missing at least one game -- partial submissions count, not
+  // just zero picks (per Yeti, 2026-08-25).
+  contentEl.innerHTML = REAL_TEAMS.map(team => {
+    const missingGames = sorted.filter(g => !(g.picks && g.picks[team]));
+    const gamesHtml = missingGames.length === 0
+      ? `<span class="mp-all-picked">All picked</span>`
+      : missingGames.map(g => {
+          const locked = isPastDeadline(g.deadline);
+          return `<span class="mp-chip${locked ? " mp-chip-locked" : ""}">${g.away} @ ${g.home} — ${locked ? "deadline passed" : fmtDeadline(g.deadline)}</span>`;
+        }).join("");
+    const reminderHtml = missingGames.length === 0 ? "" : `
+      <button class="btn mp-reminder-btn" type="button" data-team="${team}" data-week="${week}">Send reminder</button>
+      <div class="mp-reminder-status" data-reminder-status="${team}"></div>
+    `;
+    return `
+      <div class="mp-row">
+        <div class="mp-row-header"><span class="mp-matchup">${TEAM_SHORT[team]}</span></div>
+        <div class="mp-chips">${gamesHtml}</div>
+        ${reminderHtml}
+      </div>
+    `;
+  }).join("");
+
+  contentEl.querySelectorAll(".mp-reminder-btn").forEach(btn => {
+    btn.addEventListener("click", () => sendMissingPicksReminder(btn));
+  });
+}
+
+// Real family email addresses aren't wired up yet -- per Yeti's explicit
+// instruction, every reminder (regardless of which team it names) goes to
+// yeti@yetiblanc.com, same testing pattern as admin.html's other sandboxed
+// send tools. The backend (handleSendReminderEmail) pulls the real list of
+// that team's still-missing matchups into the email body -- not a generic
+// "you have picks due" message.
+async function sendMissingPicksReminder(btn) {
+  const team = btn.dataset.team;
+  const week = btn.dataset.week;
+  const statusEl = document.querySelector(`[data-reminder-status="${team}"]`);
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = "Sending...";
+  statusEl.textContent = "";
+  statusEl.className = "mp-reminder-status";
+
+  try {
+    const res = await fetch(`${WORKER_BASE}/greg/send-reminder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Session-Token": sessionToken },
+      body: JSON.stringify({ team, week: parseInt(week, 10) }),
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = originalText;
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Could not send reminder.";
+      statusEl.className = "mp-reminder-status err";
+      return;
+    }
+    statusEl.textContent = `Reminder sent (to yeti@yetiblanc.com for testing) — ${data.missingCount} game(s) listed.`;
+    statusEl.className = "mp-reminder-status ok";
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "mp-reminder-status err";
   }
 }
 
 document.getElementById("mpWeekSelect").addEventListener("change", renderMissingPicks);
-document.getElementById("mpByGameBtn").addEventListener("click", () => {
-  mpView = "byGame";
-  document.getElementById("mpByGameBtn").classList.add("active");
-  document.getElementById("mpByTeamBtn").classList.remove("active");
-  renderMissingPicks();
-});
-document.getElementById("mpByTeamBtn").addEventListener("click", () => {
-  mpView = "byTeam";
-  document.getElementById("mpByTeamBtn").classList.add("active");
-  document.getElementById("mpByGameBtn").classList.remove("active");
-  renderMissingPicks();
-});
 
 // ============================================================
 // WEEKLY DIGEST — a stats scaffold matching Greg's real house style, pulled
@@ -749,14 +902,16 @@ document.getElementById("digestCopyBtn").addEventListener("click", async () => {
 });
 
 document.getElementById("digestInsertBtn").addEventListener("click", () => {
-  document.getElementById("briefText").value = currentDigestPlainText;
-  updateCharCount();
+  showBriefEditView(currentDigestPlainText);
+  document.getElementById("briefCancelEditBtn").classList.remove("hidden");
   document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(b => b.classList.remove("active"));
   document.getElementById("dashTabPublish").classList.add("active");
   document.getElementById("missingPicksScreen").style.display = "none";
   document.getElementById("digestScreen").style.display = "none";
   document.getElementById("publishScreen").style.display = "block";
 });
+
+let digestInitialized = false;
 
 document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {

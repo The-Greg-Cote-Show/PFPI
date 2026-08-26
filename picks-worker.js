@@ -12,7 +12,7 @@
 // ============================================================
 
 import {
-  isTargetLocalTime,
+  getEasternDateParts,
   computeGameDeadline,
   isGameLocked,
   computeCurrentWeekFromDate,
@@ -111,11 +111,43 @@ async function verifyToken(token, env) {
 // plain `wrangler deploy`).
 // ============================================================
 
+// Send-time floor (per Greg via Yeti, 2026-08-25): the weekly picks email
+// must never go out before 7:00 AM ET on the calendar day of that week's
+// actual first game -- computed fresh from the real schedule every tick,
+// not hardcoded, so 2026 Week 1's Wednesday-Sept-9 opener naturally floors
+// at Wednesday 7am while every other week (first game normally Thursday)
+// floors at Thursday 7am with no special case needed. This REPLACES the
+// old fixed "always Tuesday 7am" rule entirely.
 async function handleWeeklyTrigger(env) {
-  if (!isTargetLocalTime(7, 2, "America/New_York")) return; // 2 = Tuesday
-
   const currentWeek = await getCurrentWeek(env);
+
+  // Never re-send once this week's email has gone out -- also a safety net
+  // if the cron cadence ever changes, not just a Tuesday-specific concern.
+  const alreadySent = await env.PFPI_KV.get(`weekly-email-sent:${currentWeek}`);
+  if (alreadySent) return;
+
   const schedule = await getWeekSchedule(currentWeek, env);
+  if (!schedule || schedule.length === 0) {
+    // Per Yeti: if the first game isn't known yet when the check fires,
+    // hold and log -- don't guess a floor and don't send prematurely.
+    console.error(`Weekly picks email: no real schedule cached yet for week ${currentWeek} -- holding, not sending until first-game data is available.`);
+    return;
+  }
+
+  const firstGameISO = schedule.reduce((earliest, g) =>
+    (!earliest || new Date(g.kickoffISO) < new Date(earliest)) ? g.kickoffISO : earliest, null);
+  const firstGameEastern = getEasternDateParts(new Date(firstGameISO));
+  const firstGameDateKey = `${firstGameEastern.year}-${firstGameEastern.month}-${firstGameEastern.day}`;
+
+  const nowEastern = getEasternDateParts(new Date());
+  const nowDateKey = `${nowEastern.year}-${nowEastern.month}-${nowEastern.day}`;
+
+  // Zero-padded YYYY-MM-DD from getEasternDateParts sorts correctly as a
+  // plain string -- no Date re-parsing needed for the day comparison.
+  const isOnOrAfterFirstGameDay = nowDateKey >= firstGameDateKey;
+  const isPastFloorHour = parseInt(nowEastern.hour, 10) >= 7;
+  if (!isOnOrAfterFirstGameDay || !isPastFloorHour) return;
+
   const deadlineSummary = formatWeekDeadlines(schedule);
 
   for (const member of FAMILY_MEMBERS) {
@@ -123,42 +155,47 @@ async function handleWeeklyTrigger(env) {
     const link = `https://pfpi.thegregcoteshow.com/picks.html?token=${token}`;
     await sendPicksEmail(member.email, member.name, currentWeek, link, deadlineSummary, env);
   }
+
+  // 30-day TTL: comfortably outlives a single week without growing forever.
+  await env.PFPI_KV.put(`weekly-email-sent:${currentWeek}`, "sent", { expirationTtl: 30 * 24 * 60 * 60 });
 }
 
-// Groups this week's real per-game deadlines into a scannable day-by-day
-// summary for the picks email, per Yeti (2026-08-25) — e.g. "Thursday's
-// game locks Wednesday 6pm ET. Sunday's games lock Saturday 6pm ET." Not
-// hardcoded day names: computed from the real schedule since the mix
-// varies week to week (bye weeks, holiday games on unusual days). Under
-// the current (non-hybrid) deadline rule every game sharing a kickoff
-// weekday shares one deadline date, so grouping by kickoff weekday is
-// equivalent to grouping by deadline date but reads more naturally in the
-// email. Falls back to the old generic line if there's no real schedule
+// Groups this week's real per-game deadlines into a scannable summary for
+// the picks email, matching the revised deadline structure in shared.js's
+// computeGameDeadline() (confirmed by Greg via Yeti, 2026-08-25 -- fully
+// replaces the old flat "6pm ET the day before" rule this used to
+// describe): Tue/Wed/Thu/Fri games each deadline individually (2 hours
+// before their own kickoff, so no single shared time to quote), while
+// Sat/Sun/Mon games all collapse onto one flat cutoff -- read directly off
+// any one of those games' already-computed `deadline` rather than
+// re-deriving the rule here, so this can never drift from the real
+// per-game math. Falls back to a generic line if there's no real schedule
 // yet (season hasn't started / Big Balls hasn't published this week) —
 // honest fallback, not a fabricated deadline list.
 function formatWeekDeadlines(schedule) {
   if (!schedule || schedule.length === 0) {
-    return "Deadlines are per-game (6pm ET the day before).";
+    return "Deadlines vary by game — check the picks link for each game's exact cutoff.";
   }
   const weekdayET = iso => new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "long" }).format(new Date(iso));
-  const dayOrder = ["Thursday", "Friday", "Saturday", "Sunday", "Monday", "Tuesday", "Wednesday"];
-  const groups = new Map(); // kickoff weekday -> { deadlineWeekday, count }
+  const dayOrder = ["Tuesday", "Wednesday", "Thursday", "Friday"];
+  const earlyWeekDays = new Set();
+  const weekendGames = [];
 
   for (const g of schedule) {
-    const kickoffWeekday = weekdayET(g.kickoffISO);
-    const deadlineWeekday = weekdayET(g.deadline);
-    const existing = groups.get(kickoffWeekday);
-    if (existing) existing.count++;
-    else groups.set(kickoffWeekday, { deadlineWeekday, count: 1 });
+    const wd = weekdayET(g.kickoffISO);
+    if (wd === "Saturday" || wd === "Sunday" || wd === "Monday") weekendGames.push(g);
+    else earlyWeekDays.add(wd);
   }
 
   const lines = [];
   for (const day of dayOrder) {
-    const g = groups.get(day);
-    if (!g) continue;
-    const noun = g.count === 1 ? "game" : "games";
-    const verb = g.count === 1 ? "locks" : "lock";
-    lines.push(`${day}'s ${noun} ${verb} ${g.deadlineWeekday} 6pm ET.`);
+    if (earlyWeekDays.has(day)) lines.push(`${day}'s game(s) lock 2 hours before kickoff.`);
+  }
+  if (weekendGames.length > 0) {
+    const satDate = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/New_York", weekday: "long", month: "long", day: "numeric",
+    }).format(new Date(weekendGames[0].deadline));
+    lines.push(`Saturday, Sunday, and Monday games all lock ${satDate} at 1:00 PM ET.`);
   }
   return lines.join(" ");
 }
@@ -440,6 +477,54 @@ async function handleSendCorrectionEmail(request, env) {
 }
 
 // ============================================================
+// MISSING-PICKS REMINDER (brief.html's "Send reminder" button)
+// ============================================================
+// Per Yeti (2026-08-25): real family email addresses still aren't wired up,
+// so every reminder -- regardless of which team it's "for" -- goes to
+// yeti@yetiblanc.com for now, same sandboxed-testing pattern as
+// handleSendTestPicksEmail. The list of that team's still-missing games is
+// pulled from the same real schedule + saved-picks data the tracker itself
+// reads, not a second/guessed source.
+async function handleSendReminderEmail(request, env) {
+  const sessionToken = request.headers.get("X-Session-Token");
+  const isGreg = await verifySessionToken("greg", sessionToken, env);
+  const isAdmin = !isGreg && (await verifySessionToken("admin", sessionToken, env));
+  if (!isGreg && !isAdmin) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const { team, week } = await request.json();
+  const weekNum = parseInt(week, 10);
+  if (!team || !Number.isInteger(weekNum)) {
+    return jsonResponse({ error: "team and week are required." }, 400, request);
+  }
+
+  const schedule = await getWeekSchedule(weekNum, env);
+  if (!schedule || schedule.length === 0) {
+    return jsonResponse({ error: "No schedule found for that week." }, 400, request);
+  }
+
+  const saved = (await getSavedPicks(team, weekNum, env)) || {};
+  const missing = schedule.filter(g => !saved[g.id]);
+  if (missing.length === 0) {
+    return jsonResponse({ error: `${team} has already picked every game this week.` }, 400, request);
+  }
+
+  const lines = missing.map(g => `${g.away} @ ${g.home}`);
+  const sent = await sendPfpiEmail(
+    ADMIN_EMAIL,
+    `PFPI reminder: ${team}, Week ${weekNum} picks still needed`,
+    `${team} is still missing Week ${weekNum} picks for:\n\n${lines.join("\n")}\n\n(Test send -- real family email addresses aren't set up yet, so this went to Yeti's own address standing in for ${team}'s real recipient.)`,
+    env
+  );
+
+  if (!sent) {
+    return jsonResponse({ error: "Could not send reminder email. Check Worker logs." }, 502, request);
+  }
+  return jsonResponse({ sent: true, missingCount: missing.length }, 200, request);
+}
+
+// ============================================================
 // AUTH (admin + Greg's Brief — two independent credentials)
 // ============================================================
 
@@ -662,12 +747,27 @@ async function handlePublishBrief(request, env) {
     return jsonResponse({ error: "Brief text is required." }, 400, request);
   }
 
+  const updatedAt = new Date().toISOString();
   const committed = await commitJSONToGitHub(
     `data/brief-week-${weekNum}.json`,
-    { week: weekNum, text: trimmedText, updatedAt: new Date().toISOString() },
+    { week: weekNum, text: trimmedText, updatedAt },
     `Publish Week ${weekNum} brief${isAdmin ? " [admin correction]" : ""} [automated]`,
     env
   );
+
+  // Per-week version history (Yeti, 2026-08-25 big feedback round): each
+  // save is its own version, scoped to that week only -- Week 6's history
+  // never mixes with Week 7's. Kept in KV (not GitHub) since this is an
+  // internal audit trail, not something the public site needs to serve;
+  // `brief-version:{week}:{timestamp}` sorts chronologically by key already,
+  // matching the existing override-log key convention below.
+  const versionEntry = {
+    text: trimmedText,
+    updatedAt,
+    source: isAdmin ? "admin" : "greg",
+    adminName: isAdmin ? (adminName || "Yeti") : undefined,
+  };
+  await env.PFPI_KV.put(`brief-version:${weekNum}:${Date.now()}`, JSON.stringify(versionEntry));
 
   if (isAdmin) {
     const logEntry = {
@@ -688,6 +788,38 @@ async function handlePublishBrief(request, env) {
   }
 
   return jsonResponse({ published: true }, 200, request);
+}
+
+// GET /greg/brief-history?week=N -- current saved text (if any) plus that
+// week's version list, newest first. Greg or admin session either one, same
+// as publish itself.
+async function handleGetBriefHistory(request, env) {
+  const sessionToken = request.headers.get("X-Session-Token");
+  const isGreg = await verifySessionToken("greg", sessionToken, env);
+  const isAdmin = !isGreg && (await verifySessionToken("admin", sessionToken, env));
+  if (!isGreg && !isAdmin) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const url = new URL(request.url);
+  const weekNum = parseInt(url.searchParams.get("week"), 10);
+  if (!Number.isInteger(weekNum) || weekNum < 1 || weekNum > NUM_WEEKS) {
+    return jsonResponse({ error: "Invalid week." }, 400, request);
+  }
+
+  const prefix = `brief-version:${weekNum}:`;
+  const list = await env.PFPI_KV.list({ prefix });
+  const versions = [];
+  for (const key of list.keys) {
+    const raw = await env.PFPI_KV.get(key.name);
+    if (raw) versions.push(JSON.parse(raw));
+  }
+  versions.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+  return jsonResponse({
+    current: versions[0] || null,
+    versions,
+  }, 200, request);
 }
 
 async function handleCurrentWeek(request, env) {
@@ -782,6 +914,12 @@ export default {
     }
     if (url.pathname === "/admin/publish-brief" && request.method === "POST") {
       return handlePublishBrief(request, env);
+    }
+    if (url.pathname === "/greg/brief-history" && request.method === "GET") {
+      return handleGetBriefHistory(request, env);
+    }
+    if (url.pathname === "/greg/send-reminder" && request.method === "POST") {
+      return handleSendReminderEmail(request, env);
     }
     if (url.pathname === "/current-week" && request.method === "GET") {
       return handleCurrentWeek(request, env);

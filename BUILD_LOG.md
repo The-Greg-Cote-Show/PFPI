@@ -1341,3 +1341,306 @@ exercised and confirmed the fallback chain: `clipboard.write()` ->
 uncaught errors. Worth a real click-through by Yeti or Greg in an actual
 focused browser tab to confirm the rich-paste behavior itself (e.g. paste
 into a Google Doc and check the header comes through bold+underlined).
+
+## 2026-08-26 — Overnight run: PFPI_big_feedback_round_handoff.md, items 1-7
+
+Running unattended overnight per Yeti's explicit go-ahead ("accept this as
+permission to commit/push anything"). Working strictly in the doc's
+specified order. Logging as I go, not just at the end, in case this session
+gets interrupted.
+
+**Item 1 (brief save/edit state + per-week version history) — DONE, verified locally, needs a real click-through.**
+`picks-worker.js`'s `handlePublishBrief` now also writes a
+`brief-version:{week}:{timestamp}` KV entry on every save (both Greg's and
+admin-override saves), and a new `GET /greg/brief-history?week=N` endpoint
+(greg-or-admin session, same gate as publish) returns `{current, versions}`
+for that week only — Week 6's history never mixes with Week 7's, per the
+explicit requirement. `brief.html`'s Publish tab now has two states: a
+"saved" view (read-only text + "Last saved <time> — Greg/admin" + an Edit
+button) shown whenever that week already has a published version, and the
+original editable-textarea view otherwise. A "Previous versions" dropdown
+appears whenever a week has more than one version; picking one shows a
+read-only preview plus a "Load this version into editor" button. Switching
+weeks re-fetches that week's own history fresh.
+**Found and fixed a real, pre-existing bug while in this file**: `let
+digestInitialized` was never declared anywhere, only read/assigned inside
+the tab-click handler (`if (tab === "digest" && !digestInitialized)`) —
+reading a truly undeclared identifier throws a ReferenceError in JS, so
+clicking the "Weekly Digest" tab should have been broken. Added the missing
+`let digestInitialized = false;` declaration. (Flagging this since a prior
+BUILD_LOG entry claimed the digest tab was click-tested live and worked —
+possibly tested via a direct function call rather than an actual tab click,
+which would have skipped this code path entirely. Worth a real click on
+the Digest tab to confirm, not just Publish.)
+**Not yet verified live** (no real login/click-through done this session,
+per the doc's own testing-address constraints and to avoid burning time on
+manual browser verification of a straightforward CRUD-shaped feature) —
+recommend Yeti click through: unlock brief.html, publish a Week X brief
+twice with different text, confirm the saved view + Edit + version dropdown
+all behave as described.
+
+**Item 2 (preseason picks missing for Giraffes/Chickens) — ROOT CAUSE FOUND, FIXED, verified against real KV/GitHub state.**
+The apostrophe hypothesis in the handoff doc was wrong, confirmed by direct
+evidence, not just reasoning: `wrangler kv key get picks:preseason-3:Giraffes`
+and `...:Chickens` (real production KV, `--remote`) both returned full,
+correctly-saved 16-game pick sets. So submission/storage was never broken
+for either team, for any team-naming reason. `Gentry's Neanderbrows`
+(a FAMILY_MEMBERS name that also contains an apostrophe) already appears
+correctly in the published JSON, independently confirming apostrophes
+aren't the issue.
+**Real root cause**: the preseason picks-merge-and-publish block in
+`worker.js`'s `pollAndPublish()` used to live entirely inside `if
+(preseasonGames)`, gated on a *successful, fresh* Highlightly fetch — and
+that fetch is deliberately throttled (`shouldPollHighlightlyThisTick`) to
+only ever call the Highlightly API during the real Aug 27/28/29 game
+windows (100/day budget). Outside those windows — i.e. right now, Aug
+25/26 — the fetch always returns `null`, so the merge+publish step never
+ran at all. Confirmed via git history: `data/week-preseason-3.json` was
+frozen at `updatedAt: 2026-08-25T16:24:48Z`, the exact moment of the last
+manual/dev-triggered Highlightly fetch during today's build session, and
+contained exactly whatever picks existed in KV *at that moment*
+(Roughriders, plus one Gentry's-Neanderbrows pick) — not the real current
+KV state. Roughriders had been tested before that timestamp and got
+captured in the frozen snapshot; Giraffes and Chickens were tested after
+it and simply never got a chance to publish. This is not team-specific at
+all — any team tested after that last successful fetch would have
+"disappeared" from the public page the same way, regardless of its name.
+(Also chased down what looked like a second, scarier finding — ALL commits,
+including the working current-week/standings pipeline, appeared to stop at
+2026-08-25T20:15:52Z based on a `git log -20 -- data/` listing. Verified
+this was my own analysis error, not a real outage, before writing anything
+alarming here: `git fetch origin main` showed real commits continuing every
+15 minutes right up through the current tick, just past what a `-20` limit
+could show given how many commits had accumulated. `wrangler tail` on
+`pfpi-scores-worker` across a live `:00` cron tick also confirmed a normal
+"Ok" outcome with a real commit landing at the same timestamp. Site-wide
+polling was never actually down — noting this so a future session doesn't
+have to re-verify it.)
+**Fix applied and VERIFIED LIVE, end to end.** `worker.js`'s preseason block
+now falls back to the last cached `schedule:week:preseason-3` KV entry when
+Highlightly isn't polled this tick, and re-merges + republishes picks on
+their own independent 5-minute cadence (cheap — KV reads only, no external
+API call) — no longer dependent on a live Highlightly fetch to "unlock" a
+picks update. Schedule/score freshness itself is untouched and still stays
+on Highlightly's real budgeted cadence.
+Deployed via `wrangler deploy --config wrangler-scores.toml`, then verified
+against the real production commit that landed at the very next `:15` UTC
+tick (2026-08-26T04:15:40.622Z): `git show origin/main:data/week-preseason-3.json`
+now lists `Chickens`, `Giraffes`, `Roughriders`, and `Gentry's Neanderbrows`
+as teams with real picks — Giraffes and Chickens are visible on the public
+site for the first time, with zero manual intervention beyond the deploy
+itself, roughly 5 minutes after the fix went live. Bug confirmed fully
+closed, not just theoretically fixed.
+
+**Item 3 (weekly picks-email send-time floor) — DONE, code-complete, not yet live-tested (can't be, until a real Tue/Wed/Thu 7am ET boundary occurs).**
+`picks-worker.js`'s `handleWeeklyTrigger` no longer gates on a fixed
+"Tuesday 7am" check. It now: reads the current week's real schedule, finds
+the earliest real `kickoffISO` among its games as "the week's first game,"
+and holds until both (a) today's ET calendar date is on/after that game's
+ET calendar date, and (b) it's past 7am ET — computed fresh every tick via
+the same `getEasternDateParts` helper already used elsewhere, no new
+timezone logic. If the schedule isn't cached yet when checked, it logs and
+holds rather than guessing (per the doc's explicit instruction). Added a
+`weekly-email-sent:{week}` KV flag (30-day TTL) so it can never double-send
+if checked more than once past the floor — a defensive addition beyond
+what was asked, since the old code relied entirely on the hourly cron
+firing exactly once during the target hour, which felt fragile now that
+the trigger condition is more complex. This naturally handles 2026 Week 1's
+Wednesday-Sept-9 exception with zero special-case code, since it's derived
+from the real schedule rather than a hardcoded weekday.
+
+**Item 4 (revised per-game deadline structure) — DONE, code-complete, spot-checked against Greg's worked example.**
+`shared.js`'s `computeGameDeadline()` fully replaced (old flat "6pm ET day
+before" rule is gone, not kept alongside the new one): Wed/Thu/Fri/Tue
+kickoffs deadline 2 hours before their own kickoff; Sat/Sun/Mon kickoffs
+all deadline to one flat Saturday 1:00pm ET cutoff for that week, computed
+by walking back 0/1/2 calendar days from the game's own kickoff day to that
+week's Saturday. Reused the existing DST-safe dual-offset-candidate pattern
+(now factored into a shared `etWallClockToISO` helper) rather than writing
+new timezone math, per the doc's instruction. Manually traced Greg's real
+example (Sun Sept 13 and Mon Sept 14 games) through the new logic by hand:
+both resolve to Sat Sept 12, 1:00 PM ET — matches. `picks-worker.js`'s
+`formatWeekDeadlines()` (the weekly email's deadline summary) rewritten to
+match: lists Tue/Wed/Thu/Fri days individually ("locks 2 hours before
+kickoff"), and Sat/Sun/Mon games as one combined line reading the real
+computed deadline off any one of those games rather than re-deriving the
+rule — can't drift out of sync with the actual per-game math. **Not yet
+verified against a live game's actual computed deadline timestamp** —
+recommend a spot-check once real Week 1 schedule data is polled (Big Balls
+doesn't have real kickoff times yet per earlier BUILD_LOG notes on that
+gap).
+
+**Item 5 (missing-picks tracker: drop "By game", add "Send reminder") — DONE, verified logic by reading, not click-tested.**
+`brief.html`'s Missing Picks tab: removed the "By game"/"By team" toggle
+entirely (not just hidden) — now always renders the by-team view that
+already existed. Added a "Send reminder" button under any team's card that
+has at least one missing game — explicitly including partial submissions,
+not just zero-pick teams, per Yeti's confirmation. New `POST
+/greg/send-reminder` endpoint (`picks-worker.js`, greg-or-admin session)
+pulls that team's real list of still-missing matchups from the same
+schedule+saved-picks data the tracker itself reads (not a second/guessed
+source) and emails it — always to `yeti@yetiblanc.com` regardless of which
+team is named, matching the existing sandboxed-testing pattern used
+elsewhere (`handleSendTestPicksEmail`), since real family addresses aren't
+available yet. **Not yet click-tested end-to-end** (would require a real
+login + triggering a real Resend send) — recommend Yeti trigger one for a
+team with a partial submission and confirm the email lists the right
+missing games.
+
+**Item 6 (naming/label changes) — DONE, verified by grep for other instances.**
+`brief.html`: header "PFPI Brief" → "PFPI Commissioner Portal", subtitle →
+"PFPI Commissioner • Greg Cote", tab label "Publish Brief" → "Weekly
+Brief", and the browser-tab `<title>` → "PFPI Commissioner Portal | The
+Greg Cote Show". Grepped the whole site for "PFPI Brief" / "Weekly
+publisher" afterward to check for other instances per the doc's explicit
+instruction not to assume the header is the only place it's written — none
+found elsewhere (index.html/admin.html only ever link to brief.html by
+filename, never by display text).
+
+**Item 7 (picks.html copy + technical-support button) — DONE, verified by reading, not click-tested.**
+Replaced `picks.html`'s submit-note with the exact required copy: "Picks
+will be sent to the commissioner. If you need technical support, please
+contact Yeti." Added a "Contact Yeti" `mailto:yeti@yetiblanc.com` button
+below it (judged simplest/cleanest fit — no form/backend round-trip needed
+for a support contact link). **Important finding while doing this**: the
+OLD copy it replaced actually said "...please contact the commissioner and
+email yeti@yetiblanc.com for edit approval" — i.e. it WAS advertising
+post-deadline editing capability to the general family audience, exactly
+the thing item 7 explicitly said not to do. Removed that language entirely,
+not just added the new copy alongside it. The existing admin
+correction-link tooling (`handleSendCorrectionEmail`, admin.html) is
+untouched and still fully available to Yeti — this only removes the
+public-facing advertisement of it. Grepped the rest of picks.html for any
+other such references — the only other post-deadline-related text is the
+"one-time correction link" banner that only ever displays to someone
+already using a correction link an admin sent them; that's informational
+context for an existing flow, not an invitation to the general audience,
+so left as-is per the doc's "stays exactly as-is" instruction.
+
+---
+
+**Item 8 (dynamic bar sorting) — DONE, verified by reading + a manual
+DST/worked-example trace; not click-tested in a real browser.**
+`index.html`'s `render()`: bars (and their paired team-avatar/name labels
+underneath, kept in sync since both loops now iterate the same
+`sortedTeams` array) are now sorted by that category's current value,
+highest first, ties broken alphabetically by `TEAM_SHORT` display name —
+recomputed on every `render()` call, so it re-sorts live as the week
+selector changes. This explicitly reverses the earlier locked "team order
+is fixed and never re-sorted by score" decision, per Greg via Yeti,
+confirmed in this handoff doc. **Rollback safety net**: before touching
+anything, the exact prior fixed-order rendering code was saved verbatim to
+`archive/fixed-order-bar-rendering-2026-08-26.js`, clearly labeled with
+what it is and how to restore it (full git history also has it, one commit
+back, but the doc asked for a retrievable copy beyond just git). **Also
+applied to `archive/2025-simulation.html`** per the doc's explicit
+instruction (found it already referenced correctly in `index.html`'s own
+comments as the retired 2025 tool) — same sort function, same tie-break,
+but did NOT bring items 9-12 (crowns/mascot lettering/coon-hat/decimals)
+into the archive, since item 8 was the only one the doc asked to apply
+there; noted that scoping decision inline in the archive file's own
+comment so a future session doesn't wonder why they're inconsistent.
+
+**Item 9 (crowns on every category) — DONE, verified by reading.**
+Leader-detection generalized from a Best-Week-only special case to every
+category: whichever team(s) hold the current max value in the active tab
+get the icon, ties sharing it (same rule Best Week already had). 10-Win
+Weeks gets the standard crown too, per the doc's explicit note. Both
+10-Win Weeks and Unique Hits still have `getData: w => null` (no real data
+source — Yeti's earlier decision, untouched) so this can't be visually
+confirmed against real data yet, only confirmed correct by reading the
+generalized logic.
+
+**Item 10 (vertical mascot lettering) — DONE, with a disclosed legibility trade-off.**
+Team mascot name (`team.toUpperCase()` — the existing `TEAMS` array keys
+already exactly match the doc's required mascot-word list, e.g. "Lobos" ->
+"LOBOS", so no new name mapping was needed) renders bold, centered,
+vertical (`writing-mode:vertical-rl` + 180° rotation so it reads
+bottom-to-top) inside every bar on every category tab. **Legibility
+handling**: raised the bar's minimum-height floor from 2% to 12% (helps
+near-zero bars some), and font size is computed per-bar/per-team in JS
+after layout (`sizeMascotLabels()`), from the bar's real rendered pixel
+height divided by the mascot name's character count, clamped to a 6-11px
+range. **Flagging as instructed**: the longest names (ROUGHRIDERS/
+CHICKENS/CRITTERS/FERRARIS/GIRAFFES, 8-11 letters) will render at or near
+the 6px legibility floor whenever that team's bar is short (a low value
+relative to that week's leader) — there was no minimum-height increase
+large enough to guarantee comfortable fit for an 11-letter word without
+making low-value bars look absurdly tall relative to their real value, so
+this is a real, accepted trade-off, not silently hidden. Worth a real
+visual check in a browser once real multi-team data exists (today, only
+Standings has any real spread at all — Week 1's data is still 0-0 for
+Weeks Leading/Weekly Titles/Best Week, so most bars are currently near the
+new 12% floor).
+
+**Item 11 (Unique Hits coon-skin hat) — DONE, verified by reading.**
+Hand-built a small inline SVG (dome + striped tail) rather than reaching
+for a generic raccoon emoji, since no standard Unicode coonskin-cap emoji
+exists and the whole point is that this specific icon carries meaning
+(Ruth Cote, "Ruth's Raccoons," PFPI's all-time real Unique Hits leader —
+this is a deliberate nod, not a placeholder, and should NOT get "corrected"
+back to a crown later). Same positioning/float-animation/tie-sharing
+treatment as every other category's crown, just a different icon swapped
+in only for the `uniqueHits` tab. No real data exists for this category yet
+(same `getData: w => null` as 10-Win Weeks) so it can't be seen live, only
+confirmed correct by reading the code path.
+
+**Item 12 (two decimals everywhere except Best Week) — DONE, with one judgment call flagged.**
+Standings' win-pct bottom label changed from the old 3-digit `fmtPct`
+(".653") to a new 2-digit `fmtPct2` (".65"). Weeks Leading / Weekly Titles
+bar values now always show 2 decimals via `.toFixed(2)` (fixes a real,
+currently-live inconsistency: a value that happened to land on a whole
+number, e.g. `2`, was rendering as "2" instead of "2.00" next to other
+bars showing "8.33" in the same chart). Y-axis tick labels unified to
+always show 2 decimals for every category (previously Best Week already
+did; other categories rounded but didn't pad, e.g. "2" instead of "2.00").
+Best Week's own bottom-label percentage is untouched (still 3-digit
+`fmtPct`, e.g. ".875") — the sole exception, exactly as specified.
+**Judgment call, flagged rather than guessed past**: did NOT force decimals
+onto genuinely integer "record" displays — Standings' top win-count bar
+label, Best Week's "13-1 (Wk 12)" W-L record, and Unique Hits'
+"hits-opps" pair (e.g. "5-12") — since those are counts/records, not
+fractional values, and "13.00-1.00" would be a nonsensical display nobody
+asked for. Also scoped this strictly to `index.html`'s bar chart — did NOT
+touch `brief.html`'s Weekly Digest text, since that already matches Greg's
+own real hand-typed 3-decimal house-style example verbatim (confirmed
+correct in an earlier session, see above) and changing it would contradict
+an already-locked decision. Worth Greg/Yeti confirming both scoping calls.
+
+**Item 13 (past champions history) — Checklist-only, no action taken, per the doc's own instruction.** Already tracked in `PFPI_full_build_checklist.md`.
+
+---
+
+## Deploy status (all items above)
+
+Both Workers deployed successfully, cron triggers confirmed intact on both
+(`wrangler deploy` output showed `schedule: 0 * * * *` for
+`pfpi-picks-worker` and `schedule: * * * * *` for `pfpi-scores-worker` —
+matching the wrangler.toml-based trigger fix from the previous session, not
+silently cleared):
+- `pfpi-picks-worker` (picks-worker.js): Version ID `aa8adad0-dfa1-4c2d-ad02-c85e8f411a64`.
+- `pfpi-scores-worker` (worker.js): Version ID `51c0fe2b-b0f1-446e-951b-339ae02bcc8b`.
+
+Frontend files (`index.html`, `brief.html`, `picks.html`,
+`archive/2025-simulation.html`, `archive/fixed-order-bar-rendering-2026-08-26.js`,
+`shared.js`) committed and pushed to `main` via git — GitHub Pages serves
+these directly, separate from the Worker deploys above (per the site's
+existing deploy-split architecture). Smoke-tested post-deploy: `GET
+/current-week` returns `{"currentWeek":1}`; `GET /greg/brief-history`
+correctly 403s without a session token; item 2's fix confirmed against a
+real production commit (see above) — the strongest verification done this
+session since it's an actual observed fix in the live system, not just
+code review.
+
+**Not click-tested in an actual browser this session** (no browser
+automation used — all verification was direct KV/GitHub/API checks, git
+history analysis, Node syntax checks, and manual logic tracing against
+Greg's worked examples): items 1, 5, 6's visual result, 7's visual result,
+and all of 8-12's actual on-screen appearance. Recommend Yeti do one real
+pass through both brief.html (login, publish/edit/version-history,
+missing-picks reminder button) and index.html (every chart tab, a couple
+of different weeks) before telling Greg this round is fully live.
+
+No hard-rule stop conditions were hit — nothing destructive, no real
+non-testing emails sent, no credentials requested, no plan upgrades. All
+13 items addressed (12 done/deployed, 1 checklist-only as instructed).

@@ -1757,9 +1757,22 @@ mascot lettering) and Item 12 (2-decimal formatting) per the explicit scope
 of this request — noted inline in the file's own comments so a future
 session doesn't "fix" that inconsistency by mistake.
 Browser automation WAS available this round -- after deploying, navigated
-to the live archive page, clicked the Unique Hits tab, and took a real
-screenshot to confirm (see below for what was actually observed, filled in
-after that check).
+to the live archive page and confirmed visually with real screenshots
+(cache-busted with a `?nocache=1` query param after the first attempt
+served a browser-cached copy of the old page, separate from the earlier
+GitHub-Pages-origin propagation lag this file already flags elsewhere --
+worth remembering both layers can independently delay seeing a change).
+**Standings tab**: Greg's Lobos (148, the real leader) now shows a crown,
+confirming Item 9's generalization works beyond Best Week.
+**Unique Hits tab**: Christie's Ferraris (3-3) and Tati's Llamas (3-4) are
+exactly tied on hits (3 each) and BOTH show the coon-skin-hat icon side by
+side above their bars — correct shared-leader behavior, sorted first per
+Item 8 (tied on the real sort value, Ferraris before Llamas alphabetically
+by `TEAM_SHORT`). Zoomed in on the icon itself: renders as a small brown
+domed cap with a lighter/darker striped tail section, clearly distinct
+from the crown emoji used everywhere else, with the same glow/float
+treatment. This is confirmed working exactly as designed, not just
+theorized from the code.
 
 ## Deploy status (this round)
 
@@ -1771,8 +1784,15 @@ after that check).
 - Frontend (`admin.html`, `brief.html`, `picks.html`,
   `archive/2025-simulation.html`) committed and pushed to `main`.
 
-**Not click-tested in an actual browser this round either** (same
-limitation as the first round — no browser automation used, verification
-was via curl, direct KV/GitHub checks, and Node syntax checks). The
-session-persistence fix (items 1-2) and the coon-hat visual (item 5)
-especially deserve a real look before considering this round fully closed.
+**Item 5 was visually confirmed live in a real browser this round** (see
+above — a first for either overnight round). **Items 1-2 (session
+persistence, admin.html's login form hiding) were NOT click-tested with a
+real login** — doing so would need the actual admin/Greg passwords, which
+this session doesn't have and shouldn't (Cloudflare Secrets, not something
+to guess or ask for). Verified as far as possible without them: the new
+`/verify-session` endpoint responds correctly to a bogus token
+(`{"valid":false}`), and both pages' restore/clear logic was confirmed
+correct by reading, not run end-to-end. **Recommend Yeti do the real
+login-refresh test on both pages** before considering items 1-2 fully
+closed — that's the one piece of tonight's two rounds that genuinely
+can't be verified without the real credentials.

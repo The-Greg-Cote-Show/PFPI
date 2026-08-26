@@ -94,7 +94,6 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "NO",
         "Roughriders": "NO",
         "Chickens": "DAL",
         "Ferraris": "NO",
@@ -134,6 +133,7 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
+        "Lobos": "GB",
         "Roughriders": "GB",
         "Chickens": "GB",
         "Ferraris": "ARI",
@@ -320,5 +320,5 @@
       }
     }
   ],
-  "updatedAt": "2026-08-26T15:50:06.218Z"
+  "updatedAt": "2026-08-26T15:55:06.423Z"
 }

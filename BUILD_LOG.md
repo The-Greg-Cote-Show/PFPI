@@ -1990,10 +1990,40 @@ page" was meant more literally.
 **Verified live/real this round**: item 1's preseason-3 support (code
 review + the same real KV data from last round's investigation), item 9's
 detection logic (real KV record against real live published data, watched
-fire correctly on the actual next cron tick). **Not yet verified in an
-actual browser**: items 2-8 and 10's on-screen appearance and click
-behavior — recommend a real pass through picks.html (deselect, the submit
-confirmation dialog, Contact Yeti) and both chart pages (raccoon icon,
-mascot lettering on the archive, the brief header restyle on index.html)
-before calling this round done. Item 4 (CC + tally) also can't be fully
-click-tested without a real picks submission through a live token.
+fire correctly on the actual next cron tick). Also did a real browser pass
+after deploy+propagation using the existing seeded test link
+(`picks.html?token=pfpi-preseason3-test`, Gentry's Neanderbrows against
+real preseason games) and both chart pages:
+- **Item 2 (deselect) confirmed working live**: clicked an already-selected
+  PIT pick, button un-filled, status showed "Cleared." — exactly as
+  designed.
+- **Item 6 (raccoon icon) confirmed live on the 2025 archive**'s Unique
+  Hits tab: a small grey raccoon face (round ears, dark bandit mask, white
+  eye dots) renders correctly above both exactly-tied leaders (Christie's
+  Ferraris 3-3, Tati's Llamas 3-4), shared side by side as designed. (Not
+  visible on the live 2026 site — confirmed that's the pre-existing
+  permanent empty state for Unique Hits there, not a bug in this change.)
+- **Item 7 (mascot lettering preview) confirmed live on the 2025 archive**:
+  LOBOS/ROUGHRIDERS/CHICKENS/CRITTERS/GIRAFFES/LLAMAS/FERRARIS/MANIACS all
+  render vertically inside their Standings bars, legibly on the taller
+  bars; the documented legibility trade-off is visible too, exactly as
+  expected, on the shortest Unique-Hits bars (0-3, 0-0).
+- **Item 8 (brief header restyle) confirmed live on index.html**: "PFPI
+  2026" page header shows "Commissioner's Weekly Brief" at the
+  category-title size/weight with "PFPI Commissioner • Greg Cote"
+  underneath at the category-desc size/color, on every tab checked.
+- **Item 10 (footer) confirmed live** on both index.html and the archive.
+**Not re-confirmed visually this round, due to real browser-automation
+tool instability during this session** (repeated CDP screenshot
+timeouts/render glitches deep in picks.html's long game list — confirmed
+via `get_page_text`, a non-visual DOM read, that the actual page content
+itself was intact and correct throughout, so this was a tooling
+flakiness issue, not a site bug): the submit-confirmation modal's on-screen
+appearance and the Contact Yeti modal's on-screen appearance (items 3 and
+5) — both were exercised only by reading the code, not by clicking through
+them. Item 4 (CC + tally) also can't be fully click-tested without a real
+picks submission through a live token (the seeded test token's team
+already has picks saved from prior sessions; submitting it again would
+send a real test email, which is fine, but wasn't done this pass).
+Recommend Yeti click through Submit-with-missing-picks and Contact Yeti on
+a real device before calling this round fully done.

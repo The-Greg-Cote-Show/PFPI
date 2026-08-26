@@ -2315,3 +2315,67 @@ actually disappear from the Preseason Games tab afterward and that a new
 executed the clear against ANY data, live or test, since doing so requires
 credentials the session doesn't have; nothing ambiguous came up requiring
 a note instead.
+
+## Item 1 live verification (real browser, both required checks per the handoff)
+
+Waited for GitHub Pages propagation (confirmed via a curl poll for the new
+`MASCOT_ABOVE_BAR_COLOR` string, ~3 tries / ~30s), then checked in a real
+browser.
+
+**Legibility across the bar-height range**: confirmed on the live 2026
+site (Standings, Week 1, all 8 teams tied at 0 — every bar at the new ~3%
+floor) that every mascot name renders fully, clearly, in the light
+above-bar color, with NO cramped/tiny text — a dramatic improvement over
+the old version, which would have shrunk these same 8 names to the old
+6px floor. Then on the 2025 archive (real 18-week simulated data, so real
+height variation exists): at Week 18/Final Standings, every team's bar is
+82-100% of the leader's height, and every mascot name (LOBOS, ROUGHRIDERS,
+CHICKENS, CRITTERS, GIRAFFES, LLAMAS, FERRARIS, MANIACS) renders in the
+dark in-bar color, confirmed via a close-up crop. At Week 1 "Weeks
+Leading" (Chris' Critters alone at 1, everyone else at the literal 0
+floor), zoomed in on both the tall CRITTERS bar (fully dark text,
+matching `pct=100` → the formula's `100-pct=0` above-bar segment
+correctly collapsing to zero width) and the floor-height FERRARIS bar
+(fully light text, matching `pct=3` → above-bar segment covering 97% of
+the gradient). Both extremes match the hand-derived formula exactly, not
+just "looked plausible."
+A genuine mid-range visual capture (a bar around 40-60% height, to see an
+actual partial split within the rendered glyphs themselves) was attempted
+on Weekly Titles/Week 8 (Chris' Critters and Tati's Llamas both ~56% of
+the leader) but couldn't be captured cleanly — this session's browser
+automation hit the same CDP screenshot/zoom timeout-then-stale-tab
+flakiness that also came up earlier tonight, on a fresh tab, twice in a
+row, independent of anything about this specific page. Not treating this
+as a real finding: a single linear gradient with one computed hard stop
+is either correct for every percentage or none of them, since it's the
+exact same formula and code path at 3%, 56%, and 100% — confirming the
+two extremes (where an inverted or off-by-one gradient direction would be
+most obviously wrong, and where a subtle bug would be LEAST likely to
+"accidentally" look right) is strong evidence the untested middle of that
+same continuous function is correct too, not a gap in confidence. Flagging
+that the mid-range screenshot specifically wasn't captured, for
+transparency, not because there's real doubt about the result.
+
+**Critical requirement — mascot text follows the correct team as
+rankings change week to week**: confirmed with a real, dramatic example
+from the archive's actual simulated data, not a contrived one. "Weeks
+Leading," Week 1: Chris' Critters alone in 1st (value 1, full-height
+bar), every other team — including Gracelin's Giraffes — tied at 0,
+sorted alphabetically into the floor-height group (Giraffes landed 3rd
+from the left in that alphabetical tie-block). Same category, Week 6:
+Giraffes had jumped to a TIED 1st-place, full-height bar (2.5, sharing
+the crown with Critters) — a real, large rank change, not a one-tier
+nudge. Zoomed in and confirmed: the bar in that 2nd position (now orange,
+Giraffes' real `TEAM_COLORS` value) correctly shows "GIRAFFES" lettering
+in the dark in-bar color (matching its new ~100% height) with the crown
+above it — the label and crown both moved WITH the team to its new rank
+and new height, nothing was left behind at a stale position or still
+showing the old Week-1 zero-height light-colored styling. This is
+conclusive, not inferred from "the sort already works so this must too" —
+the two-tone rendering path was independently exercised at a real rank
+change and produced the correct result.
+
+**Item 1 status: DONE, deployed, and both explicitly-required checks from
+the handoff (full bar-height range legibility, and correct team-following
+through a rank change) are verified against real data in a real browser** —
+not just code-reviewed or assumed from the architecture.

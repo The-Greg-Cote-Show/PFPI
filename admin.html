@@ -161,6 +161,23 @@ button:hover{opacity:.9;}
     <div class="status" id="correctionStatus"></div>
   </div>
 
+  <div class="panel hidden" id="clearPicksPanel">
+    <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;color:var(--red);">Clear all picks for a week</div>
+    <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
+      Destructive — clears EVERY team's saved picks for the week below (all
+      8 real roster teams AND the 2 sandboxed test teams), not just one
+      team. No undo. Built for resetting preseason test data before a clean
+      multi-person test, but works on any week — remove this button
+      yourself before opening the site for real regular-season picks.
+    </div>
+    <label for="clearPicksWeek">Week</label>
+    <input type="text" id="clearPicksWeek" placeholder="preseason-3, or 1-18">
+    <label for="clearPicksAdminName">Your name (for the audit log)</label>
+    <input type="text" id="clearPicksAdminName" value="Yeti">
+    <button id="clearPicksBtn" style="background:var(--red);">Clear all picks for this week</button>
+    <div class="status" id="clearPicksStatus"></div>
+  </div>
+
   <div class="footer-copyright">&copy;ThatKindaThing Productions, LLC</div>
 </div>
 
@@ -181,6 +198,7 @@ function showLoggedIn() {
   document.getElementById("briefFixPanel").classList.remove("hidden");
   document.getElementById("testEmailPanel").classList.remove("hidden");
   document.getElementById("correctionPanel").classList.remove("hidden");
+  document.getElementById("clearPicksPanel").classList.remove("hidden");
   loadBriefForWeek();
 }
 
@@ -196,6 +214,7 @@ function clearSession(message) {
   document.getElementById("briefFixPanel").classList.add("hidden");
   document.getElementById("testEmailPanel").classList.add("hidden");
   document.getElementById("correctionPanel").classList.add("hidden");
+  document.getElementById("clearPicksPanel").classList.add("hidden");
   if (message) {
     const statusEl = document.getElementById("loginStatus");
     statusEl.textContent = message;
@@ -479,6 +498,48 @@ document.getElementById("correctionBtn").onclick = async () => {
       return;
     }
     statusEl.textContent = "Sent to yeti@yetiblanc.com. Link: " + data.link;
+    statusEl.className = "status ok";
+  } catch (e) {
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "status error";
+  }
+};
+
+// Real destructive action -- per Yeti (2026-08-26): a simple confirm()
+// popup is sufficient here, no typed-confirmation step. Clears every
+// team's picks for the selected week (real roster + sandboxed test teams
+// both) via /admin/clear-week-picks, which logs to the same
+// override-log:{week}:{timestamp} audit trail admin overrides already use.
+document.getElementById("clearPicksBtn").onclick = async () => {
+  const week = document.getElementById("clearPicksWeek").value.trim();
+  const adminName = document.getElementById("clearPicksAdminName").value;
+  const statusEl = document.getElementById("clearPicksStatus");
+
+  if (!week) {
+    statusEl.textContent = "Enter a week first.";
+    statusEl.className = "status error";
+    return;
+  }
+  if (!confirm(`Clear ALL teams' picks for week "${week}"? This cannot be undone.`)) {
+    return;
+  }
+
+  statusEl.textContent = "Clearing...";
+  statusEl.className = "status";
+  try {
+    const res = await fetch(`${WORKER_BASE}/admin/clear-week-picks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Admin-Token": sessionToken },
+      body: JSON.stringify({ week, adminName }),
+    });
+    const data = await res.json();
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Clear failed.";
+      statusEl.className = "status error";
+      return;
+    }
+    statusEl.textContent = `Cleared picks for ${data.teamCount} teams, week "${data.week}". Logged.`;
     statusEl.className = "status ok";
   } catch (e) {
     statusEl.textContent = "Could not reach the server.";

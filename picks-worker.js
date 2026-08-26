@@ -424,6 +424,47 @@ async function handleAdminOverride(request, env) {
 }
 
 // ============================================================
+// CLEAR ALL PICKS FOR A WEEK (admin.html "Clear all picks" tool)
+// ============================================================
+// Per Yeti (2026-08-26): a real destructive reset for a selected week's
+// test data (his stated use case: resetting preseason picks before a
+// clean multi-person test) -- but deliberately works on ANY week, not
+// just preseason (confirmed intentional, not scope creep). Clears EVERY
+// team's picks for that week -- the real 8-team roster AND the 2
+// sandboxed FAMILY_MEMBERS test teams -- since Yeti's own testing uses the
+// test teams too. Logged to the same override-log:{week}:{timestamp}
+// audit trail admin pick overrides already use, so there's a record of
+// when this ran and by whom even though it's Yeti's own tool.
+async function handleClearWeekPicks(request, env) {
+  const adminToken = request.headers.get("X-Admin-Token");
+  const isValidAdmin = await verifyAdminToken(adminToken, env);
+  if (!isValidAdmin) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const { week, adminName } = await request.json();
+  if (week === undefined || week === null || week === "") {
+    return jsonResponse({ error: "week is required." }, 400, request);
+  }
+
+  const allTeams = [...TEAMS, ...FAMILY_MEMBERS.map(m => m.team)];
+  for (const team of allTeams) {
+    await env.PFPI_KV.delete(`picks:${week}:${team}`);
+  }
+
+  const logEntry = {
+    timestamp: new Date().toISOString(),
+    adminName: adminName || "Yeti",
+    week,
+    action: "clear-week-picks",
+    clearedTeams: allTeams,
+  };
+  await env.PFPI_KV.put(`override-log:${week}:${Date.now()}`, JSON.stringify(logEntry));
+
+  return jsonResponse({ cleared: true, week, teamCount: allTeams.length }, 200, request);
+}
+
+// ============================================================
 // AD-HOC TEST PICKS EMAIL (admin.html "Send test picks email")
 // ============================================================
 // Per Yeti (2026-08-25): a self-service way to get a picks link emailed
@@ -1001,6 +1042,9 @@ export default {
     }
     if (url.pathname === "/admin/override-pick" && request.method === "POST") {
       return handleAdminOverride(request, env);
+    }
+    if (url.pathname === "/admin/clear-week-picks" && request.method === "POST") {
+      return handleClearWeekPicks(request, env);
     }
     if (url.pathname === "/admin/send-test-picks-email" && request.method === "POST") {
       return handleSendTestPicksEmail(request, env);

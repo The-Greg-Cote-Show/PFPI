@@ -2195,3 +2195,123 @@ together for the first time today. Recommend Yeti do one real publish
 through brief.html when convenient and confirm the "Week N brief is live"
 email actually lands, as the final human-eyes confirmation on top of the
 technical evidence above.
+
+## 2026-08-26, evening — Fifth round: two-tone mascot text, "Commissioner's Report" rename, clear-all-picks admin tool
+
+Three independent items from Yeti's overnight handoff. Working through in
+order; logging as I go per the doc's own instruction.
+
+**1. Two-tone mascot text — DONE, deployed to both index.html and the 2025
+archive. Implementation approach and reasoning documented below; live
+cross-team-swap verification still to follow this log entry.**
+Confirmed this codebase's bars are plain HTML/CSS (`.bar-el` with an
+inline `height:X%`, not SVG), so of the two suggested techniques, a
+`background-clip:text` gradient with a hard color stop was the cleaner fit
+than two clipped stacked copies — one element, one inline style per bar,
+no extra DOM nodes.
+**Structural change**: `.bar-mascot-label` moved from being a child of
+`.bar-el` (the shrinking fill) to a sibling of it under `.bar-col` (the
+fixed-height card), positioned `top:0;bottom:0` so its size is now
+completely independent of the bar's current height — this directly
+implements the "fixed vertical position/size relative to the card" ask,
+and is why the old bar-height-based 12% minimum floor could come back down
+near its original 3% (text legibility no longer depends on bar height at
+all now).
+**Color split derivation**: the gradient's hard stop is computed inline in
+JS as `100 - pct`, using the exact same `pct` variable that sets
+`.bar-el`'s own `height:${pct}%` two lines below it in the same function —
+not a separate calculation. (The `100 - pct`, not `pct` directly, is
+because this element also carries the pre-existing `rotate(180deg)`
+transform needed for bottom-to-top vertical reading order — a rotation
+flips which end of the gradient's own local coordinate space ends up at
+the visual top vs. bottom. Worked through the geometry by hand before
+writing the code: pre-transform-top of the gradient maps to visual-bottom
+after a 180° rotation, so the "in-bar" color needs to occupy the
+pre-transform TOP `pct`% and the "above-bar" color the pre-transform
+BOTTOM `(100-pct)`% for the VISUAL result to come out correct. Verified
+this reasoning against concrete pct values (100 → should be all
+in-bar-color; 3 → should be almost all above-bar-color) before trusting
+it, not just asserted.)
+**Colors chosen**: in-bar color reuses the exact same `rgba(8,12,20,.72)`
+tone the existing `.bar-bottom-label` already uses (already proven legible
+against every `TEAM_COLORS` fill); above-bar color is a new translucent
+light tone (`rgba(238,242,247,.55)`, based on `--text`) for legibility
+against the dark card background.
+**Layering**: gave `.bar-value-label` (the rank number + crown/raccoon
+icon, which already floats above the bar via `bottom:100%`) an explicit
+`z-index:5` it didn't have before, and the new mascot label `z-index:3` --
+ensures the value/crown stay clearly on top wherever their vertical zones
+cross the now-full-height mascot text, rather than an unpredictable
+DOM-order-dependent stacking result.
+**Font size**: `sizeMascotLabels()` now measures the fixed-height
+`.bar-col` instead of the shrinking `.bar-el`, and the clamp range widened
+from the old 6-11px to 9-15px, since every bar can now afford the same
+generous size (previously only tall bars could).
+**Ported the identical change to `archive/2025-simulation.html`** (which
+already had the single-color preview version from an earlier round) rather
+than leaving it with the "illegibly small" bug this whole item exists to
+fix — a consistency judgment call, not explicitly requested for the
+archive by name in this handoff, flagging it as such.
+**Not done**: the "text always above the bar" alternative was correctly
+NOT built, per the explicit "don't do this, already rejected" instruction.
+
+**2. "Commissioner's Weekly Brief" → "Commissioner's Report" — DONE, three
+real locations found and fixed.**
+Grepped case-insensitively for "Weekly Brief" across the whole repo (not
+just "Commissioner's Weekly Brief" verbatim, to catch near-variants) per
+the instruction to use the same thorough approach as the round that first
+established this naming. Found and fixed:
+- `index.html`'s brief-panel label (the one explicitly named in the
+  handoff).
+- `archive/2025-simulation.html`'s identical brief-panel label (same
+  component, kept in sync with index.html per the pattern already
+  established for this shared feature in earlier rounds).
+- `brief.html`'s dashboard tab button, which said just "Weekly Brief" (no
+  "Commissioner's" prefix — a different, shorter label from a different,
+  earlier rename event in an even earlier round, not literally the exact
+  phrase this handoff named). **Judgment call, flagging it**: changed this
+  to "Commissioner's Report" too, since leaving the tab that navigates to
+  publishing the Commissioner's Report still saying "Weekly Brief" would
+  read as an inconsistency/oversight rather than a deliberate scope
+  boundary, and the handoff's own framing ("drop 'Weekly' and 'Brief'
+  entirely") applies just as much to this label's wording. If this wasn't
+  intended, it's a one-line revert.
+No other real instances found (BUILD_LOG.md's own historical entries
+correctly left untouched — a log of what was true at the time, not
+something to retroactively rewrite; picks-worker.js's AUTH_CONFIG naming
+from the prior round already says "Commissioner Portal", which doesn't
+contain "Weekly Brief" and didn't need touching for this specific rename).
+
+**3. "Clear all picks" admin tool — DONE, deployed; code-reviewed thoroughly but NOT click-tested (no admin password available, same established limitation as other admin-gated features this session).**
+New panel in admin.html ("Clear all picks for a week", styled with the
+red/danger color already used elsewhere for destructive actions), and a
+new `POST /admin/clear-week-picks` endpoint (picks-worker.js, admin-token
+gated). Confirmed matches every explicit requirement: accepts a free-text
+week value (not restricted to 1-18) so `preseason-3` works, the stated
+primary use case; clears ALL teams for that week (real 8-team roster +
+the 2 sandboxed FAMILY_MEMBERS test teams, via the exact same
+`[...TEAMS, ...FAMILY_MEMBERS.map(m => m.team)]` pattern worker.js already
+uses for the preseason merge, not a new/separate team list); confirmation
+is a plain `confirm()` popup, no typed-confirmation step added; logs to
+`override-log:{week}:{timestamp}` — the exact same audit-trail key pattern
+`handleAdminOverride` already writes to, so this shows up in the same
+place Yeti already knows to look.
+**Why this wasn't click-tested**: `/admin/clear-week-picks` requires a
+valid admin session token, which requires the real admin password —
+something this session has never had and shouldn't (per the standing
+credential rule). This is the same limitation already logged for other
+admin-only features earlier this session (e.g. items 1-2 of an earlier
+round). Verified as thoroughly as possible without it: read the code back
+against the exact KV key format `getSavedPicks`/`savePicks` actually use
+(`picks:{week}:{team}`) to confirm the delete targets the real keys, not a
+guessed format.
+**Recommend Yeti do the real test himself**, per the hard rule's own
+guidance to only ever clear disposable data: try it against
+`preseason-3` specifically (which is already Yeti's real sandboxed testing
+week, so nothing there is precious) and confirm both that the picks
+actually disappear from the Preseason Games tab afterward and that a new
+`override-log:preseason-3:*` entry shows up.
+**No hard-rule stop condition was triggered** — this session never
+executed the clear against ANY data, live or test, since doing so requires
+credentials the session doesn't have; nothing ambiguous came up requiring
+a note instead.

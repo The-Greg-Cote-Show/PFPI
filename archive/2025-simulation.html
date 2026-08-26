@@ -57,7 +57,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .labels-cols{flex:1;display:flex;justify-content:space-between;gap:10px;padding-left:.5rem;}
 
 .bar-col{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0;width:0;position:relative;overflow:visible;}
-.bar-value-label{font-size:.68rem;font-weight:800;color:var(--gold);text-align:center;line-height:1.2;position:absolute;bottom:100%;left:0;right:0;margin-bottom:10px;white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.bar-value-label{font-size:.68rem;font-weight:800;color:var(--gold);text-align:center;line-height:1.2;position:absolute;bottom:100%;left:0;right:0;margin-bottom:10px;white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:5;}
 .bar-el{width:100%;max-width:46px;border-radius:5px 5px 0 0;transition:height .25s;position:relative;min-height:2px;display:flex;align-items:flex-end;justify-content:center;}
 .bar-bottom-label{font-size:.62rem;font-weight:800;color:rgba(8,12,20,.8);margin-bottom:5px;letter-spacing:.01em;}
 .label-col{flex:1 1 0;display:flex;flex-direction:column;align-items:center;min-width:0;}
@@ -69,16 +69,20 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 /* Unique Hits' leader icon -- a grey raccoon face, not a crown. See
    index.html for the full backstory (Ruth Cote / "Ruth's Raccoons"). */
 .raccoon-icon{width:24px;height:21px;filter:drop-shadow(0 0 5px rgba(150,150,160,.55));animation:crownFloat 2.2s ease-in-out infinite;z-index:5;}
-/* Vertical mascot lettering inside each bar -- ported from index.html
-   (Item 10) per Yeti's 2026-08-26 follow-up, to preview it against a full
-   real season. Font size is set per-team inline by JS (sizeMascotLabels). */
+/* Two-tone vertical mascot lettering -- ported from index.html's
+   2026-08-26 redesign (replacing the earlier shrink-to-fit-inside-the-bar
+   version, which was illegibly small on short bars). Fixed size/position
+   relative to .bar-col (the full card height), color split via a hard
+   gradient stop at the bar's current fill line -- see index.html for the
+   full reasoning. */
 .bar-mascot-label{
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(180deg);
+  position:absolute;top:0;bottom:0;left:50%;width:1.3em;
+  transform:translateX(-50%) rotate(180deg);
+  display:flex;align-items:center;justify-content:center;
   writing-mode:vertical-rl;font-weight:800;letter-spacing:.03em;
-  color:rgba(8,12,20,.55);white-space:nowrap;pointer-events:none;
-  max-height:calc(100% - 6px);overflow:hidden;
+  white-space:nowrap;pointer-events:none;overflow:hidden;z-index:3;
+  background-repeat:no-repeat;-webkit-background-clip:text;background-clip:text;color:transparent;
 }
-.bar-mascot-label.with-bottom-label{top:calc(50% - 9px);}
 .bar-col.is-champion .bar-value-label{color:var(--gold2);}
 .bar-col.is-champion .bar-team-avatar{border-width:2px;box-shadow:0 0 0 3px rgba(232,184,75,.15);}
 
@@ -179,7 +183,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
   <div class="brief-panel" id="briefPanel">
     <div class="brief-header">
-      <div class="brief-label">Commissioner's Weekly Brief</div>
+      <div class="brief-label">Commissioner's Report</div>
       <div class="brief-week-tag" id="briefWeekTag"></div>
     </div>
     <div class="brief-body" id="briefBody"></div>
@@ -200,6 +204,12 @@ const TEAM_SHORT = {
   "Lobos":"Greg's Lobos","Roughriders":"Dick's Roughriders","Maniacs":"Mom's Maniacs","Critters":"Chris' Critters",
   "Chickens":"Mike's Chickens","Ferraris":"Christie's Ferraris","Llamas":"Tati's Llamas","Giraffes":"Gracelin's Giraffes"
 };
+
+// Two-tone mascot lettering colors -- see index.html for the full
+// reasoning, ported verbatim.
+const MASCOT_IN_BAR_COLOR = "rgba(8,12,20,.72)";
+const MASCOT_ABOVE_BAR_COLOR = "rgba(238,242,247,.55)";
+
 function initials(fullName){
   const words = fullName.replace(/['']s\b/,"'s").split(/\s+/).filter(Boolean);
   if (words.length < 2) return fullName.slice(0,2).toUpperCase();
@@ -517,20 +527,23 @@ async function render(){
 
   sortedTeams.forEach(team => {
     const val = values[team];
-    const pct = Math.max(12, Math.round((val/maxVal)*1000)/10);
+    const pct = Math.max(3, Math.round((val/maxVal)*1000)/10);
     const color = TEAM_COLORS[team];
     const isLeader = leaderTeams.includes(team);
     const bottomLabel = bottomLabels[team];
 
+    // Same derivation as index.html -- see there for the full reasoning.
+    const mascotGradient = `linear-gradient(0deg, ${MASCOT_ABOVE_BAR_COLOR} 0%, ${MASCOT_ABOVE_BAR_COLOR} ${100 - pct}%, ${MASCOT_IN_BAR_COLOR} ${100 - pct}%, ${MASCOT_IN_BAR_COLOR} 100%)`;
+
     const col = document.createElement("div");
     col.className = "bar-col" + (isLeader ? " is-champion" : "");
     col.innerHTML = `
+      <div class="bar-mascot-label" style="background-image:${mascotGradient}">${team.toUpperCase()}</div>
       <div class="bar-el" style="height:${pct}%;background:${color}">
         <div class="bar-value-label">
           ${isLeader ? leaderIconHtml : ""}
           <div>${labels[team].replace("\n","<br>")}</div>
         </div>
-        <div class="bar-mascot-label${bottomLabel ? " with-bottom-label" : ""}">${team.toUpperCase()}</div>
         ${bottomLabel ? `<div class="bar-bottom-label">${bottomLabel}</div>` : ""}
       </div>
     `;
@@ -554,15 +567,16 @@ async function render(){
     : "Simulated data from real 2025 NFL results with randomized picks. Bars are sorted by rank in this category (highest first); ties break alphabetically.";
 }
 
-// Ported from index.html (Item 10, 2026-08-26) -- see there for the full
-// reasoning on the legibility trade-off (long names on short bars clamp to
-// a 6px floor rather than overflow).
+// Ported from index.html's two-tone redesign (2026-08-26) -- size is now
+// independent of the bar's own height (measures the fixed-height .bar-col
+// instead of the shrinking .bar-el), so every bar gets the same generous,
+// legible size. See index.html for the full reasoning.
 function sizeMascotLabels(barsArea) {
   barsArea.querySelectorAll(".bar-mascot-label").forEach(el => {
-    const barEl = el.closest(".bar-el");
-    const heightPx = barEl.getBoundingClientRect().height;
-    const available = heightPx - 8;
-    const size = Math.max(6, Math.min(11, available / (el.textContent.length * 1.05)));
+    const barCol = el.closest(".bar-col");
+    const heightPx = barCol.getBoundingClientRect().height;
+    const available = heightPx * 0.82;
+    const size = Math.max(9, Math.min(15, available / (el.textContent.length * 1.05)));
     el.style.fontSize = size + "px";
   });
 }

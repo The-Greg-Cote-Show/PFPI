@@ -62,7 +62,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .labels-cols{flex:1;display:flex;justify-content:space-between;gap:10px;padding-left:.5rem;}
 
 .bar-col{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;min-width:0;width:0;position:relative;overflow:visible;}
-.bar-value-label{font-size:.68rem;font-weight:800;color:var(--gold);text-align:center;line-height:1.2;position:absolute;bottom:100%;left:0;right:0;margin-bottom:10px;white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:6px;}
+.bar-value-label{font-size:.68rem;font-weight:800;color:var(--gold);text-align:center;line-height:1.2;position:absolute;bottom:100%;left:0;right:0;margin-bottom:10px;white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:6px;z-index:5;}
 .bar-el{width:100%;max-width:46px;border-radius:5px 5px 0 0;transition:height .25s;position:relative;min-height:2px;display:flex;align-items:flex-end;justify-content:center;}
 .bar-bottom-label{font-size:.62rem;font-weight:800;color:rgba(8,12,20,.8);margin-bottom:5px;letter-spacing:.01em;}
 .label-col{flex:1 1 0;display:flex;flex-direction:column;align-items:center;min-width:0;}
@@ -80,18 +80,34 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
    crown. (Was a coon-skin hat before 2026-08-26; swapped per Yeti.) */
 .raccoon-icon{width:24px;height:21px;filter:drop-shadow(0 0 5px rgba(150,150,160,.55));animation:crownFloat 2.2s ease-in-out infinite;z-index:5;}
 
-/* Vertical mascot lettering inside each bar (item 10). Font size is set
-   per-team inline by JS, scaled to that bar's actual rendered height and
-   the mascot name's length -- see render()'s sizeMascotLabels(). */
+/* Two-tone vertical mascot lettering (2026-08-26 round, replacing the
+   earlier "shrink to fit inside the bar" version -- that became illegibly
+   small on short/low-value bars). Confirmed-viable redesign, agreed with
+   Yeti: the text is now a CHILD OF .bar-col, not .bar-el, so its size and
+   vertical span are fixed relative to the whole card (top:0/bottom:0 of
+   bar-col's full height) and never shrink with the bar. Legibility is
+   handled by color instead of size: a background-clip:text gradient with
+   a HARD color stop exactly at the bar's current fill line -- the portion
+   of the text below the fill line (visually "inside" the bar) renders in
+   a dark, bar-legible color; the portion above it (against the card's
+   dark background) renders in a light, background-legible color. The
+   stop position is set inline per-bar from the exact same `pct` value
+   that sets .bar-el's own height (see render()) -- never computed
+   separately, so it cannot drift out of sync with the bar's real fill.
+   Font size is still set per-team inline by JS (sizeMascotLabels()), now
+   measuring the fixed-height .bar-col instead of the shrinking .bar-el.
+   z-index sits below .bar-value-label/crown (z-index:5) so the rank
+   number and crown/raccoon icon always stay legible on top where they
+   cross -- above .bar-el's own plain color fill so the gradient text is
+   actually visible. */
 .bar-mascot-label{
-  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(180deg);
+  position:absolute;top:0;bottom:0;left:50%;width:1.3em;
+  transform:translateX(-50%) rotate(180deg);
+  display:flex;align-items:center;justify-content:center;
   writing-mode:vertical-rl;font-weight:800;letter-spacing:.03em;
-  color:rgba(8,12,20,.55);white-space:nowrap;pointer-events:none;
-  max-height:calc(100% - 6px);overflow:hidden;
+  white-space:nowrap;pointer-events:none;overflow:hidden;z-index:3;
+  background-repeat:no-repeat;-webkit-background-clip:text;background-clip:text;color:transparent;
 }
-/* Nudged up a bit so it doesn't collide with the win-pct bottom label
-   (Standings/Best Week) sitting near the bottom of the same bar. */
-.bar-mascot-label.with-bottom-label{top:calc(50% - 9px);}
 
 .legend-note{font-size:.68rem;color:var(--muted);margin-top:1.25rem;padding-top:.75rem;border-top:1px solid var(--border);}
 .footer-copyright{text-align:center;font-size:.68rem;color:var(--muted);margin-top:1.5rem;}
@@ -193,7 +209,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="brief-panel" id="briefPanel">
     <div class="brief-header">
       <div>
-        <div class="brief-label">Commissioner's Weekly Brief</div>
+        <div class="brief-label">Commissioner's Report</div>
         <div class="brief-subtitle">PFPI Commissioner &bull; Greg Cote</div>
       </div>
       <div class="brief-week-tag" id="briefWeekTag"></div>
@@ -216,6 +232,14 @@ const TEAM_SHORT = {
   "Lobos":"Greg's Lobos","Roughriders":"Dick's Roughriders","Maniacs":"Mom's Maniacs","Critters":"Chris' Critters",
   "Chickens":"Mike's Chickens","Ferraris":"Christie's Ferraris","Llamas":"Tati's Llamas","Giraffes":"Gracelin's Giraffes"
 };
+
+// Two-tone mascot lettering colors (2026-08-26 round). IN_BAR matches the
+// existing .bar-bottom-label color exactly (already proven legible against
+// every TEAM_COLORS fill, all light/pastel tones); ABOVE_BAR is a
+// translucent light tone (based on --text) for legibility against the
+// dark card background.
+const MASCOT_IN_BAR_COLOR = "rgba(8,12,20,.72)";
+const MASCOT_ABOVE_BAR_COLOR = "rgba(238,242,247,.55)";
 function initials(fullName){
   const words = fullName.replace(/['']s\b/,"'s").split(/\s+/).filter(Boolean);
   if (words.length < 2) return fullName.slice(0,2).toUpperCase();
@@ -624,20 +648,28 @@ async function render(){
 
   sortedTeams.forEach(team => {
     const val = values[team];
-    const pct = Math.max(12, Math.round((val/maxVal)*1000)/10);
+    const pct = Math.max(3, Math.round((val/maxVal)*1000)/10);
     const color = TEAM_COLORS[team];
     const isLeader = leaderTeams.includes(team);
     const bottomLabel = bottomLabels[team];
 
+    // Two-tone split: derived directly from `pct`, the exact same value
+    // that sets .bar-el's own height below -- never computed separately,
+    // so the color boundary can't drift out of sync with the bar's real
+    // fill line. See the .bar-mascot-label CSS comment for the full
+    // reasoning on why the gradient stop is `100 - pct` (not `pct`) given
+    // the rotate(180deg) this element also carries.
+    const mascotGradient = `linear-gradient(0deg, ${MASCOT_ABOVE_BAR_COLOR} 0%, ${MASCOT_ABOVE_BAR_COLOR} ${100 - pct}%, ${MASCOT_IN_BAR_COLOR} ${100 - pct}%, ${MASCOT_IN_BAR_COLOR} 100%)`;
+
     const col = document.createElement("div");
     col.className = "bar-col" + (isLeader ? " is-champion" : "");
     col.innerHTML = `
+      <div class="bar-mascot-label" style="background-image:${mascotGradient}">${team.toUpperCase()}</div>
       <div class="bar-el" style="height:${pct}%;background:${color}">
         <div class="bar-value-label">
           ${isLeader ? leaderIconHtml : ""}
           <div>${labels[team].replace("\n","<br>")}</div>
         </div>
-        <div class="bar-mascot-label${bottomLabel ? " with-bottom-label" : ""}">${team.toUpperCase()}</div>
         ${bottomLabel ? `<div class="bar-bottom-label">${bottomLabel}</div>` : ""}
       </div>
     `;
@@ -660,21 +692,21 @@ async function render(){
     "Live data. Bars are sorted by rank in this category (highest first); ties break alphabetically.";
 }
 
-// Item 10: vertical mascot lettering must stay legible at any bar height.
-// Bar height is enforced with a 12% floor above (was 2%) to give short
-// bars some room, but the longest mascot names (e.g. ROUGHRIDERS, 11
-// letters) still can't always fit at a fixed font size -- so font size is
-// computed per-bar, per-team, from the bar's real rendered pixel height
-// (read after layout, since bar heights are percentages) divided by the
-// name's length, clamped to a legible 6-11px range. A team with a long
-// name on a short bar will render at the 6px floor rather than overflow —
-// flagged in BUILD_LOG.md as an accepted trade-off, not silently hidden.
+// Item 10/two-tone redesign (2026-08-26): mascot lettering size is now
+// independent of the bar's own height entirely -- the label is a child of
+// .bar-col (the fixed-height card), not .bar-el (the shrinking fill), so
+// every bar gets the SAME generous, legible size (the bar-height-based 12%
+// floor + 6-11px clamp this used to need is gone -- the actual bar-height
+// floor is back down near its original 3%, see render()). Still measured
+// via getBoundingClientRect() rather than hardcoded, so it stays correct
+// across the desktop/mobile plot-row height breakpoint without duplicating
+// that number here.
 function sizeMascotLabels(barsArea) {
   barsArea.querySelectorAll(".bar-mascot-label").forEach(el => {
-    const barEl = el.closest(".bar-el");
-    const heightPx = barEl.getBoundingClientRect().height;
-    const available = heightPx - 8;
-    const size = Math.max(6, Math.min(11, available / (el.textContent.length * 1.05)));
+    const barCol = el.closest(".bar-col");
+    const heightPx = barCol.getBoundingClientRect().height;
+    const available = heightPx * 0.82;
+    const size = Math.max(9, Math.min(15, available / (el.textContent.length * 1.05)));
     el.style.fontSize = size + "px";
   });
 }

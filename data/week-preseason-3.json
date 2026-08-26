@@ -36,6 +36,7 @@
         "Maniacs": "IND",
         "Chickens": "DET",
         "Ferraris": "DET",
+        "Llamas": "DET",
         "Giraffes": "DET"
       }
     },
@@ -74,6 +75,7 @@
         "Maniacs": "SEA",
         "Chickens": "SEA",
         "Ferraris": "KC",
+        "Llamas": "KC",
         "Giraffes": "SEA"
       }
     },
@@ -92,6 +94,7 @@
         "Roughriders": "NO",
         "Chickens": "DAL",
         "Ferraris": "NO",
+        "Llamas": "DAL",
         "Giraffes": "NO"
       }
     },
@@ -111,6 +114,7 @@
         "Maniacs": "PHI",
         "Chickens": "CIN",
         "Ferraris": "PHI",
+        "Llamas": "PHI",
         "Giraffes": "PHI"
       }
     },
@@ -167,6 +171,7 @@
         "Maniacs": "TB",
         "Chickens": "JAX",
         "Ferraris": "JAX",
+        "Llamas": "TB",
         "Giraffes": "TB"
       }
     },
@@ -205,6 +210,7 @@
         "Maniacs": "CAR",
         "Chickens": "CAR",
         "Ferraris": "HOU",
+        "Llamas": "CAR",
         "Giraffes": "HOU"
       }
     },
@@ -223,6 +229,7 @@
         "Roughriders": "BAL",
         "Chickens": "BAL",
         "Ferraris": "BAL",
+        "Llamas": "WSH",
         "Giraffes": "WSH"
       }
     },
@@ -241,6 +248,7 @@
         "Roughriders": "LAR",
         "Chickens": "LAC",
         "Ferraris": "LAR",
+        "Llamas": "LAC",
         "Giraffes": "LAC"
       }
     },
@@ -260,6 +268,7 @@
         "Maniacs": "NE",
         "Chickens": "NE",
         "Ferraris": "NE",
+        "Llamas": "NE",
         "Giraffes": "NE"
       }
     },
@@ -278,6 +287,7 @@
         "Roughriders": "SF",
         "Chickens": "SF",
         "Ferraris": "LV",
+        "Llamas": "LV",
         "Giraffes": "LV"
       }
     },
@@ -296,10 +306,11 @@
         "Roughriders": "BUF",
         "Chickens": "BUF",
         "Ferraris": "BUF",
+        "Llamas": "BUF",
         "Giraffes": "BUF",
         "Gentry's Neanderbrows": "PIT"
       }
     }
   ],
-  "updatedAt": "2026-08-26T13:20:15.462Z"
+  "updatedAt": "2026-08-26T13:25:15.744Z"
 }

@@ -32,6 +32,7 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
+        "Lobos": "DET",
         "Roughriders": "DET",
         "Maniacs": "IND",
         "Chickens": "DET",
@@ -52,6 +53,7 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
+        "Lobos": "DEN",
         "Roughriders": "DEN",
         "Maniacs": "MIN",
         "Chickens": "DEN",
@@ -91,6 +93,7 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
+        "Lobos": "NO",
         "Roughriders": "NO",
         "Chickens": "DAL",
         "Ferraris": "NO",
@@ -167,6 +170,7 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
+        "Lobos": "JAX",
         "Roughriders": "TB",
         "Maniacs": "TB",
         "Chickens": "JAX",
@@ -187,6 +191,7 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
+        "Lobos": "ATL",
         "Roughriders": "MIA",
         "Maniacs": "MIA",
         "Chickens": "ATL",
@@ -206,6 +211,7 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
+        "Lobos": "HOU",
         "Roughriders": "HOU",
         "Maniacs": "CAR",
         "Chickens": "CAR",
@@ -226,6 +232,7 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
+        "Lobos": "BAL",
         "Roughriders": "BAL",
         "Chickens": "BAL",
         "Ferraris": "BAL",
@@ -303,6 +310,7 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
+        "Lobos": "PIT",
         "Roughriders": "BUF",
         "Chickens": "BUF",
         "Ferraris": "BUF",
@@ -311,5 +319,5 @@
       }
     }
   ],
-  "updatedAt": "2026-08-26T15:30:22.298Z"
+  "updatedAt": "2026-08-26T15:35:06.372Z"
 }

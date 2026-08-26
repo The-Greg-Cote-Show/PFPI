@@ -59,7 +59,7 @@
         "Maniacs": "MIN",
         "Chickens": "DEN",
         "Ferraris": "DEN",
-        "Giraffes": "MIN"
+        "Giraffes": "DEN"
       }
     },
     {
@@ -79,7 +79,7 @@
         "Chickens": "SEA",
         "Ferraris": "KC",
         "Llamas": "KC",
-        "Giraffes": "SEA"
+        "Giraffes": "KC"
       }
     },
     {
@@ -155,8 +155,7 @@
         "Roughriders": "NYG",
         "Maniacs": "NYG",
         "Chickens": "NYG",
-        "Ferraris": "NYG",
-        "Giraffes": "NYG"
+        "Ferraris": "NYG"
       }
     },
     {
@@ -176,8 +175,7 @@
         "Maniacs": "TB",
         "Chickens": "JAX",
         "Ferraris": "JAX",
-        "Llamas": "TB",
-        "Giraffes": "TB"
+        "Llamas": "TB"
       }
     },
     {
@@ -217,8 +215,7 @@
         "Maniacs": "CAR",
         "Chickens": "CAR",
         "Ferraris": "HOU",
-        "Llamas": "CAR",
-        "Giraffes": "HOU"
+        "Llamas": "CAR"
       }
     },
     {
@@ -320,5 +317,5 @@
       }
     }
   ],
-  "updatedAt": "2026-08-26T22:20:06.080Z"
+  "updatedAt": "2026-08-26T22:25:06.078Z"
 }

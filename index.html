@@ -74,10 +74,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .bar-col.is-champion .bar-value-label{color:var(--gold2);}
 .bar-col.is-champion .bar-team-avatar{border-width:2px;box-shadow:0 0 0 3px rgba(232,184,75,.15);}
 
-/* Unique Hits' leader icon -- a coon-skin hat, not a crown. Deliberate nod
-   to Ruth Cote ("Ruth's Raccoons"), PFPI's all-time Unique Hits leader --
-   see BUILD_LOG.md. Same positioning/animation/tie-sharing as the crown. */
-.coon-hat{width:26px;height:20px;filter:drop-shadow(0 0 5px rgba(139,90,52,.55));animation:crownFloat 2.2s ease-in-out infinite;z-index:5;}
+/* Unique Hits' leader icon -- a grey raccoon face, not a crown. Deliberate
+   nod to Ruth Cote ("Ruth's Raccoons"), PFPI's all-time Unique Hits leader
+   -- see BUILD_LOG.md. Same positioning/animation/tie-sharing as the
+   crown. (Was a coon-skin hat before 2026-08-26; swapped per Yeti.) */
+.raccoon-icon{width:24px;height:21px;filter:drop-shadow(0 0 5px rgba(150,150,160,.55));animation:crownFloat 2.2s ease-in-out infinite;z-index:5;}
 
 /* Vertical mascot lettering inside each bar (item 10). Font size is set
    per-team inline by JS, scaled to that bar's actual rendered height and
@@ -93,10 +94,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .bar-mascot-label.with-bottom-label{top:calc(50% - 9px);}
 
 .legend-note{font-size:.68rem;color:var(--muted);margin-top:1.25rem;padding-top:.75rem;border-top:1px solid var(--border);}
+.footer-copyright{text-align:center;font-size:.68rem;color:var(--muted);margin-top:1.5rem;}
 
 .brief-panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.4rem;margin-top:1rem;}
-.brief-header{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.85rem;flex-wrap:wrap;}
-.brief-label{font-size:.68rem;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.06em;}
+.brief-header{display:flex;align-items:flex-end;justify-content:space-between;gap:.75rem;margin-bottom:.85rem;flex-wrap:wrap;}
+/* Matches .category-title/.category-desc's size+weight+color exactly, per
+   Yeti (2026-08-26) -- was a small uppercase gold label before. */
+.brief-label{font-size:1.05rem;font-weight:800;}
+.brief-subtitle{font-size:.78rem;color:var(--muted);margin-top:2px;}
 .brief-week-tag{font-size:.65rem;color:var(--muted);background:var(--panel2);border:1px solid var(--border2);border-radius:6px;padding:3px 9px;}
 .brief-body{font-size:.86rem;line-height:1.65;color:var(--text);white-space:pre-wrap;}
 .brief-body.empty{color:var(--muted);font-style:italic;}
@@ -187,13 +192,17 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
   <div class="brief-panel" id="briefPanel">
     <div class="brief-header">
-      <div class="brief-label">Greg's Weekly Brief</div>
+      <div>
+        <div class="brief-label">Commissioner's Weekly Brief</div>
+        <div class="brief-subtitle">PFPI Commissioner &bull; Greg Cote</div>
+      </div>
       <div class="brief-week-tag" id="briefWeekTag"></div>
     </div>
     <div class="brief-body" id="briefBody"></div>
   </div>
 
   <div class="legend-note" id="legendNote"></div>
+  <div class="footer-copyright">&copy;ThatKindaThing Productions, LLC</div>
 </div>
 
 <script>
@@ -583,19 +592,24 @@ async function render(){
   // Leader icon for every category's current top value (item 9), shared by
   // every co-leader on an exact tie -- same rule Best Week already used,
   // now generalized instead of being Best-Week-only. Unique Hits gets a
-  // coon-skin hat instead of a crown (item 11) -- a deliberate nod to Ruth
-  // Cote ("Ruth's Raccoons"), PFPI's all-time Unique Hits leader; not a bug
-  // if it looks different from every other category's crown.
+  // grey raccoon face instead of a crown -- a deliberate nod to Ruth Cote
+  // ("Ruth's Raccoons"), PFPI's all-time Unique Hits leader; not a bug if
+  // it looks different from every other category's crown. Swapped from an
+  // earlier coon-skin-hat icon to this raccoon face per Yeti (2026-08-26,
+  // "let's swap those out for a raccoon... maybe a grey raccoon").
   const topValue = Math.max(...TEAMS.map(t => values[t]));
   const leaderTeams = TEAMS.filter(t => values[t] === topValue);
-  const isCoonHat = currentCat === "uniqueHits";
-  const leaderIconHtml = isCoonHat
-    ? `<div class="coon-hat"><svg viewBox="0 0 32 24" width="26" height="20" xmlns="http://www.w3.org/2000/svg">
-         <ellipse cx="12" cy="10" rx="10" ry="8" fill="#8a5a34"/>
-         <ellipse cx="12" cy="16" rx="10" ry="3" fill="#5c3a1e"/>
-         <rect x="14" y="7" width="14" height="6" rx="3" fill="#8a5a34" transform="rotate(18 18 10)"/>
-         <rect x="18" y="6" width="4" height="6" rx="2" fill="#e9dcc7" transform="rotate(18 18 10)"/>
-         <rect x="22" y="9" width="4" height="6" rx="2" fill="#3d2814" transform="rotate(18 18 10)"/>
+  const isRaccoon = currentCat === "uniqueHits";
+  const leaderIconHtml = isRaccoon
+    ? `<div class="raccoon-icon"><svg viewBox="0 0 28 24" width="24" height="21" xmlns="http://www.w3.org/2000/svg">
+         <circle cx="6" cy="6" r="4" fill="#9096a0"/>
+         <circle cx="22" cy="6" r="4" fill="#9096a0"/>
+         <ellipse cx="14" cy="13" rx="11" ry="9" fill="#aaafb8"/>
+         <ellipse cx="14" cy="17" rx="6" ry="4.5" fill="#eceef0"/>
+         <path d="M4 11 Q14 6.5 24 11 Q14 15.5 4 11 Z" fill="#33363b"/>
+         <circle cx="10" cy="11" r="1.3" fill="#fff"/>
+         <circle cx="18" cy="11" r="1.3" fill="#fff"/>
+         <ellipse cx="14" cy="17.5" rx="1.4" ry="1" fill="#222427"/>
        </svg></div>`
     : '<div class="crown">&#128081;</div>';
 

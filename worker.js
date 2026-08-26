@@ -36,7 +36,7 @@
 // guesses exactly, including the game_id's YYYY_WW_AWAY_HOME format.
 // ============================================================
 
-import { TEAMS, computeCurrentWeekFromDate, commitJSONToGitHub, getEasternDateParts, FAMILY_MEMBERS, computeGameDeadline } from "./shared.js";
+import { TEAMS, computeCurrentWeekFromDate, commitJSONToGitHub, getEasternDateParts, FAMILY_MEMBERS, computeGameDeadline, sendPfpiEmail } from "./shared.js";
 
 const BIG_BALLS_BASE = "https://api.bigballsdata.com";
 const SEASON = 2026;
@@ -493,10 +493,74 @@ async function preloadFullSeasonScheduleIfNeeded(env) {
 }
 
 // ============================================================
+// BRIEF PUBLISH CONFIRMATION -- per Yeti (2026-08-26): send a "the brief
+// is live" email only once a publish is ACTUALLY visible on the real
+// public site, not merely committed to GitHub (a commit succeeding
+// doesn't mean GitHub Pages has finished rebuilding/deploying it yet --
+// the observed 10-15 minute variance Yeti saw came from investigating
+// this exact gap; see BUILD_LOG.md for what was actually found: this repo
+// uses GitHub's classic "Deploy from a branch" Pages method, not a slower
+// Actions-based build, so there's no repo-side config lever to speed it up
+// further -- the variance is GitHub's own infrastructure timing, outside
+// what a code change here can control). Runs every tick (this Worker's
+// cron is every minute) regardless of the Big Balls throttle below --
+// cheap (one KV list + one plain unauthenticated fetch per pending week)
+// and this is specifically the piece that needs to be fast.
+// ============================================================
+
+// Comfortably past the worst case Yeti actually observed (10-15 min), so
+// this doesn't retry forever if something's genuinely stuck.
+const BRIEF_CONFIRM_MAX_AGE_MS = 30 * 60 * 1000;
+
+async function checkPendingBriefConfirmations(env) {
+  const list = await env.PFPI_KV.list({ prefix: "brief-pending-confirm:" });
+  for (const key of list.keys) {
+    const raw = await env.PFPI_KV.get(key.name);
+    if (!raw) continue;
+    const pending = JSON.parse(raw);
+
+    let live = null;
+    try {
+      const res = await fetch(`https://the-greg-cote-show.github.io/PFPI/data/brief-week-${pending.week}.json?t=${Date.now()}`);
+      if (res.ok) live = await res.json();
+    } catch (e) {
+      // Network blip -- try again next tick rather than giving up on one failure.
+    }
+
+    if (live && live.updatedAt === pending.expectedUpdatedAt) {
+      await sendPfpiEmail(
+        pending.notifyEmail,
+        `PFPI Week ${pending.week} brief is live`,
+        `Week ${pending.week}'s brief just went live on the public site -- confirmed by reading it back from the real published page, not just that the save succeeded.\n\nhttps://the-greg-cote-show.github.io/PFPI/index.html`,
+        env
+      );
+      await env.PFPI_KV.delete(key.name);
+      continue;
+    }
+
+    const ageMs = Date.now() - new Date(pending.createdAt).getTime();
+    if (ageMs > BRIEF_CONFIRM_MAX_AGE_MS) {
+      // Honest fallback: only ever claim "live" once actually confirmed
+      // above, so this is a heads-up, not a fabricated confirmation --
+      // a genuinely stuck publish shouldn't just go silent forever.
+      await sendPfpiEmail(
+        pending.notifyEmail,
+        `PFPI Week ${pending.week} brief: still checking after 30 minutes`,
+        `Week ${pending.week}'s brief was saved, but this Worker couldn't confirm it's actually live on the public site after 30 minutes of checking. It may still show up on its own (GitHub Pages can occasionally lag that long) -- worth a manual check, and flagging to Yeti if it's still missing.`,
+        env
+      );
+      await env.PFPI_KV.delete(key.name);
+    }
+  }
+}
+
+// ============================================================
 // MAIN POLL CYCLE
 // ============================================================
 
 async function pollAndPublish(env) {
+  await checkPendingBriefConfirmations(env);
+
   const currentWeek = computeCurrentWeekFromDate();
   await env.PFPI_KV.put("current-week", String(currentWeek));
 

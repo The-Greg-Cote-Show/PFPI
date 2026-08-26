@@ -64,6 +64,25 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .submit-status.rejected{color:var(--red);}
 .support-btn{display:inline-block;background:var(--panel2);border:1.5px solid var(--border2);color:var(--text);font-size:.8rem;font-weight:700;padding:.6rem 1.1rem;border-radius:8px;text-decoration:none;}
 .support-btn:hover{border-color:var(--blue);}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(4,6,10,.72);display:flex;align-items:center;justify-content:center;padding:1.25rem;z-index:200;}
+.modal-box{background:var(--panel);border:1px solid var(--border2);border-radius:14px;padding:1.5rem;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;}
+.modal-title{font-size:1.05rem;font-weight:800;margin-bottom:.6rem;}
+.modal-text{font-size:.82rem;color:var(--text);line-height:1.55;margin-bottom:.85rem;}
+.modal-games-list{list-style:none;background:var(--panel2);border:1px solid var(--border2);border-radius:8px;padding:.6rem .85rem;margin-bottom:.85rem;max-height:9rem;overflow-y:auto;}
+.modal-games-list li{font-size:.78rem;padding:.25rem 0;}
+.modal-actions{display:flex;flex-direction:column;gap:8px;}
+.modal-btn{border:none;border-radius:8px;font-size:.85rem;font-weight:800;padding:.75rem 1rem;cursor:pointer;width:100%;}
+.modal-btn.primary{background:var(--gold);color:#1a1305;}
+.modal-btn.primary:hover{background:var(--gold2);}
+.modal-btn.secondary{background:var(--panel2);border:1.5px solid var(--border2);color:var(--text);}
+.modal-btn.secondary:hover{border-color:var(--blue);}
+
+.contact-form textarea{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:.6rem .7rem;font-size:.85rem;font-family:inherit;resize:vertical;min-height:6rem;margin-top:.85rem;}
+.contact-form input[type=email]{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:.6rem .7rem;font-size:.85rem;font-family:inherit;margin-top:.5rem;}
+.contact-form label{display:block;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:.85rem;}
+
+.footer-copyright{text-align:center;font-size:.68rem;color:var(--muted);margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--border);}
 </style>
 </head>
 <body>
@@ -77,7 +96,40 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <button class="submit-btn" id="submitBtn">Submit picks</button>
     <div class="submit-status" id="submitStatus"></div>
     <div class="submit-note">Picks will be sent to the commissioner. If you need technical support, please contact Yeti.</div>
-    <a class="support-btn" href="mailto:yeti@yetiblanc.com?subject=PFPI%20Picks%20-%20Technical%20Support">Contact Yeti</a>
+    <button class="support-btn" id="contactYetiBtn" type="button">Contact Yeti</button>
+  </div>
+
+  <div class="footer-copyright">&copy;ThatKindaThing Productions, LLC</div>
+</div>
+
+<div class="modal-overlay hidden" id="submitConfirmModal">
+  <div class="modal-box">
+    <div class="modal-title">Ready to submit?</div>
+    <div class="modal-text" id="submitConfirmText"></div>
+    <ul class="modal-games-list hidden" id="submitConfirmGamesList"></ul>
+    <div class="modal-text">You can use this same link to come back and edit or finish your picks any time, right up until each game's own deadline. Are you sure you're ready to submit now?</div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" id="submitConfirmYesBtn" type="button">Yes, submit now</button>
+      <button class="modal-btn secondary" id="submitConfirmBackBtn" type="button">Go back and finish</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="contactModal">
+  <div class="modal-box">
+    <div class="modal-title">Contact Yeti</div>
+    <div class="modal-text">Describe the issue and Yeti will get back to you. Include your email so he knows where to reply.</div>
+    <div class="contact-form">
+      <label for="contactEmail">Your email</label>
+      <input type="email" id="contactEmail" placeholder="you@example.com">
+      <label for="contactMessage">What's going on?</label>
+      <textarea id="contactMessage" placeholder="Describe the issue..."></textarea>
+    </div>
+    <div class="submit-status" id="contactStatus" style="margin-bottom:.5rem;"></div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" id="contactSendBtn" type="button">Send</button>
+      <button class="modal-btn secondary" id="contactCancelBtn" type="button">Cancel</button>
+    </div>
   </div>
 </div>
 
@@ -133,6 +185,11 @@ function fmtDeadlineFull(iso) {
 // LOAD + RENDER (fetch logic unchanged from the previous layout)
 // ============================================================
 
+// Set once /my-picks loads, so the Contact Yeti form can tell him which
+// team/week the visitor was on without asking them to type it in.
+let currentTeam = null;
+let currentWeekLabel = null;
+
 async function loadPicks() {
   const content = document.getElementById("content");
   const subtitle = document.getElementById("subtitle");
@@ -158,6 +215,8 @@ async function loadPicks() {
     return;
   }
 
+  currentTeam = data.team;
+  currentWeekLabel = data.week;
   subtitle.textContent = `${data.team} — Week ${data.week}. Pick any time this week, deadlines are per game.`;
   content.innerHTML = "";
 
@@ -204,6 +263,8 @@ async function loadPicks() {
     group.games.forEach(game => {
       const card = document.createElement("div");
       card.className = "game-card" + (game.locked ? " locked" : "");
+      card.dataset.away = game.away;
+      card.dataset.home = game.home;
       card.innerHTML = `
         <div class="game-teams">
           <div class="team-slot">
@@ -227,7 +288,13 @@ async function loadPicks() {
       const buttons = card.querySelectorAll(".pick-btn");
       buttons.forEach(btn => {
         if (btn.dataset.team === game.pick) btn.classList.add("selected");
-        btn.onclick = () => savePick(game.id, btn.dataset.team, buttons, card.querySelector(".save-status"));
+        // Clicking the already-selected team deselects it instead of doing
+        // nothing (per Yeti, 2026-08-26) -- guards against an accidental
+        // first click locking someone in before they've made up their mind.
+        btn.onclick = () => {
+          const clearing = btn.classList.contains("selected");
+          savePick(game.id, clearing ? null : btn.dataset.team, buttons, card.querySelector(".save-status"));
+        };
       });
       groupEl.appendChild(card);
     });
@@ -246,10 +313,13 @@ async function loadPicks() {
 
 async function savePick(gameId, teamPicked, buttons, statusEl) {
   buttons.forEach(b => b.classList.toggle("selected", b.dataset.team === teamPicked));
-  statusEl.textContent = "Saving...";
+  statusEl.textContent = teamPicked ? "Saving..." : "Clearing...";
   statusEl.className = "save-status";
 
   try {
+    // teamPicked === null means "deselect" -- handleSubmitPicks
+    // (picks-worker.js) deletes the saved pick for this game entirely
+    // rather than storing a null value.
     const res = await fetch(`${WORKER_BASE}/submit-picks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -260,7 +330,7 @@ async function savePick(gameId, teamPicked, buttons, statusEl) {
       statusEl.textContent = "That game already locked, pick not saved.";
       statusEl.className = "save-status rejected";
     } else {
-      statusEl.textContent = "Saved.";
+      statusEl.textContent = teamPicked ? "Saved." : "Cleared.";
       statusEl.className = "save-status saved";
     }
   } catch (e) {
@@ -269,7 +339,28 @@ async function savePick(gameId, teamPicked, buttons, statusEl) {
   }
 }
 
-document.getElementById("submitBtn").onclick = async () => {
+// ============================================================
+// SUBMIT CONFIRMATION (per Yeti, 2026-08-26) -- if any unlocked game is
+// still unpicked, show a confirmation dialog listing exactly which ones
+// before actually submitting, rather than submitting silently incomplete.
+// The prior one-click "Submit picks" -> immediate submit flow is archived
+// verbatim in archive/picks-submit-flow-before-confirmation-2026-08-26.html
+// in case this needs to be reverted.
+// ============================================================
+
+function getUnpickedGames() {
+  // Locked games are excluded -- their deadline has already passed, so
+  // there's nothing actionable to confirm about them here.
+  const missing = [];
+  document.querySelectorAll(".game-card:not(.locked)").forEach(card => {
+    if (!card.querySelector(".pick-btn.selected")) {
+      missing.push({ away: card.dataset.away, home: card.dataset.home });
+    }
+  });
+  return missing;
+}
+
+async function doSubmit() {
   const btn = document.getElementById("submitBtn");
   const statusEl = document.getElementById("submitStatus");
   btn.disabled = true;
@@ -296,6 +387,84 @@ document.getElementById("submitBtn").onclick = async () => {
   } catch (e) {
     btn.disabled = false;
     btn.textContent = "Submit picks";
+    statusEl.textContent = "Could not reach the server, try again.";
+    statusEl.className = "submit-status rejected";
+  }
+}
+
+document.getElementById("submitBtn").onclick = () => {
+  const missing = getUnpickedGames();
+  if (missing.length === 0) {
+    doSubmit();
+    return;
+  }
+  document.getElementById("submitConfirmText").textContent =
+    `You still haven't picked ${missing.length} game${missing.length === 1 ? "" : "s"}:`;
+  const listEl = document.getElementById("submitConfirmGamesList");
+  listEl.innerHTML = missing.map(g => `<li>${g.away} @ ${g.home}</li>`).join("");
+  listEl.classList.remove("hidden");
+  document.getElementById("submitConfirmModal").classList.remove("hidden");
+};
+
+document.getElementById("submitConfirmBackBtn").onclick = () => {
+  document.getElementById("submitConfirmModal").classList.add("hidden");
+};
+document.getElementById("submitConfirmYesBtn").onclick = () => {
+  document.getElementById("submitConfirmModal").classList.add("hidden");
+  doSubmit();
+};
+
+// ============================================================
+// CONTACT YETI (per Yeti, 2026-08-26) -- was a plain mailto: link, now an
+// actual in-page form that emails the support inbox via the Worker, since
+// a mailto only works if the visitor's device has a mail client configured.
+// ============================================================
+
+document.getElementById("contactYetiBtn").onclick = () => {
+  document.getElementById("contactStatus").textContent = "";
+  document.getElementById("contactStatus").className = "submit-status";
+  document.getElementById("contactModal").classList.remove("hidden");
+};
+document.getElementById("contactCancelBtn").onclick = () => {
+  document.getElementById("contactModal").classList.add("hidden");
+};
+document.getElementById("contactSendBtn").onclick = async () => {
+  const email = document.getElementById("contactEmail").value.trim();
+  const message = document.getElementById("contactMessage").value.trim();
+  const statusEl = document.getElementById("contactStatus");
+  const btn = document.getElementById("contactSendBtn");
+
+  if (!email || !message) {
+    statusEl.textContent = "Please fill in both your email and a description.";
+    statusEl.className = "submit-status rejected";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Sending...";
+  statusEl.textContent = "";
+  statusEl.className = "submit-status";
+
+  try {
+    const res = await fetch(`${WORKER_BASE}/contact-support`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, message, page: "picks.html", team: currentTeam, week: currentWeekLabel }),
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = "Send";
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Could not send. Try again.";
+      statusEl.className = "submit-status rejected";
+      return;
+    }
+    statusEl.textContent = "Sent. Yeti will get back to you.";
+    statusEl.className = "submit-status saved";
+    document.getElementById("contactMessage").value = "";
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = "Send";
     statusEl.textContent = "Could not reach the server, try again.";
     statusEl.className = "submit-status rejected";
   }

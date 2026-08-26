@@ -66,13 +66,24 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 .crown{font-size:1.3rem;line-height:1;filter:drop-shadow(0 0 6px rgba(232,184,75,.6));animation:crownFloat 2.2s ease-in-out infinite;z-index:5;}
 @keyframes crownFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
-/* Unique Hits' leader icon -- a coon-skin hat, not a crown. See index.html
-   for the full backstory (Ruth Cote / "Ruth's Raccoons"). */
-.coon-hat{width:26px;height:20px;filter:drop-shadow(0 0 5px rgba(139,90,52,.55));animation:crownFloat 2.2s ease-in-out infinite;z-index:5;}
+/* Unique Hits' leader icon -- a grey raccoon face, not a crown. See
+   index.html for the full backstory (Ruth Cote / "Ruth's Raccoons"). */
+.raccoon-icon{width:24px;height:21px;filter:drop-shadow(0 0 5px rgba(150,150,160,.55));animation:crownFloat 2.2s ease-in-out infinite;z-index:5;}
+/* Vertical mascot lettering inside each bar -- ported from index.html
+   (Item 10) per Yeti's 2026-08-26 follow-up, to preview it against a full
+   real season. Font size is set per-team inline by JS (sizeMascotLabels). */
+.bar-mascot-label{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(180deg);
+  writing-mode:vertical-rl;font-weight:800;letter-spacing:.03em;
+  color:rgba(8,12,20,.55);white-space:nowrap;pointer-events:none;
+  max-height:calc(100% - 6px);overflow:hidden;
+}
+.bar-mascot-label.with-bottom-label{top:calc(50% - 9px);}
 .bar-col.is-champion .bar-value-label{color:var(--gold2);}
 .bar-col.is-champion .bar-team-avatar{border-width:2px;box-shadow:0 0 0 3px rgba(232,184,75,.15);}
 
 .legend-note{font-size:.68rem;color:var(--muted);margin-top:1.25rem;padding-top:.75rem;border-top:1px solid var(--border);}
+.footer-copyright{text-align:center;font-size:.68rem;color:var(--muted);margin-top:1.5rem;}
 
 .brief-panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:1.25rem 1.4rem;margin-top:1rem;}
 .brief-header{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.85rem;flex-wrap:wrap;}
@@ -175,6 +186,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
 
   <div class="legend-note" id="legendNote"></div>
+  <div class="footer-copyright">&copy;ThatKindaThing Productions, LLC</div>
 </div>
 
 <script>
@@ -464,19 +476,23 @@ async function render(){
   // SEE it against this archive's real simulated data, since the live 2026
   // site has zero real data for Unique Hits/10-Win Weeks to render it
   // against yet). Ties share the icon, same rule Best Week already used.
-  // Unique Hits gets a coon-skin hat instead of a crown (Item 11) -- a
+  // Unique Hits gets a grey raccoon face instead of a crown -- a
   // deliberate nod to Ruth Cote ("Ruth's Raccoons"), PFPI's all-time real
   // Unique Hits leader; see BUILD_LOG.md, not a bug if it looks different.
+  // Swapped from an earlier coon-skin-hat icon per Yeti (2026-08-26).
   const topValue = Math.max(...TEAMS.map(t => values[t]));
   const leaderTeams = TEAMS.filter(t => values[t] === topValue);
-  const isCoonHat = currentCat === "uniqueHits";
-  const leaderIconHtml = isCoonHat
-    ? `<div class="coon-hat"><svg viewBox="0 0 32 24" width="26" height="20" xmlns="http://www.w3.org/2000/svg">
-         <ellipse cx="12" cy="10" rx="10" ry="8" fill="#8a5a34"/>
-         <ellipse cx="12" cy="16" rx="10" ry="3" fill="#5c3a1e"/>
-         <rect x="14" y="7" width="14" height="6" rx="3" fill="#8a5a34" transform="rotate(18 18 10)"/>
-         <rect x="18" y="6" width="4" height="6" rx="2" fill="#e9dcc7" transform="rotate(18 18 10)"/>
-         <rect x="22" y="9" width="4" height="6" rx="2" fill="#3d2814" transform="rotate(18 18 10)"/>
+  const isRaccoon = currentCat === "uniqueHits";
+  const leaderIconHtml = isRaccoon
+    ? `<div class="raccoon-icon"><svg viewBox="0 0 28 24" width="24" height="21" xmlns="http://www.w3.org/2000/svg">
+         <circle cx="6" cy="6" r="4" fill="#9096a0"/>
+         <circle cx="22" cy="6" r="4" fill="#9096a0"/>
+         <ellipse cx="14" cy="13" rx="11" ry="9" fill="#aaafb8"/>
+         <ellipse cx="14" cy="17" rx="6" ry="4.5" fill="#eceef0"/>
+         <path d="M4 11 Q14 6.5 24 11 Q14 15.5 4 11 Z" fill="#33363b"/>
+         <circle cx="10" cy="11" r="1.3" fill="#fff"/>
+         <circle cx="18" cy="11" r="1.3" fill="#fff"/>
+         <ellipse cx="14" cy="17.5" rx="1.4" ry="1" fill="#222427"/>
        </svg></div>`
     : '<div class="crown">&#128081;</div>';
 
@@ -486,10 +502,14 @@ async function render(){
   // data). Same rule as index.html: ranked by this category's value,
   // highest first, alphabetical by team name on an exact tie, recomputed
   // every render() call. Items 9 and 11 (crowns on every category, the
-  // coon-hat) are now also ported above, per Yeti's 2026-08-26 follow-up --
-  // Item 10 (vertical mascot lettering) and Item 12 (2-decimal formatting)
-  // still weren't asked for here, so this archive intentionally still
-  // differs from index.html on those two.
+  // coon-hat) were ported above per Yeti's first 2026-08-26 follow-up.
+  // Item 10 (vertical mascot lettering) is now ALSO ported below, per a
+  // second follow-up the same day ("probably scrap this idea, but I want
+  // to see how it looks on an actual season") -- purely to preview it
+  // against a full real 18-week season's worth of bar heights, not a
+  // permanent design decision either way. Item 12 (2-decimal formatting)
+  // still wasn't asked for here, so this archive intentionally still
+  // differs from index.html on that one.
   const sortedTeams = [...TEAMS].sort((a, b) => {
     if (values[b] !== values[a]) return values[b] - values[a];
     return TEAM_SHORT[a].localeCompare(TEAM_SHORT[b]);
@@ -497,7 +517,7 @@ async function render(){
 
   sortedTeams.forEach(team => {
     const val = values[team];
-    const pct = Math.max(2, Math.round((val/maxVal)*1000)/10);
+    const pct = Math.max(12, Math.round((val/maxVal)*1000)/10);
     const color = TEAM_COLORS[team];
     const isLeader = leaderTeams.includes(team);
     const bottomLabel = bottomLabels[team];
@@ -510,6 +530,7 @@ async function render(){
           ${isLeader ? leaderIconHtml : ""}
           <div>${labels[team].replace("\n","<br>")}</div>
         </div>
+        <div class="bar-mascot-label${bottomLabel ? " with-bottom-label" : ""}">${team.toUpperCase()}</div>
         ${bottomLabel ? `<div class="bar-bottom-label">${bottomLabel}</div>` : ""}
       </div>
     `;
@@ -524,11 +545,26 @@ async function render(){
     labelsCols.appendChild(labelCol);
   });
 
+  sizeMascotLabels(barsArea);
+
   const isRealStandings = cat.isStandings && hasRealStandingsForWeek(currentWeek);
   simBanner.style.display = isRealStandings ? "none" : "";
   document.getElementById("legendNote").textContent = isRealStandings
     ? "Live standings. Bars are sorted by rank in this category (highest first); ties break alphabetically."
     : "Simulated data from real 2025 NFL results with randomized picks. Bars are sorted by rank in this category (highest first); ties break alphabetically.";
+}
+
+// Ported from index.html (Item 10, 2026-08-26) -- see there for the full
+// reasoning on the legibility trade-off (long names on short bars clamp to
+// a 6px floor rather than overflow).
+function sizeMascotLabels(barsArea) {
+  barsArea.querySelectorAll(".bar-mascot-label").forEach(el => {
+    const barEl = el.closest(".bar-el");
+    const heightPx = barEl.getBoundingClientRect().height;
+    const available = heightPx - 8;
+    const size = Math.max(6, Math.min(11, available / (el.textContent.length * 1.05)));
+    el.style.fontSize = size + "px";
+  });
 }
 
 let expandedGameIdx = null;

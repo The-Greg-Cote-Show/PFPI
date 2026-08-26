@@ -17,6 +17,7 @@ import {
   isGameLocked,
   computeCurrentWeekFromDate,
   commitJSONToGitHub,
+  sendPfpiEmail,
   NUM_WEEKS,
   TEAMS,
   FAMILY_MEMBERS,
@@ -288,7 +289,12 @@ async function handleSubmitPicks(request, env) {
       rejected.push(gameId);
       continue;
     }
-    existing[gameId] = pick;
+    // pick === null means "deselect" (per Yeti, 2026-08-26) -- remove the
+    // saved pick entirely rather than storing a null value, so this game
+    // goes back to genuinely unpicked (matches the missing-picks tracker's
+    // own "no pick" check, which just tests for a falsy value).
+    if (pick === null) delete existing[gameId];
+    else existing[gameId] = pick;
   }
 
   await savePicks(team, week, existing, env);
@@ -310,6 +316,16 @@ async function handleSubmitPicks(request, env) {
 // pick was." Tracks the last-notified snapshot in its own KV key so
 // resubmitting after further edits only flags what's genuinely different
 // this time, not the whole history.
+// Real per-team emails for the 8 real roster teams aren't set up yet
+// (Greg hasn't provided real family addresses) -- ADMIN_EMAIL is the same
+// placeholder used everywhere else in this file until those exist. The two
+// sandboxed FAMILY_MEMBERS test teams already have a real stored email, so
+// those resolve correctly today.
+function getPickerEmail(team) {
+  const member = FAMILY_MEMBERS.find(m => m.team === team);
+  return member ? member.email : ADMIN_EMAIL;
+}
+
 async function handleConfirmPicks(request, env) {
   const { token } = await request.json();
 
@@ -339,16 +355,33 @@ async function handleConfirmPicks(request, env) {
     lines.push(`${matchup}: ${pick}${isUpdated ? " (Updated)" : ""}`);
   }
 
+  // Tally line above the actual picks, per Yeti (2026-08-26) -- how many
+  // games are picked vs. still pending, at a glance before the per-game
+  // detail. `schedule.length` is every game this week; `current` already
+  // has deselected games removed (see handleSubmitPicks), so this can't
+  // overcount a pick that was cleared after being notified once before.
+  const totalGames = schedule.length;
+  const pickedCount = Object.keys(current).length;
+  const pendingCount = Math.max(0, totalGames - pickedCount);
+  const tally = `Picked: ${pickedCount} of ${totalGames} games. Still pending: ${pendingCount}.`;
+
   const subject = `PFPI: ${team} submitted Week ${week} picks`;
-  const text = `${team} submitted Week ${week} picks (${new Date().toISOString()}).\n\n${lines.join("\n")}`;
+  const text = `${team} submitted Week ${week} picks (${new Date().toISOString()}).\n\n${tally}\n\n${lines.join("\n")}`;
+  // CC's the picker themselves (per Yeti, 2026-08-26) so they have a copy
+  // of exactly what they submitted. Real per-team emails for the 8 real
+  // roster teams still aren't set up (Greg hasn't provided them yet), so
+  // getPickerEmail() falls back to ADMIN_EMAIL for those -- same
+  // placeholder pattern used everywhere else in this file. Only the two
+  // sandboxed FAMILY_MEMBERS test teams have a real stored email today.
+  const pickerEmail = getPickerEmail(team);
   // Two separate sends (not one email with two recipients) so each stays a
   // private notification, consistent with how admin/Greg account emails
   // already work elsewhere in this file. GREG_EMAIL is currently the same
   // placeholder as ADMIN_EMAIL (Greg's real address isn't in the system
   // yet, see its definition above) — not invented here, just reused.
-  const sent = await sendPfpiEmail(ADMIN_EMAIL, subject, text, env);
+  const sent = await sendPfpiEmail(ADMIN_EMAIL, subject, text, env, pickerEmail);
   if (GREG_EMAIL !== ADMIN_EMAIL) {
-    await sendPfpiEmail(GREG_EMAIL, subject, text, env);
+    await sendPfpiEmail(GREG_EMAIL, subject, text, env, pickerEmail);
   }
 
   if (!sent) {
@@ -477,6 +510,58 @@ async function handleSendCorrectionEmail(request, env) {
 }
 
 // ============================================================
+// CONTACT SUPPORT (picks.html's "Contact Yeti" popup)
+// ============================================================
+// Public, unauthenticated -- picks.html visitors never have a session.
+// Per-IP rate limit (same shape as the login brute-force guard above)
+// since this is a public write endpoint with no login gate at all.
+const CONTACT_RATE_LIMIT = 5;
+const CONTACT_RATE_WINDOW_SECONDS = 60 * 60;
+const CONTACT_MESSAGE_MAX_LENGTH = 5000;
+
+async function handleContactSupport(request, env) {
+  const ip = getClientIp(request);
+  const rateKey = `contact-rate:${ip}`;
+  const count = parseInt((await env.PFPI_KV.get(rateKey)) || "0", 10);
+  if (count >= CONTACT_RATE_LIMIT) {
+    return jsonResponse({ error: "Too many requests. Try again later." }, 429, request);
+  }
+
+  const { email, message, page, team, week } = await request.json();
+  if (!email || !message) {
+    return jsonResponse({ error: "Email and message are required." }, 400, request);
+  }
+  if (message.length > CONTACT_MESSAGE_MAX_LENGTH) {
+    return jsonResponse({ error: "Message is too long." }, 400, request);
+  }
+  // Light shape check, not full RFC validation -- just enough to catch an
+  // obviously blank/garbage field so Yeti has somewhere real to reply.
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return jsonResponse({ error: "Please enter a valid email address." }, 400, request);
+  }
+
+  const context = [
+    team ? `Team: ${team}` : null,
+    week !== undefined && week !== null ? `Week: ${week}` : null,
+    page ? `Page: ${page}` : null,
+  ].filter(Boolean).join("\n");
+
+  const sent = await sendPfpiEmail(
+    ADMIN_EMAIL,
+    `PFPI support request from ${email}`,
+    `From: ${email}\n${context ? context + "\n" : ""}\nMessage:\n${message}`,
+    env
+  );
+
+  if (!sent) {
+    return jsonResponse({ error: "Could not send. Check Worker logs." }, 502, request);
+  }
+
+  await env.PFPI_KV.put(rateKey, String(count + 1), { expirationTtl: CONTACT_RATE_WINDOW_SECONDS });
+  return jsonResponse({ sent: true }, 200, request);
+}
+
+// ============================================================
 // MISSING-PICKS REMINDER (brief.html's "Send reminder" button)
 // ============================================================
 // Per Yeti (2026-08-25): real family email addresses still aren't wired up,
@@ -494,10 +579,15 @@ async function handleSendReminderEmail(request, env) {
   }
 
   const { team, week } = await request.json();
-  const weekNum = parseInt(week, 10);
-  if (!team || !Number.isInteger(weekNum)) {
+  // "preseason-3" is a valid week value too (per Yeti, 2026-08-26 -- the
+  // Missing Picks tracker now supports testing against the preseason
+  // sandbox), not just a real numbered week -- only reject it if it's
+  // neither a real week integer nor that literal string.
+  const weekNum = week === "preseason-3" ? week : parseInt(week, 10);
+  if (!team || (weekNum !== "preseason-3" && !Number.isInteger(weekNum))) {
     return jsonResponse({ error: "team and week are required." }, 400, request);
   }
+  const weekLabel = weekNum === "preseason-3" ? "Preseason" : `Week ${weekNum}`;
 
   const schedule = await getWeekSchedule(weekNum, env);
   if (!schedule || schedule.length === 0) {
@@ -513,8 +603,8 @@ async function handleSendReminderEmail(request, env) {
   const lines = missing.map(g => `${g.away} @ ${g.home}`);
   const sent = await sendPfpiEmail(
     ADMIN_EMAIL,
-    `PFPI reminder: ${team}, Week ${weekNum} picks still needed`,
-    `${team} is still missing Week ${weekNum} picks for:\n\n${lines.join("\n")}\n\n(Test send -- real family email addresses aren't set up yet, so this went to Yeti's own address standing in for ${team}'s real recipient.)`,
+    `PFPI reminder: ${team}, ${weekLabel} picks still needed`,
+    `${team} is still missing ${weekLabel} picks for:\n\n${lines.join("\n")}\n\n(Test send -- real family email addresses aren't set up yet, so this went to Yeti's own address standing in for ${team}'s real recipient.)`,
     env
   );
 
@@ -693,34 +783,6 @@ async function handleForgotPassword(kind, request, env) {
   return jsonResponse({ sent: true }, 200, request);
 }
 
-async function sendPfpiEmail(to, subject, text, env) {
-  // These emails always go to a fixed PFPI-internal address (ADMIN_EMAIL or,
-  // for now, GREG_EMAIL — see its definition), so they can use Resend's
-  // default sender: Resend allows onboarding@resend.dev to any recipient
-  // even with an unverified sending domain. picks@thegregcoteshow.com stays
-  // in sendPicksEmail() since that goes to family members, but it stays
-  // broken until thegregcoteshow.com is verified at resend.com/domains
-  // (needs DNS console access this Worker doesn't have).
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: "PFPI <onboarding@resend.dev>",
-      to,
-      subject,
-      text,
-    }),
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    console.error(`Failed to send email ("${subject}"): ${res.status} ${body}`);
-  }
-  return res.ok;
-}
-
 async function handleResetPassword(kind, request, env) {
   const cfg = AUTH_CONFIG[kind];
   const { token, newPassword } = await request.json();
@@ -804,6 +866,23 @@ async function handlePublishBrief(request, env) {
       error: "Saved, but not yet live — GitHub publishing isn't configured yet (GITHUB_PAT missing). Ask Yeti to set it.",
     }, 202, request);
   }
+
+  // "Brief is live" confirmation email, per Yeti (2026-08-26) -- sent only
+  // once the commit above is ACTUALLY visible on the real public site, not
+  // merely committed to GitHub (a commit succeeding doesn't mean GitHub
+  // Pages has finished rebuilding/deploying it yet -- see BUILD_LOG.md for
+  // the investigation into why that gap is sometimes seconds and sometimes
+  // 10-15 minutes). pfpi-scores-worker's existing every-minute cron picks
+  // this KV flag up (checkPendingBriefConfirmations in worker.js) and polls
+  // the real deployed URL until `updatedAt` matches, rather than guessing a
+  // fixed delay. One flag per week -- a newer publish for the same week
+  // simply overwrites the pending record for it.
+  await env.PFPI_KV.put(`brief-pending-confirm:${weekNum}`, JSON.stringify({
+    week: weekNum,
+    expectedUpdatedAt: updatedAt,
+    notifyEmail: GREG_EMAIL,
+    createdAt: updatedAt,
+  }));
 
   return jsonResponse({ published: true }, 200, request);
 }
@@ -902,6 +981,9 @@ export default {
     }
     if (url.pathname === "/confirm-picks" && request.method === "POST") {
       return handleConfirmPicks(request, env);
+    }
+    if (url.pathname === "/contact-support" && request.method === "POST") {
+      return handleContactSupport(request, env);
     }
     if (url.pathname === "/admin/login" && request.method === "POST") {
       return handleLogin("admin", request, env);

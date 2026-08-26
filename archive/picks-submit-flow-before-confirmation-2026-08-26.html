@@ -1,0 +1,54 @@
+<!--
+ARCHIVED SNAPSHOT -- picks.html's Submit-picks flow as it existed BEFORE
+the 2026-08-26 confirmation-popup enhancement.
+
+Why this exists: per Yeti (2026-08-26) -- "Save how it is currently set up
+b/c it's working and if I don't like the enhancement I'll want to revert."
+This is the exact prior markup + handler, verbatim, before adding the
+"are you sure, here's what you're missing" confirmation dialog that only
+appears when at least one (unlocked) game is still unpicked.
+
+Not wired into the site anywhere -- reference/rollback copy only. To
+revert: restore this button markup and handler in picks.html, and remove
+the confirmation-modal markup/CSS/JS added alongside it. Full git history
+also has this exact prior state, one commit before this file was added.
+-->
+
+<!-- HTML (inside #submitSection, at the time this was cut) -->
+<button class="submit-btn" id="submitBtn">Submit picks</button>
+<div class="submit-status" id="submitStatus"></div>
+
+<!-- JS handler -->
+<script>
+document.getElementById("submitBtn").onclick = async () => {
+  const btn = document.getElementById("submitBtn");
+  const statusEl = document.getElementById("submitStatus");
+  btn.disabled = true;
+  btn.textContent = "Submitting...";
+  statusEl.textContent = "";
+  statusEl.className = "submit-status";
+
+  try {
+    const res = await fetch(`${WORKER_BASE}/confirm-picks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = "Submit picks";
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Could not submit picks.";
+      statusEl.className = "submit-status rejected";
+      return;
+    }
+    statusEl.textContent = "Picks submitted to the commissioner.";
+    statusEl.className = "submit-status saved";
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = "Submit picks";
+    statusEl.textContent = "Could not reach the server, try again.";
+    statusEl.className = "submit-status rejected";
+  }
+};
+</script>

@@ -49,6 +49,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .status.warn{background:rgba(232,184,75,.12);color:var(--gold);border:1px solid rgba(232,184,75,.3);}
 
 .gate-note{font-size:.72rem;color:var(--muted);margin-top:1rem;text-align:center;}
+.footer-copyright{text-align:center;font-size:.68rem;color:var(--muted);margin-top:2rem;}
 .forgot-link{font-size:.75rem;text-align:center;margin-top:.85rem;}
 .forgot-link a{color:var(--blue);}
 
@@ -190,6 +191,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     </div>
     <div class="status" id="publishStatus"></div>
   </div>
+
+  <div class="footer-copyright">&copy;ThatKindaThing Productions, LLC</div>
 </div>
 
 <script>
@@ -598,10 +601,22 @@ async function fetchWeekGames(week) {
   }
 }
 
+// Per Yeti (2026-08-26): a "Preseason" entry so the whole tracker can
+// actually be tested before real family emails/roster picks exist for a
+// real week -- preseason-3 is the same cross-team sandbox worker.js
+// already merges TEAMS + FAMILY_MEMBERS picks into (see BUILD_LOG.md), so
+// this reuses that same real data rather than faking a preview.
+const PRESEASON_MP_KEY = "preseason-3";
+const PRESEASON_MP_TEAMS = [...REAL_TEAMS, "Yeti's Big Feet", "Gentry's Neanderbrows"];
+
 async function populateMissingPicksWeeks() {
   const currentWeek = await fetchCurrentWeek();
   const sel = document.getElementById("mpWeekSelect");
   sel.innerHTML = "";
+  const preseasonOpt = document.createElement("option");
+  preseasonOpt.value = PRESEASON_MP_KEY;
+  preseasonOpt.textContent = "Preseason";
+  sel.appendChild(preseasonOpt);
   for (let w = 1; w <= currentWeek; w++) {
     const opt = document.createElement("option");
     opt.value = w;
@@ -634,7 +649,11 @@ function isPastDeadline(iso) {
 async function renderMissingPicks() {
   const contentEl = document.getElementById("mpContent");
   const statusEl = document.getElementById("mpStatus");
-  const week = parseInt(document.getElementById("mpWeekSelect").value, 10);
+  // Not parsed to an int here -- "preseason-3" is a valid value too, and
+  // every downstream use (fetchWeekGames, the reminder endpoint) already
+  // treats week as an opaque string/id, not strictly numeric.
+  const week = document.getElementById("mpWeekSelect").value;
+  const teamsForWeek = week === PRESEASON_MP_KEY ? PRESEASON_MP_TEAMS : REAL_TEAMS;
 
   contentEl.innerHTML = "";
   statusEl.textContent = "Loading...";
@@ -659,7 +678,7 @@ async function renderMissingPicks() {
   // missing games is sorted by urgency. A "Send reminder" button appears for
   // any team missing at least one game -- partial submissions count, not
   // just zero picks (per Yeti, 2026-08-25).
-  contentEl.innerHTML = REAL_TEAMS.map(team => {
+  contentEl.innerHTML = teamsForWeek.map(team => {
     const missingGames = sorted.filter(g => !(g.picks && g.picks[team]));
     const gamesHtml = missingGames.length === 0
       ? `<span class="mp-all-picked">All picked</span>`
@@ -673,7 +692,7 @@ async function renderMissingPicks() {
     `;
     return `
       <div class="mp-row">
-        <div class="mp-row-header"><span class="mp-matchup">${TEAM_SHORT[team]}</span></div>
+        <div class="mp-row-header"><span class="mp-matchup">${TEAM_SHORT[team] || team}</span></div>
         <div class="mp-chips">${gamesHtml}</div>
         ${reminderHtml}
       </div>
@@ -705,7 +724,7 @@ async function sendMissingPicksReminder(btn) {
     const res = await fetch(`${WORKER_BASE}/greg/send-reminder`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Session-Token": sessionToken },
-      body: JSON.stringify({ team, week: parseInt(week, 10) }),
+      body: JSON.stringify({ team, week: week === PRESEASON_MP_KEY ? week : parseInt(week, 10) }),
     });
     const data = await res.json();
     btn.disabled = false;

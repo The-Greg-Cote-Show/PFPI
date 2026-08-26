@@ -1796,3 +1796,204 @@ correct by reading, not run end-to-end. **Recommend Yeti do the real
 login-refresh test on both pages** before considering items 1-2 fully
 closed — that's the one piece of tonight's two rounds that genuinely
 can't be verified without the real credentials.
+
+## 2026-08-26, ~10:15 AM — Third round: 9 more enhancements
+
+Yeti asked for 9 more enhancements, to be handled autonomously (same
+standing commit/push/deploy permission, "as if I'm away"). Working through
+them in the order given.
+
+**1. Test Missing Picks against Preseason — DONE, deployed.**
+`brief.html`'s Missing Picks week selector now has a "Preseason" entry
+(value `preseason-3`) alongside the real numbered weeks. When selected, the
+tracker rosters `REAL_TEAMS` plus the two sandboxed `FAMILY_MEMBERS` test
+teams (`Yeti's Big Feet`, `Gentry's Neanderbrows`) instead of just
+`REAL_TEAMS` — matching the real cross-team sandbox worker.js already
+merges picks for. `handleSendReminderEmail` (picks-worker.js) now accepts
+`"preseason-3"` as a valid week value (was strictly-numeric before, would
+have 400'd). This directly answers Yeti's own earlier question from this
+session — "can I test the tracker itself before handing this to Greg" —
+yes, now against real preseason data.
+
+**2. Deselect a pick — DONE, deployed.**
+`picks.html`: clicking an already-selected pick button now clears it
+instead of doing nothing — guards against an accidental first click
+before someone's made up their mind, per Yeti's stress-reduction framing.
+Backend (`handleSubmitPicks`, picks-worker.js): a `null` pick value now
+deletes that game's saved pick entirely rather than storing `null` as a
+value, so a cleared game genuinely goes back to "no pick," not a
+falsy-but-present one (matters for the missing-picks tracker's own check,
+which is exactly `!picks[team]`).
+
+**3. Submit-picks confirmation dialog — DONE, deployed, old flow archived
+per Yeti's explicit "save it in case I want to revert."**
+The exact prior one-click Submit flow (button markup + handler) is saved
+verbatim in
+`archive/picks-submit-flow-before-confirmation-2026-08-26.html`. New
+behavior: clicking Submit checks every unlocked game card for a selected
+pick; if any are missing, a modal lists exactly which games (away @ home)
+are still unpicked, reassures the visitor they can come back and finish
+any time up to each game's own deadline using the same link, and asks
+them to confirm before actually submitting ("Yes, submit now" / "Go back
+and finish"). If nothing is missing, it submits immediately with no
+popup — the dialog only exists to catch the genuinely-incomplete case, per
+the request's own framing ("if someone hasn't picked all games...").
+**Judgment call, flagged**: "Let's change the wording" wasn't paired with
+specific alternate button text anywhere in the request, and read most
+naturally as introducing the new popup copy that followed it (which IS
+fully specified) rather than a separate ask to rename the "Submit picks"
+button itself — so the button's own label is unchanged. Flagging in case
+that's wrong and a specific new label was intended.
+
+**4. CC the picker + game tally on the submission email — DONE, deployed.**
+`handleConfirmPicks` (picks-worker.js) now prepends a tally line above the
+per-game list ("Picked: X of Y games. Still pending: Z.") and CC's the
+picker's own email via a new `getPickerEmail(team)` helper. That helper
+resolves to the two sandboxed `FAMILY_MEMBERS`' real stored test emails
+when applicable, and falls back to `ADMIN_EMAIL` (yeti@yetiblanc.com) for
+any of the 8 real roster teams, since Greg hasn't provided real per-family
+addresses yet — same placeholder pattern already used everywhere else in
+this file. This matches exactly what Yeti described testing as ("both the
+To: and Cc: should be to yeti@yetiblanc.com") when testing as a real
+roster team, which has no stored email of its own. `sendPfpiEmail` gained
+an optional 5th `cc` parameter (Resend supports `cc` natively) and was
+moved from picks-worker.js into `shared.js` (exported) as part of this —
+worker.js needed it too, for item 9 below, and the file header comment
+for shared.js already says "kept in one place so the two Workers can
+never drift," so this keeps that intact rather than duplicating it.
+
+**5. Contact Yeti — now actually functional — DONE, deployed.**
+Was a plain `mailto:` link (a prior session's earlier addition) — replaced
+with a real in-page modal (email field + message textarea + Send button)
+and a new public, unauthenticated `POST /contact-support` endpoint
+(picks-worker.js) that emails Yeti with the visitor's stated email,
+message, and page/team/week context. Added a per-IP rate limit (5/hour,
+same shape as the existing login brute-force guard) since this is a public
+write endpoint with zero login gate — a `mailto:` link had no such
+concern, so this is a genuinely new consideration this change introduces,
+not copied from an existing pattern.
+
+**6. Unique Hits: coon-skin hat → grey raccoon face — DONE, deployed on
+BOTH the live 2026 site (index.html) and the 2025 archive.**
+Replaced the hat SVG with a small flat grey raccoon face (two ears, a
+lighter head, a dark "bandit mask" band across white eye-dots, a lighter
+muzzle patch, small dark nose) in both files, renamed the CSS class from
+`.coon-hat` to `.raccoon-icon` in both. Same position/glow/tie-sharing
+behavior as before — only the icon itself changed. Not yet visually
+re-confirmed in a browser this round (was confirmed for the hat version
+last round) — recommend Yeti take a look and say whether the grey raccoon
+reads clearly at this small size, since "maybe a grey raccoon, let's see
+how it looks" was explicitly exploratory.
+
+**7. Vertical mascot lettering on the 2025 archive (preview only) — DONE, deployed.**
+Ported index.html's Item 10 (mascot lettering + `sizeMascotLabels()` +
+the 12% bar-height floor) into `archive/2025-simulation.html`, purely so
+Yeti can see it against a full real 18-week season's worth of bar-height
+variation, per his own "probably scrap this idea, but I want to see how
+it looks on an actual season" framing. Not brought back out — left in
+place until Yeti says whether to keep or revert it (git history has the
+prior state either way).
+
+**8. Commissioner's Weekly Brief header (live site only) — DONE, deployed.**
+`index.html`: "Greg's Weekly Brief" → "Commissioner's Weekly Brief",
+resized/restyled to exactly match `.category-title` (1.05rem/800 weight,
+default text color — was .68rem uppercase gold before), with a new
+subtitle line "PFPI Commissioner • Greg Cote" styled to exactly match
+`.category-desc` (.78rem, muted color) — same treatment as e.g. "Points
+for the best record in each individual week, split on ties." on the
+Weekly Titles tab, per Yeti's own worked example. Scoped to index.html
+only ("the live site") — did not touch brief.html's or the archive's own
+brief-panel headers, since neither was named.
+
+**9. Brief publish speed investigation + "brief is live" confirmation
+email — INVESTIGATED, root cause identified as NOT fixable from this
+repo; NEW confirmation-email feature built and verified live.**
+Checked the repo for a GitHub Actions Pages-deploy workflow (`.github/`
+doesn't exist at all) — this site uses GitHub's classic "Deploy from a
+branch" Pages method, not a slower Actions-based build. That means there's
+no repo-side build/workflow configuration to tune; the 10-15-minutes-vs-
+under-2-minutes variance Yeti observed is GitHub's own Pages
+infrastructure timing (queue congestion on their end), not something
+controllable from code or repo settings here. Being direct about this
+rather than implying a fix exists that doesn't.
+What WAS built: a real "confirmed live" signal instead of a guess.
+`handlePublishBrief` now writes a `brief-pending-confirm:{week}` KV flag
+(expected `updatedAt`, notify email) after a successful commit.
+`pollAndPublish` (worker.js, runs every minute year-round) now starts every
+tick with `checkPendingBriefConfirmations()` — a new, cheap,
+unauthenticated check that fetches the real public
+`data/brief-week-N.json` from the live site and compares its `updatedAt`
+against what was just published. The moment they match, it emails
+Greg/Yeti "Week N brief is live" — a claim backed by actually reading the
+live page back, not by elapsed time. If a publish still hasn't matched
+after 30 minutes (well past the worst case Yeti saw), it sends an honest
+"still checking" heads-up instead of a false confirmation, then stops
+checking that one. This runs independently of the Big Balls polling
+throttle, so it's not gated behind live-game windows or 15-minute marks —
+first check happens within the same minute as the publish.
+**Verified live, not just by reading — and this surfaced a real, blocking gap.**
+Manually wrote a `brief-pending-confirm:1` KV record pointing at the
+ALREADY-live, real `data/brief-week-1.json`
+(`updatedAt: "2026-08-26T13:59:09.465Z"`, text "Nullified! Again!") to
+exercise the exact match path without needing a real login to trigger a
+fresh publish. `wrangler tail` on the very next `:29` cron tick confirmed
+the detection logic works exactly as designed — it correctly matched and
+attempted to send — but the send itself failed:
+`Failed to send email ("PFPI Week 1 brief is live"): 401 {"statusCode":401,
+"name":"validation_error","message":"API key is invalid"}`. Root cause:
+`RESEND_API_KEY` has only ever been set as a secret on `pfpi-picks-worker`
+(the only Worker that ever sent email before today) — `pfpi-scores-worker`
+(worker.js) has its own separate Cloudflare secret store and has never had
+that key, per this same architecture already documented for `GITHUB_PAT`
+in shared.js's own comments. Confirmed the KV flag was still correctly
+deleted afterward regardless (checked via `wrangler kv key get` → real
+404) — the code doesn't leave a stuck flag behind just because the send
+failed, it only retries the whole detect-and-send on a genuinely new
+publish.
+**BLOCKED on a credential this session doesn't have and shouldn't request
+directly, per the standing hard rule** — this needs Yeti to run one
+command: `wrangler secret put RESEND_API_KEY --config wrangler-scores.toml`
+(pasting the same Resend key already used on `pfpi-picks-worker`). Until
+that's done, the detection half of this feature is confirmed fully
+working, but no confirmation or "still checking" email can actually send.
+Not attempting a workaround (e.g. routing the send through the other
+Worker via an internal fetch) without checking with Yeti first, since that
+would be a real architecture change beyond what was asked.
+
+**10. Copyright footer on every page — DONE, deployed.**
+"©ThatKindaThing Productions, LLC" added at the bottom of index.html,
+brief.html, picks.html, admin.html, and archive/2025-simulation.html — all
+five actively-served pages. Deliberately left off
+archive/pfpi_mockup_v3.html (an older, unlinked mockup file, not a live
+page anyone actually reaches) and off the new reference-only archive
+snapshots (fixed-order-bar-rendering-2026-08-26.js,
+picks-submit-flow-before-confirmation-2026-08-26.html) since those aren't
+pages either. Flagging the mockup-file scoping decision in case "every
+page" was meant more literally.
+
+## Deploy status (this round)
+
+- `pfpi-picks-worker` redeployed (version `d807439c-f510-4583-b337-5efd6eefba66`)
+  with: the deselect-a-pick backend change, the tally+CC on the submission
+  email, the new `/contact-support` endpoint, preseason-3 support in the
+  reminder endpoint, the `brief-pending-confirm` KV write on publish, and
+  `sendPfpiEmail` now imported from shared.js instead of defined locally.
+  Cron trigger confirmed intact (`schedule: 0 * * * *`).
+- `pfpi-scores-worker` redeployed (version `12860d4f-50ae-47a8-872b-b24cacbe1cea`)
+  with `checkPendingBriefConfirmations()`. Cron trigger confirmed intact
+  (`schedule: * * * * *`). **Needs `RESEND_API_KEY` added as a secret
+  before its email-sending half will actually work — see item 9 above.**
+- Frontend (`admin.html`, `archive/2025-simulation.html`, `brief.html`,
+  `index.html`, `picks.html`, plus the two new archive reference files)
+  committed and pushed to `main`.
+
+**Verified live/real this round**: item 1's preseason-3 support (code
+review + the same real KV data from last round's investigation), item 9's
+detection logic (real KV record against real live published data, watched
+fire correctly on the actual next cron tick). **Not yet verified in an
+actual browser**: items 2-8 and 10's on-screen appearance and click
+behavior — recommend a real pass through picks.html (deselect, the submit
+confirmation dialog, Contact Yeti) and both chart pages (raccoon icon,
+mascot lettering on the archive, the brief header restyle on index.html)
+before calling this round done. Item 4 (CC + tally) also can't be fully
+click-tested without a real picks submission through a live token.

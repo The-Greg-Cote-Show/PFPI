@@ -108,6 +108,46 @@ export function isGameLocked(gameDeadlineISO) {
 }
 
 // ============================================================
+// EMAIL (Resend)
+// Moved here from picks-worker.js (2026-08-26) so worker.js can also send
+// mail -- specifically the "brief is live" confirmation once a publish is
+// confirmed actually deployed (see worker.js's checkPendingBriefConfirmations).
+// Kept in one place so the two Workers can never drift on the sender/shape.
+// ============================================================
+
+export async function sendPfpiEmail(to, subject, text, env, cc) {
+  // These emails always go to a fixed PFPI-internal address (ADMIN_EMAIL or,
+  // for now, GREG_EMAIL) as the primary `to`, so they can use Resend's
+  // default sender: Resend allows onboarding@resend.dev to any recipient
+  // even with an unverified sending domain. The optional `cc` (added
+  // 2026-08-26 for the picks-confirmation email) is currently always a
+  // PFPI-internal address too, for the same unverified-domain reason.
+  // picks@thegregcoteshow.com stays in picks-worker.js's sendPicksEmail()
+  // since that goes to family members, but it stays broken until
+  // thegregcoteshow.com is verified at resend.com/domains (needs DNS
+  // console access neither Worker has).
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: "PFPI <onboarding@resend.dev>",
+      to,
+      ...(cc ? { cc } : {}),
+      subject,
+      text,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    console.error(`Failed to send email ("${subject}"): ${res.status} ${body}`);
+  }
+  return res.ok;
+}
+
+// ============================================================
 // GITHUB CONTENTS API
 // Used by worker.js (scores/standings) and picks-worker.js (brief publisher)
 // to commit static JSON that GitHub Pages then serves directly — visitors

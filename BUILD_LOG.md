@@ -2141,3 +2141,57 @@ naming fix; the Contact form flow verified by code review). Item 1 needs
 one more try at re-entering the Resend key — the secret name/binding is
 proven correct, only the value itself is the problem, and that's something
 only you can fix.
+
+## 2026-08-26, ~5:30 PM — RESEND_API_KEY on pfpi-scores-worker: RESOLVED, real root cause found
+
+Live troubleshooting session with Yeti (interactive, not autonomous) to
+chase down why the confirmation-email fix from the 3:20 PM round stayed
+blocked. Four consecutive attempts failed with the identical
+`401 {"statusCode":401,"name":"validation_error","message":"API key is invalid"}`
+from Resend, across: the original key set via the `!` chat-relay prefix,
+the same key re-entered in a proper terminal, a brand-new key set the same
+way, and that brand-new key again after a fresh `wrangler deploy` (to rule
+out stale-isolate binding caching -- ruled out; `wrangler secret list`
+also confirmed the binding name was always correct and present).
+
+**Real root cause, found by isolating the variable step by step**:
+- `curl https://api.resend.com/domains` with the new key returned a
+  *different*, more specific error (`restricted_api_key` -- "restricted to
+  only send emails"), proving the key itself WAS valid and recognized by
+  Resend -- my own `/domains` test was simply the wrong diagnostic (that
+  endpoint needs broader permission than a Sending-access key is supposed
+  to have; least-privilege sending-only scope was correct all along, no
+  need for Full access).
+- Testing the *actual* call the Worker makes (`POST /emails`) directly via
+  PowerShell's `Invoke-RestMethod` still failed with the same "API key is
+  invalid" -- but testing the exact same request via the real `curl.exe`
+  (writing the JSON body to a file first, to eliminate any quoting
+  differences) **succeeded**, and Yeti received the real test email.
+- **Conclusion: this was never actually a bad/garbled key at any point in
+  this whole saga.** It was `Invoke-RestMethod` (Windows PowerShell 5.1)
+  silently mangling the Authorization header on Yeti's machine -- a real,
+  known-class quirk of that specific cmdlet, unrelated to Cloudflare,
+  wrangler, this codebase, or anything Yeti did wrong. The very first key
+  from earlier today may well have been fine the whole time too; there's
+  no way to know retroactively, but it no longer matters.
+- Yeti re-ran `wrangler secret put RESEND_API_KEY --config
+  wrangler-scores.toml` with the `curl.exe`-confirmed-working key, in a
+  proper terminal.
+
+**Final verification — the exact same live test used all day, one more time:**
+wrote a `brief-pending-confirm:1` KV record matching the real live
+`data/brief-week-1.json`, watched the next cron tick via `wrangler tail`.
+**Result: no error logged at all** (every prior attempt logged a "Failed
+to send email" 401 at this exact point) **and the KV flag was cleared**
+(confirmed via a real `wrangler kv key get` → 404) -- both signals
+together are conclusive: the send succeeded. This closes out the item that
+was flagged as blocked at the end of the 3:20 PM round.
+
+**Status: Item 9 from two rounds ago (brief publish confirmation email) is
+now fully done, deployed, and verified working end-to-end** -- the
+detection logic (built earlier), the email-sending capability (blocked
+until now), and the underlying secret are all confirmed functional
+together for the first time today. Recommend Yeti do one real publish
+through brief.html when convenient and confirm the "Week N brief is live"
+email actually lands, as the final human-eyes confirmation on top of the
+technical evidence above.

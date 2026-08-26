@@ -651,6 +651,24 @@ async function verifyAdminToken(token, env) {
   return verifySessionToken("admin", token, env);
 }
 
+// GET /verify-session?kind=admin|greg -- cheap (one KV get), no side
+// effects. Lets admin.html/brief.html restore a session saved in
+// localStorage across a page refresh (per Yeti, 2026-08-26) without
+// guessing: they show a "checking..." state on load, call this, and only
+// then decide whether to show the logged-in dashboard or the login gate --
+// rather than either always forcing a fresh login (the bug being fixed) or
+// blindly trusting a stored token that may have expired.
+async function handleVerifySession(request, env) {
+  const url = new URL(request.url);
+  const kind = url.searchParams.get("kind");
+  if (kind !== "admin" && kind !== "greg") {
+    return jsonResponse({ error: "Invalid kind." }, 400, request);
+  }
+  const token = request.headers.get("X-Session-Token");
+  const valid = await verifySessionToken(kind, token, env);
+  return jsonResponse({ valid }, 200, request);
+}
+
 // ============================================================
 // PASSWORD RESET (admin and Greg both use this)
 // ============================================================
@@ -923,6 +941,9 @@ export default {
     }
     if (url.pathname === "/current-week" && request.method === "GET") {
       return handleCurrentWeek(request, env);
+    }
+    if (url.pathname === "/verify-session" && request.method === "GET") {
+      return handleVerifySession(request, env);
     }
     return jsonResponse({ error: "Not found" }, 404, request);
   },

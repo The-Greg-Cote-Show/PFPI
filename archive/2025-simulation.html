@@ -66,6 +66,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 .crown{font-size:1.3rem;line-height:1;filter:drop-shadow(0 0 6px rgba(232,184,75,.6));animation:crownFloat 2.2s ease-in-out infinite;z-index:5;}
 @keyframes crownFloat{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
+/* Unique Hits' leader icon -- a coon-skin hat, not a crown. See index.html
+   for the full backstory (Ruth Cote / "Ruth's Raccoons"). */
+.coon-hat{width:26px;height:20px;filter:drop-shadow(0 0 5px rgba(139,90,52,.55));animation:crownFloat 2.2s ease-in-out infinite;z-index:5;}
 .bar-col.is-champion .bar-value-label{color:var(--gold2);}
 .bar-col.is-champion .bar-team-avatar{border-width:2px;box-shadow:0 0 0 3px rgba(232,184,75,.15);}
 
@@ -455,23 +458,38 @@ async function render(){
     barsArea.appendChild(line);
   }
 
-  // For Best Week, find whichever team currently holds the season's best pct.
-  // Ties (identical pct) get the crown too, rather than arbitrarily picking one.
-  let championTeam = null;
-  if (cat.isBestWeek) {
-    const topPct = Math.max(...TEAMS.map(t => values[t]));
-    const holders = TEAMS.filter(t => values[t] === topPct);
-    championTeam = holders; // array, supports shared crown on a tie
-  }
+  // Leader icon for every category's current top value (index.html's Item
+  // 9, ported here 2026-08-26 per Yeti's explicit follow-up request --
+  // generalized from a Best-Week-only special case so Yeti can actually
+  // SEE it against this archive's real simulated data, since the live 2026
+  // site has zero real data for Unique Hits/10-Win Weeks to render it
+  // against yet). Ties share the icon, same rule Best Week already used.
+  // Unique Hits gets a coon-skin hat instead of a crown (Item 11) -- a
+  // deliberate nod to Ruth Cote ("Ruth's Raccoons"), PFPI's all-time real
+  // Unique Hits leader; see BUILD_LOG.md, not a bug if it looks different.
+  const topValue = Math.max(...TEAMS.map(t => values[t]));
+  const leaderTeams = TEAMS.filter(t => values[t] === topValue);
+  const isCoonHat = currentCat === "uniqueHits";
+  const leaderIconHtml = isCoonHat
+    ? `<div class="coon-hat"><svg viewBox="0 0 32 24" width="26" height="20" xmlns="http://www.w3.org/2000/svg">
+         <ellipse cx="12" cy="10" rx="10" ry="8" fill="#8a5a34"/>
+         <ellipse cx="12" cy="16" rx="10" ry="3" fill="#5c3a1e"/>
+         <rect x="14" y="7" width="14" height="6" rx="3" fill="#8a5a34" transform="rotate(18 18 10)"/>
+         <rect x="18" y="6" width="4" height="6" rx="2" fill="#e9dcc7" transform="rotate(18 18 10)"/>
+         <rect x="22" y="9" width="4" height="6" rx="2" fill="#3d2814" transform="rotate(18 18 10)"/>
+       </svg></div>`
+    : '<div class="crown">&#128081;</div>';
 
   // Dynamic bar sorting (per Greg via Yeti, 2026-08-26 big feedback round --
   // applied here too, not just the live 2026 site, specifically so Greg can
   // see the pattern play out against a full real season's worth of 2025
   // data). Same rule as index.html: ranked by this category's value,
   // highest first, alphabetical by team name on an exact tie, recomputed
-  // every render() call. See index.html for items 9-12 (crowns on every
-  // category, vertical mascot lettering, etc.) -- those weren't asked for
-  // here, only the sorting.
+  // every render() call. Items 9 and 11 (crowns on every category, the
+  // coon-hat) are now also ported above, per Yeti's 2026-08-26 follow-up --
+  // Item 10 (vertical mascot lettering) and Item 12 (2-decimal formatting)
+  // still weren't asked for here, so this archive intentionally still
+  // differs from index.html on those two.
   const sortedTeams = [...TEAMS].sort((a, b) => {
     if (values[b] !== values[a]) return values[b] - values[a];
     return TEAM_SHORT[a].localeCompare(TEAM_SHORT[b]);
@@ -481,15 +499,15 @@ async function render(){
     const val = values[team];
     const pct = Math.max(2, Math.round((val/maxVal)*1000)/10);
     const color = TEAM_COLORS[team];
-    const isChamp = championTeam && championTeam.includes(team);
+    const isLeader = leaderTeams.includes(team);
     const bottomLabel = bottomLabels[team];
 
     const col = document.createElement("div");
-    col.className = "bar-col" + (isChamp ? " is-champion" : "");
+    col.className = "bar-col" + (isLeader ? " is-champion" : "");
     col.innerHTML = `
       <div class="bar-el" style="height:${pct}%;background:${color}">
         <div class="bar-value-label">
-          ${isChamp ? '<div class="crown">&#128081;</div>' : ""}
+          ${isLeader ? leaderIconHtml : ""}
           <div>${labels[team].replace("\n","<br>")}</div>
         </div>
         ${bottomLabel ? `<div class="bar-bottom-label">${bottomLabel}</div>` : ""}

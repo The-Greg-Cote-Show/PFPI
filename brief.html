@@ -139,6 +139,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="field">
       <label for="mpWeekSelect">Week</label>
       <select id="mpWeekSelect"></select>
+      <div class="char-count" style="text-align:left;margin-top:.4rem;">Tracks real numbered weeks only — a Preseason test pick won't show up or count here.</div>
     </div>
     <div id="mpContent"></div>
     <div class="status" id="mpStatus"></div>
@@ -193,6 +194,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
 <script>
 const WORKER_BASE = "https://pfpi-picks-worker.yeti-f3c.workers.dev";
+const SESSION_STORAGE_KEY = "pfpi-greg-session-token";
 let sessionToken = null;
 
 // Real 8-team roster only -- matches shared.js's TEAMS export. The 2 sandboxed
@@ -207,6 +209,55 @@ const TEAM_SHORT = {
 // ============================================================
 // LOGIN
 // ============================================================
+
+// Shared by a fresh login and a restored (localStorage) session, per Yeti
+// (2026-08-26) -- refreshing the page shouldn't force a re-login when the
+// backend session (4-hour KV TTL) is still good.
+async function enterDashboard() {
+  document.getElementById("gateScreen").style.display = "none";
+  document.getElementById("dashboardTabs").style.display = "flex";
+  document.getElementById("missingPicksScreen").style.display = "block";
+  await populateWeeks();
+  await renderPublishTab();
+  await populateMissingPicksWeeks();
+}
+
+// Clears a rejected/expired session and falls back to the login gate --
+// used both when a restored token turns out invalid and when a session
+// expires mid-visit (401/403 from an authenticated call later in the tab).
+function clearSession(message) {
+  sessionToken = null;
+  localStorage.removeItem(SESSION_STORAGE_KEY);
+  document.getElementById("dashboardTabs").style.display = "none";
+  document.getElementById("missingPicksScreen").style.display = "none";
+  document.getElementById("digestScreen").style.display = "none";
+  document.getElementById("publishScreen").style.display = "none";
+  document.getElementById("gateScreen").style.display = "block";
+  const statusEl = document.getElementById("gateStatus");
+  if (message) {
+    statusEl.textContent = message;
+    statusEl.className = "status err show";
+  }
+}
+
+async function restoreSessionIfSaved() {
+  const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (!saved) return;
+  try {
+    const res = await fetch(`${WORKER_BASE}/verify-session?kind=greg`, {
+      headers: { "X-Session-Token": saved },
+    });
+    const data = await res.json();
+    if (data.valid) {
+      sessionToken = saved;
+      await enterDashboard();
+    } else {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+  } catch (e) {
+    // Network error -- leave the login gate showing rather than guess.
+  }
+}
 
 async function tryUnlock(e) {
   if (e) e.preventDefault();
@@ -234,12 +285,8 @@ async function tryUnlock(e) {
       return;
     }
     sessionToken = data.sessionToken;
-    document.getElementById("gateScreen").style.display = "none";
-    document.getElementById("dashboardTabs").style.display = "flex";
-    document.getElementById("missingPicksScreen").style.display = "block";
-    await populateWeeks();
-    await renderPublishTab();
-    await populateMissingPicksWeeks();
+    localStorage.setItem(SESSION_STORAGE_KEY, sessionToken);
+    await enterDashboard();
   } catch (e) {
     statusEl.textContent = "Could not reach the server.";
     statusEl.className = "status err show";
@@ -274,6 +321,8 @@ const resetToken = new URLSearchParams(location.search).get("resetToken");
 if (resetToken) {
   document.getElementById("gateScreen").style.display = "none";
   document.getElementById("resetScreen").style.display = "block";
+} else {
+  restoreSessionIfSaved();
 }
 
 document.getElementById("resetForm").addEventListener("submit", async (e) => {
@@ -397,6 +446,7 @@ async function renderPublishTab() {
     const res = await fetch(`${WORKER_BASE}/greg/brief-history?week=${week}`, {
       headers: { "X-Session-Token": sessionToken },
     });
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
     data = await res.json();
     if (!res.ok) throw new Error(data.error || "Could not load this week's brief.");
   } catch (e) {
@@ -498,6 +548,7 @@ async function publish() {
     btn.disabled = false;
     btn.textContent = "Publish brief";
 
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
     if (res.status === 202 && data.published === false) {
       statusEl.textContent = data.error;
       statusEl.className = "status warn show";
@@ -659,6 +710,7 @@ async function sendMissingPicksReminder(btn) {
     const data = await res.json();
     btn.disabled = false;
     btn.textContent = originalText;
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
     if (!res.ok) {
       statusEl.textContent = data.error || "Could not send reminder.";
       statusEl.className = "mp-reminder-status err";

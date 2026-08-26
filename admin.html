@@ -94,6 +94,12 @@ button:hover{opacity:.9;}
       zero effect on real scoring; a real numbered week (1-18) plugs into
       real standings once picks are saved against it, so only use one of
       those once you actually mean to test against the live season.
+      <strong>These are two separate buckets that never mix</strong> — a
+      pick saved against "preseason-3" shows up on the Preseason Games tab
+      but will NEVER appear on the Commissioner Portal's Missing Picks
+      tracker (which only ever looks at real numbered weeks), and vice
+      versa. If you're testing the Missing Picks tracker specifically, use
+      a real week number here, not "preseason-3."
     </div>
     <label for="testEmailTeam">Team (testing as)</label>
     <select id="testEmailTeam">
@@ -157,7 +163,62 @@ button:hover{opacity:.9;}
 
 <script>
 const WORKER_BASE = "https://pfpi-picks-worker.yeti-f3c.workers.dev";
+const SESSION_STORAGE_KEY = "pfpi-admin-session-token";
 let sessionToken = null;
+
+// Per Yeti (2026-08-26): a saved browser password shouldn't matter if the
+// page throws the session away on every refresh -- the backend session is
+// already good for 4 hours (see AUTH_CONFIG/handleLogin, picks-worker.js),
+// this was purely a frontend gap. Persist the token across a refresh, and
+// hide the login form once actually logged in (previously this page never
+// did that at all, unlike brief.html).
+function showLoggedIn() {
+  document.getElementById("loginPanel").classList.add("hidden");
+  document.getElementById("overridePanel").classList.remove("hidden");
+  document.getElementById("briefFixPanel").classList.remove("hidden");
+  document.getElementById("testEmailPanel").classList.remove("hidden");
+  document.getElementById("correctionPanel").classList.remove("hidden");
+  loadBriefForWeek();
+}
+
+// Clears a rejected/expired session and falls back to the login gate --
+// used both on initial-load verification failure and on a 401/403 from any
+// authenticated action taken later in the same tab (session can still
+// expire mid-visit, since the 4-hour TTL isn't tied to the tab staying open).
+function clearSession(message) {
+  sessionToken = null;
+  localStorage.removeItem(SESSION_STORAGE_KEY);
+  document.getElementById("loginPanel").classList.remove("hidden");
+  document.getElementById("overridePanel").classList.add("hidden");
+  document.getElementById("briefFixPanel").classList.add("hidden");
+  document.getElementById("testEmailPanel").classList.add("hidden");
+  document.getElementById("correctionPanel").classList.add("hidden");
+  if (message) {
+    const statusEl = document.getElementById("loginStatus");
+    statusEl.textContent = message;
+    statusEl.className = "status error";
+  }
+}
+
+async function restoreSessionIfSaved() {
+  const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (!saved) return;
+  try {
+    const res = await fetch(`${WORKER_BASE}/verify-session?kind=admin`, {
+      headers: { "X-Session-Token": saved },
+    });
+    const data = await res.json();
+    if (data.valid) {
+      sessionToken = saved;
+      showLoggedIn();
+    } else {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+  } catch (e) {
+    // Network error -- leave the login gate showing rather than guess the
+    // saved token is still good.
+  }
+}
 
 document.getElementById("loginForm").onsubmit = async (e) => {
   e.preventDefault();
@@ -181,18 +242,17 @@ document.getElementById("loginForm").onsubmit = async (e) => {
       return;
     }
     sessionToken = data.sessionToken;
+    localStorage.setItem(SESSION_STORAGE_KEY, sessionToken);
     statusEl.textContent = "Logged in. Session valid for 4 hours.";
     statusEl.className = "status ok";
-    document.getElementById("overridePanel").classList.remove("hidden");
-    document.getElementById("briefFixPanel").classList.remove("hidden");
-    document.getElementById("testEmailPanel").classList.remove("hidden");
-    document.getElementById("correctionPanel").classList.remove("hidden");
-    loadBriefForWeek();
+    showLoggedIn();
   } catch (e) {
     statusEl.textContent = "Could not reach the server.";
     statusEl.className = "status error";
   }
 };
+
+restoreSessionIfSaved();
 
 document.getElementById("forgotBtn").onclick = async (e) => {
   e.preventDefault();
@@ -275,6 +335,7 @@ document.getElementById("overrideBtn").onclick = async () => {
       body: JSON.stringify(body),
     });
     const data = await res.json();
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
     if (!res.ok) {
       statusEl.textContent = data.error || "Override failed.";
       statusEl.className = "status error";
@@ -344,6 +405,7 @@ document.getElementById("briefFixBtn").onclick = async () => {
       body: JSON.stringify(body),
     });
     const data = await res.json();
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
     if (res.status === 202 && data.published === false) {
       statusEl.textContent = data.error;
       statusEl.className = "status error";
@@ -377,6 +439,7 @@ document.getElementById("testEmailBtn").onclick = async () => {
       body: JSON.stringify(body),
     });
     const data = await res.json();
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
     if (!res.ok) {
       statusEl.textContent = data.error || "Send failed.";
       statusEl.className = "status error";
@@ -406,6 +469,7 @@ document.getElementById("correctionBtn").onclick = async () => {
       body: JSON.stringify(body),
     });
     const data = await res.json();
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
     if (!res.ok) {
       statusEl.textContent = data.error || "Send failed.";
       statusEl.className = "status error";

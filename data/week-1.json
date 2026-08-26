@@ -13,7 +13,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-08T22:00:00.000Z"
+      "deadline": "2026-09-09T10:00:00.000Z"
     },
     {
       "id": "2026_01_SF_LA",
@@ -27,7 +27,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-09T22:00:00.000Z"
+      "deadline": "2026-09-10T10:00:00.000Z"
     },
     {
       "id": "2026_01_ARI_LAC",
@@ -41,7 +41,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-12T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
       "id": "2026_01_ATL_PIT",
@@ -55,7 +55,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-12T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
       "id": "2026_01_BAL_IND",
@@ -69,7 +69,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-12T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
       "id": "2026_01_BUF_HOU",
@@ -83,7 +83,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-12T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
       "id": "2026_01_CHI_CAR",
@@ -97,7 +97,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-12T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
       "id": "2026_01_CLE_JAX",
@@ -111,7 +111,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-12T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
       "id": "2026_01_DAL_NYG",
@@ -125,7 +125,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-12T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
       "id": "2026_01_GB_MIN",
@@ -139,7 +139,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-12T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
       "id": "2026_01_MIA_LV",
@@ -153,7 +153,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-12T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
       "id": "2026_01_NO_DET",
@@ -167,7 +167,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-12T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
       "id": "2026_01_NYJ_TEN",
@@ -181,7 +181,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-12T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
       "id": "2026_01_TB_CIN",
@@ -195,7 +195,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-12T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
       "id": "2026_01_WAS_PHI",
@@ -209,7 +209,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-12T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
       "id": "2026_01_DEN_KC",
@@ -223,7 +223,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
-      "deadline": "2026-09-13T22:00:00.000Z"
+      "deadline": "2026-09-12T17:00:00.000Z"
     }
   ]
 }

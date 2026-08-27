@@ -263,7 +263,7 @@
       "id": "hl-566529",
       "home": "BUF",
       "away": "PIT",
-      "homeScore": 13,
+      "homeScore": 14,
       "awayScore": 3,
       "status": "in_progress",
       "kickoffISO": "2026-08-27T23:00:00.000Z",
@@ -274,7 +274,7 @@
         "Lobos": "BUF",
         "Critters": "BUF"
       },
-      "clockReport": "2:20 - 1st Quarter"
+      "clockReport": "1:42 - 1st Quarter"
     }
   ],
   "stats": {
@@ -504,5 +504,5 @@
       "preseason-3": 0
     }
   },
-  "updatedAt": "2026-08-27T23:35:23.325Z"
+  "updatedAt": "2026-08-27T23:40:23.304Z"
 }

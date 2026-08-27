@@ -2605,3 +2605,69 @@ Deployed to `pfpi-scores-worker` (version `775ae6ea-2561-4ec0-b175-
 actually in progress tonight -- recommend Yeti (or a future session)
 spot-check that Live status/scores are updating during tonight's games
 and that final scores land within the expected windows, not hours late.
+
+## Deadline-enforcement popup + Contact Yeti tie-in (2026-08-27)
+
+Yeti asked to test deadline enforcement tonight using a real team (not just
+the sandboxed FAMILY_MEMBERS accounts), and specifically wanted to know
+what a visitor sees if they try to submit after a game's deadline --
+previously nothing, or close to it:
+
+- If a game was already locked when `/my-picks` loaded, its pick buttons
+  used a native `disabled` attribute -- clicking did literally nothing, no
+  message at all beyond a small red "Locked" tag.
+- If a game locked in the brief window between page load and an in-flight
+  submit (the rare race), `savePick()` just set inline text ("That game
+  already locked, pick not saved.") -- easy to miss, no path to dispute it.
+
+Neither matched what Yeti wanted: a clear popup stating the deadline
+passed, with a direct "contact Yeti" option for the rare case someone
+disagrees.
+
+**Fix (picks.html only -- no backend change needed, since deadline
+enforcement itself was already real and server-side; see the "pick
+deadlines" Q&A earlier today)**:
+- Added a `#deadlinePassedModal` (same modal pattern as the existing
+  submit-confirm/contact modals) stating which game and its exact deadline
+  (via the existing `fmtDeadlineFull()`), with "Contact Yeti" and "OK".
+- Pick buttons on a locked game are no longer natively `disabled` -- they
+  stay clickable specifically so a click can trigger the popup instead of
+  silently doing nothing. `game.locked` is still checked in the click
+  handler; an unlocked game's click behavior (select/deselect, `savePick`)
+  is completely unchanged.
+- The submit-time race in `savePick()` now also opens the same popup (in
+  addition to the existing inline status text) and rolls the optimistic
+  `selected` toggle back to the pick's actual last-saved state, so the UI
+  doesn't show a pick that the server didn't actually accept.
+- "Contact Yeti" from this popup opens the exact same `#contactModal` /
+  `/contact-support` flow already used for tech issues (no new backend
+  endpoint, no duplicated form) -- refactored the existing inline
+  `contactYetiBtn.onclick` into a reusable `openContactModal()` so both
+  entry points share one implementation. When opened from the
+  deadline-passed popup, the message textarea is pre-filled with which
+  game and its deadline (editable, not locked text) so Yeti doesn't have
+  to ask; opening it from the normal "Contact Yeti" button in the submit
+  section still opens it blank, as before.
+- Server-side enforcement itself is untouched -- `isGameLocked()` /
+  `handleSubmitPicks()` in picks-worker.js already rejected locked picks
+  correctly before this change; this was purely a frontend
+  messaging/UX gap, confirmed by tracing the real code path first (not
+  assumed) before writing any of the above.
+
+**Verified live** (not just code inspection): pushed to `main`, confirmed
+GitHub Pages propagation via a cache-busting fetch, then opened
+picks.html in a real browser and called `showDeadlinePassedModal({away:
+"PIT", home:"BUF", deadline:"2026-08-27T21:00:00.000Z"})` directly from
+the console (no real token needed to test the popup itself). Screenshot
+confirmed: correct title, correct matchup/deadline text ("Thursday,
+August 27 at 5:00 PM Eastern"), both buttons rendered. Clicked "Contact
+Yeti" and confirmed the support form opened with the message textarea
+pre-filled exactly as designed ("I tried to pick PIT @ BUF after the
+deadline (Thursday, August 27 at 5:00 PM Eastern) and would like to
+discuss.") -- did not actually click Send, to avoid generating a fake
+support ticket to Yeti's real inbox for a synthetic test case.
+
+**Not yet verified**: the real end-to-end path (an actual locked-game
+button click on a real team's live picks page, and the submit-time race
+path) -- both only exercisable once a real game's deadline actually
+passes tonight, which Yeti said he'd test himself using a real team.

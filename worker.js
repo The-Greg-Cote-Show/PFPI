@@ -386,6 +386,85 @@ async function computeStandings(throughWeek, env) {
 }
 
 // ============================================================
+// PRESEASON SCORING SNAPSHOT (2026-08-27 round)
+// ============================================================
+// Yeti's real requirement: when preseason is the selected week, Standings/
+// Weekly Titles/Weeks Leading/Best Week should compute and show real
+// numbers from real preseason picks/results, same as a genuine numbered
+// week -- for real hands-on testing this weekend. Confirmed scope: all of
+// preseason Week 3 (Aug 27-29) is ONE single unified week for scoring
+// purposes (same as a normal NFL week already bundles Thu/Sun/Mon games),
+// and it must be structurally impossible for this to ever sum into real
+// regular-season cumulative totals, now or after the real season starts.
+//
+// How that's actually guaranteed, not just asserted: this function shares
+// NO code and NO mutable state with computeStandings() above -- it is not
+// a call into that function with a special-cased argument, it is a
+// completely separate, stateless, single-week-only computation (the only
+// things reused are the tiny generic math helpers splitShare()/round2(),
+// which have no notion of "week" or "cumulative" at all). computeStandings
+// ONLY EVER iterates a numeric range (`for week = 1; week <= throughWeek`)
+// -- there is no code path by which it could read "preseason-3" even if
+// asked to, and this function never writes into `results:week:N` (the KV
+// namespace computeStandings reads from) or into data/standings.json (the
+// file the real-season frontend loads) at all. The result is committed
+// into its own field inside data/week-preseason-3.json (see
+// pollAndPublish below), a file computeStandings/data/standings.json have
+// no knowledge of. Two independent computations, two independent output
+// destinations -- not one function with a bypassable guard clause.
+function computePreseasonSnapshot(finalResults, picksByTeam, weekLabel) {
+  const scorableGames = finalResults.filter(g => !g.tie);
+  const weekTotal = scorableGames.length;
+
+  const correctThisTeam = {};
+  TEAMS.forEach(team => {
+    const picks = picksByTeam[team] || {};
+    let correct = 0;
+    for (const game of scorableGames) {
+      if (game.winner && picks[game.id] === game.winner) correct++;
+    }
+    correctThisTeam[team] = correct;
+  });
+
+  // Weekly Titles and Weeks Leading collapse to the identical computation
+  // here -- both concepts ("best record this week" / "leading the
+  // cumulative season") are the same thing when there's only one week in
+  // the "season" to lead or win. Not a bug that they end up numerically
+  // equal for preseason.
+  let holders = [], share = 0;
+  if (weekTotal > 0) {
+    const maxCorrect = Math.max(...TEAMS.map(t => correctThisTeam[t]));
+    holders = TEAMS.filter(t => correctThisTeam[t] === maxCorrect);
+    share = splitShare(holders.length);
+  }
+
+  const standings = {}, standingsPct = {};
+  const weeklyTitles = {}, weeklyTitlesCount = {};
+  const weeksLeading = {}, weeksLeadingCount = {};
+  const bestWeek = {};
+
+  TEAMS.forEach(team => {
+    const correct = correctThisTeam[team];
+    const pct = weekTotal > 0 ? correct / weekTotal : 0;
+    const isHolder = holders.includes(team);
+
+    standings[team] = { [weekLabel]: correct };
+    standingsPct[team] = { [weekLabel]: pct };
+    weeklyTitles[team] = { [weekLabel]: isHolder ? round2(share) : 0 };
+    weeklyTitlesCount[team] = { [weekLabel]: isHolder ? 1 : 0 };
+    weeksLeading[team] = { [weekLabel]: isHolder ? round2(share) : 0 };
+    weeksLeadingCount[team] = { [weekLabel]: isHolder ? 1 : 0 };
+    bestWeek[team] = {
+      [weekLabel]: weekTotal > 0
+        ? { correct, total: weekTotal, pct, week: "Preseason" }
+        : { correct: 0, total: 0, pct: 0, week: "Preseason" },
+    };
+  });
+
+  return { standings, standingsPct, weeklyTitles, weeklyTitlesCount, weeksLeading, weeksLeadingCount, bestWeek };
+}
+
+// ============================================================
 // PER-WEEK PUBLIC JSON (games + picks, matches mockup's SCHEDULE shape)
 // ============================================================
 
@@ -697,9 +776,22 @@ async function pollAndPublish(env) {
         return { ...g, picks };
       });
 
+      // Real Standings/Weekly Titles/Weeks Leading/Best Week for preseason
+      // (2026-08-27 round) -- see computePreseasonSnapshot()'s own comment
+      // for the full isolation reasoning. Only the REAL 8-team roster
+      // scores here (matches computeStandings' own TEAMS-only loop) --
+      // picksByTeam has FAMILY_MEMBERS entries too (needed for the picks
+      // merge above), computePreseasonSnapshot simply never looks at them.
+      // finalResults comes straight from this tick's own Highlightly-
+      // shaped game objects already in memory -- never written to or read
+      // from the `results:week:N` KV namespace real weeks use, so there
+      // is no shared storage for the two computations to ever collide in.
+      const finalResults = preseasonGames.filter(g => g.status === "final");
+      const preseasonStats = computePreseasonSnapshot(finalResults, picksByTeam, "preseason-3");
+
       await commitJSONToGitHub(
         "data/week-preseason-3.json",
-        { week: "preseason-3", games: preseasonGamesWithPicks, updatedAt: new Date().toISOString() },
+        { week: "preseason-3", games: preseasonGamesWithPicks, stats: preseasonStats, updatedAt: new Date().toISOString() },
         "Update preseason Week 3 (Highlightly) [automated]",
         env
       );

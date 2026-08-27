@@ -18,6 +18,7 @@ import {
   computeCurrentWeekFromDate,
   commitJSONToGitHub,
   sendPfpiEmail,
+  fullTeamName,
   NUM_WEEKS,
   TEAMS,
   FAMILY_MEMBERS,
@@ -201,6 +202,18 @@ function formatWeekDeadlines(schedule) {
   return lines.join(" ");
 }
 
+// Sender display name "PFPI Commissioner" per Yeti (2026-08-27) -- and,
+// checked against what's actually verified before picking an address
+// rather than inventing one: `picks@thegregcoteshow.com` is NOT verified
+// in Resend (documented above and in shared.js's sendPfpiEmail -- still
+// broken, needs DNS console access nobody has). `onboarding@resend.dev`
+// IS the one proven to actually deliver, used by every other email in
+// this codebase (see sendPfpiEmail, shared.js). Using it here too, with
+// the new display name, rather than keeping a sender address that's
+// documented as non-functional -- this also happens to fix this specific
+// email actually being sendable at all, which it wasn't before. Swap the
+// address back to picks@thegregcoteshow.com once that domain is verified;
+// nothing else about this function needs to change when that happens.
 async function sendPicksEmail(toEmail, name, week, link, deadlineSummary, env) {
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -209,7 +222,7 @@ async function sendPicksEmail(toEmail, name, week, link, deadlineSummary, env) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "PFPI <picks@thegregcoteshow.com>",
+      from: "PFPI Commissioner <onboarding@resend.dev>",
       to: toEmail,
       subject: `PFPI Week ${week} picks are open`,
       text: `Hey ${name},\n\nYour Week ${week} picks are ready. Use this link any time this week, you can save and come back before each game's deadline:\n\n${link}\n\n${deadlineSummary}\n\nGood luck.`,
@@ -365,8 +378,8 @@ async function handleConfirmPicks(request, env) {
   const pendingCount = Math.max(0, totalGames - pickedCount);
   const tally = `Picked: ${pickedCount} of ${totalGames} games. Still pending: ${pendingCount}.`;
 
-  const subject = `PFPI: ${team} submitted Week ${week} picks`;
-  const text = `${team} submitted Week ${week} picks (${new Date().toISOString()}).\n\n${tally}\n\n${lines.join("\n")}`;
+  const subject = `PFPI: ${fullTeamName(team)} submitted Week ${week} picks`;
+  const text = `${fullTeamName(team)} submitted Week ${week} picks (${new Date().toISOString()}).\n\n${tally}\n\n${lines.join("\n")}`;
   // CC's the picker themselves (per Yeti, 2026-08-26) so they have a copy
   // of exactly what they submitted. Real per-team emails for the 8 real
   // roster teams still aren't set up (Greg hasn't provided them yet), so
@@ -493,14 +506,16 @@ async function handleSendTestPicksEmail(request, env) {
   const schedule = await getWeekSchedule(week, env);
   const deadlineSummary = formatWeekDeadlines(schedule);
 
-  // Deliberately NOT sendPicksEmail() -- that still sends from
-  // picks@thegregcoteshow.com, which the unverified Resend domain still
-  // rejects (see BUILD_LOG.md, unresolved). sendPfpiEmail's
-  // onboarding@resend.dev sender is the one actually proven to deliver.
+  // Deliberately NOT sendPicksEmail() -- this is an ad-hoc admin tool with
+  // its own distinct "[TEST]" subject/body, not the real weekly picks
+  // email. (sendPicksEmail also now sends from the same proven-working
+  // onboarding@resend.dev sender as of 2026-08-27 -- see its own comment
+  // -- so that's no longer the reason to keep these separate, just a
+  // genuinely different email.)
   const sent = await sendPfpiEmail(
     ADMIN_EMAIL,
-    `[TEST] PFPI Week ${week} picks — as ${team}`,
-    `Test picks link for "${team}", Week ${week}.\n\nUse this link any time, you can save and come back before each game's deadline:\n\n${link}\n\n${deadlineSummary}\n\nThis is a test email triggered from admin.html, not a real weekly picks notification.`,
+    `[TEST] PFPI Week ${week} picks — as ${fullTeamName(team)}`,
+    `Test picks link for "${fullTeamName(team)}", Week ${week}.\n\nUse this link any time, you can save and come back before each game's deadline:\n\n${link}\n\n${deadlineSummary}\n\nThis is a test email triggered from admin.html, not a real weekly picks notification.`,
     env
   );
 
@@ -539,8 +554,8 @@ async function handleSendCorrectionEmail(request, env) {
 
   const sent = await sendPfpiEmail(
     ADMIN_EMAIL,
-    `[CORRECTION] PFPI Week ${week} — ${team} — ${game.away} @ ${game.home}`,
-    `One-time correction link for "${team}", Week ${week}, ${game.away} @ ${game.home}.\n\nThis link unlocks ONLY that one game, even though its deadline has passed — every other game on this link stays locked normally. Forward it to whoever needs to fix their pick.\n\nValid for 24 hours:\n\n${link}`,
+    `[CORRECTION] PFPI Week ${week} — ${fullTeamName(team)} — ${game.away} @ ${game.home}`,
+    `One-time correction link for "${fullTeamName(team)}", Week ${week}, ${game.away} @ ${game.home}.\n\nThis link unlocks ONLY that one game, even though its deadline has passed — every other game on this link stays locked normally. Forward it to whoever needs to fix their pick.\n\nValid for 24 hours:\n\n${link}`,
     env
   );
 
@@ -582,7 +597,7 @@ async function handleContactSupport(request, env) {
   }
 
   const context = [
-    team ? `Team: ${team}` : null,
+    team ? `Team: ${fullTeamName(team)}` : null,
     week !== undefined && week !== null ? `Week: ${week}` : null,
     page ? `Page: ${page}` : null,
   ].filter(Boolean).join("\n");
@@ -644,8 +659,8 @@ async function handleSendReminderEmail(request, env) {
   const lines = missing.map(g => `${g.away} @ ${g.home}`);
   const sent = await sendPfpiEmail(
     ADMIN_EMAIL,
-    `PFPI reminder: ${team}, ${weekLabel} picks still needed`,
-    `${team} is still missing ${weekLabel} picks for:\n\n${lines.join("\n")}\n\n(Test send -- real family email addresses aren't set up yet, so this went to Yeti's own address standing in for ${team}'s real recipient.)`,
+    `PFPI reminder: ${fullTeamName(team)}, ${weekLabel} picks still needed`,
+    `${fullTeamName(team)} is still missing ${weekLabel} picks for:\n\n${lines.join("\n")}\n\n(Test send -- real family email addresses aren't set up yet, so this went to Yeti's own address standing in for ${fullTeamName(team)}'s real recipient.)`,
     env
   );
 

@@ -7,6 +7,26 @@
 
 export const TEAMS = ["Lobos", "Roughriders", "Maniacs", "Critters", "Chickens", "Ferraris", "Llamas", "Giraffes"];
 
+// Full display names, matching index.html/brief.html's own TEAM_SHORT
+// objects exactly (kept in sync by hand -- there's no single shared
+// import between the frontend pages and this file, but the values must
+// never drift). Moved here (2026-08-27) so picks-worker.js's automated
+// emails can use full names instead of the bare mascot key -- see
+// fullTeamName() below and BUILD_LOG.md for the full list of email
+// functions this fixed.
+export const TEAM_SHORT = {
+  Lobos: "Greg's Lobos", Roughriders: "Dick's Roughriders", Maniacs: "Mom's Maniacs", Critters: "Chris' Critters",
+  Chickens: "Mike's Chickens", Ferraris: "Christie's Ferraris", Llamas: "Tati's Llamas", Giraffes: "Gracelin's Giraffes",
+};
+
+// FAMILY_MEMBERS' `.team` values are already full display names on their
+// own ("Yeti's Big Feet") -- this only maps the bare mascot keys above,
+// falling back to the input unchanged for anything else (sandboxed test
+// teams, or any already-full name passed in by mistake).
+export function fullTeamName(team) {
+  return TEAM_SHORT[team] || team;
+}
+
 // Test data only, per Yeti (Aug 2026 sessions) — NOT the real 8-team
 // roster above. Real family emails are still pending from Greg; do not
 // invent them here. Moved here from picks-worker.js (2026-08-25) so

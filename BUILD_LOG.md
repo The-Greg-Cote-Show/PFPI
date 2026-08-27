@@ -2379,3 +2379,163 @@ change and produced the correct result.
 the handoff (full bar-height range legibility, and correct team-following
 through a rank change) are verified against real data in a real browser** —
 not just code-reviewed or assumed from the architecture.
+
+## 2026-08-27, ~2:00 AM — Sixth round: preseason scoring integration, full team names in emails, sender alias
+
+Three items, scheduled via a 2:00 AM CronCreate safety-net wake-up (fired
+right on time, no usage pause hit -- this ran start to finish in one pass).
+
+**1. Preseason scoring integration — DONE, deployed, verified with real
+data and a hand-checked scoring-logic test. This was the big one; full
+detail below since the isolation-by-construction requirement was the
+single most important constraint in the handoff.**
+
+**How isolation was actually achieved (structural, not a guard clause):**
+Added `computePreseasonSnapshot(finalResults, picksByTeam, weekLabel)` to
+worker.js as a completely new, standalone function -- it shares NO code
+and NO mutable state with `computeStandings()`. Concretely:
+- `computeStandings()` is untouched, byte-for-byte, and still only ever
+  iterates `for (week = 1; week <= throughWeek; week++)` -- a numeric
+  range that structurally cannot ever include the string `"preseason-3"`,
+  not even if asked to. There was no temptation to "generalize" that loop
+  to also accept preseason, specifically to avoid creating a shared code
+  path that a future change could accidentally widen.
+- `computePreseasonSnapshot()` never reads from or writes to
+  `results:week:N` (the KV namespace `computeStandings()` reads from) --
+  its input (`finalResults`) comes directly from this tick's own
+  already-in-memory Highlightly game objects, filtered to `status ===
+  "final"`. There is no shared KV key either computation could collide on.
+  Only two generic, weekless math helpers are reused: `splitShare()` and
+  `round2()` (pure functions, no notion of "week" or "cumulative" at all
+  -- reusing these isn't reusing scoring logic, it's reusing arithmetic).
+- The result is committed into `data/week-preseason-3.json`'s own new
+  `stats` field -- NOT merged into `data/standings.json` (the real-season
+  file). The real-season file has no key for preseason and never will,
+  since nothing ever writes one there. Two independent computations, two
+  independent output files -- confirmed by reading the actual diff, not
+  assumed.
+- Preseason is treated as one single, self-contained week (confirmed
+  scope) -- there's no cumulative state to carry in or out at all, so
+  "Weekly Titles" and "Weeks Leading" mathematically collapse to the
+  identical computation for this one case (both reduce to "best record
+  this single week" when there's only one week in the "season"). Noted
+  in-code so this isn't mistaken for a bug later.
+
+**Frontend wiring** (index.html): added `REAL.preseasonStats` (loaded as a
+side effect of the existing `loadRealWeek()` fetch for preseason -- no
+extra network request) and a `realDataFor(field, week)` router that
+existing consumers (`hasRealStandingsForWeek`, `hasRealDataForWeek`, the
+`CATEGORIES` `getData` functions, the Standings pct lookup) now call
+instead of hardcoding `REAL.standings` etc. -- since
+`computePreseasonSnapshot()` deliberately mirrors `computeStandings()`'s
+exact output shape, every existing chart-rendering code path (sorting,
+crowns, two-tone mascot lettering, all of it) works unchanged regardless
+of which source it's pointed at. Also fixed a real gap while wiring this
+up: `loadRealWeek()` was previously only ever called from the Games-tab
+branch of `render()`, so selecting a chart category for preseason without
+visiting Games first would have left `REAL.preseasonStats` null forever --
+now called unconditionally whenever preseason is selected, regardless of
+which tab.
+
+**Verification, in order:**
+1. Deployed, then confirmed live (real curl against the real published
+   file) that the new `stats` field appears in `data/week-preseason-3.json`
+   after the next 5-minute-cadence tick, correctly showing an honest
+   all-zero state for every team/category -- no preseason games have
+   actually kicked off yet (first ones start later Wednesday), so zero is
+   the honest answer, same as how real Week 1 currently shows all-zero
+   too. This confirms the mechanism end-to-end (worker computes -> commits
+   -> publishes) but doesn't exercise the actual scoring math, since there
+   are no real "final" games yet to score against.
+2. To verify the scoring math itself without waiting hours for real games
+   to finish, copied `computePreseasonSnapshot()` verbatim into a
+   standalone Node script and fed it a hand-built scenario using REAL
+   game IDs/matchups from the real cached `schedule:week:preseason-3`, and
+   Gracelin's Giraffes' ACTUAL real currently-saved picks
+   (`picks:preseason-3:Giraffes`, fetched live via wrangler, 6 real
+   picks). Discovered mid-test that most other teams' real
+   preseason picks (Roughriders, Chickens, Ferraris, Maniacs, Lobos,
+   Critters, Llamas) are now gone (404) -- almost certainly Yeti already
+   used the new clear-all-picks admin tool from the prior round to reset
+   for this weekend's clean multi-person test, exactly as that tool was
+   built for. Used clearly-labeled synthetic picks for two more teams
+   (Roughriders, Lobos) to exercise a genuine tie-for-first scenario.
+   First run of the test caught a mistake in my OWN hand-typed expected
+   values (I'd meant to give Lobos a wrong pick on one game but typo'd the
+   correct answer instead, making Lobos a sole 5/5 leader instead of a
+   tied 4/5) -- re-derived the correct expectation from the actual test
+   inputs and confirmed the function's output matched exactly, then fixed
+   the test data to genuinely tie two teams at 4/5 and re-ran. Final
+   confirmed results: Giraffes 3/5 correct (.600, not a title holder,
+   matches picking CLE/SF/LAC right and PIT/WSH wrong against the real
+   winners set in the test), Roughriders and Lobos both 4/5 (.800),
+   correctly tied and split 0.5/0.5 via the same `splitShare()` formula
+   already proven in the real-season code, the untouched 6th game
+   correctly excluded from the 5-game week total for being marked a tie,
+   and Best Week correctly capturing each team's exact record/pct. This is
+   real verification of the formula against real inputs, not "the code
+   ran without erroring."
+3. Not yet re-confirmed in an actual browser this round (see "not yet
+   verified" note below) -- recommend a real look once real preseason
+   games start producing final results Wednesday, to see genuinely
+   non-zero bars render for the first time.
+
+**2. Full team names in every automated email — DONE, deployed.**
+Added `TEAM_SHORT` + a `fullTeamName(team)` helper to shared.js (falls
+back to the input unchanged for FAMILY_MEMBERS' sandboxed test teams,
+which are already full display names on their own). Checked every
+email-generating function across BOTH workers, not just the one most
+recently touched, per the instruction: found and fixed 5 real instances
+in picks-worker.js using the bare mascot name --
+`handleConfirmPicks` (submission notification subject+body),
+`handleSendTestPicksEmail` (admin test tool subject+body),
+`handleSendCorrectionEmail` (admin correction tool subject+body),
+`handleContactSupport` (the "Team: X" context line in support emails),
+and `handleSendReminderEmail` (missing-picks reminder subject+body).
+worker.js's two emails (brief-live confirmation, still-checking fallback)
+never reference a team name at all -- nothing to fix there. Left one
+non-email JSON API error message (`"${team} has already picked..."`,
+shown inline in the UI, never emailed) using the bare name, correctly out
+of scope.
+
+**3. "PFPI Commissioner" sender for the weekly picks-link email — DONE, deployed, with a judgment call on the address.**
+Changed `sendPicksEmail`'s `from` field to `"PFPI Commissioner
+<onboarding@resend.dev>"`. **On the address specifically**: the handoff
+said to confirm against what's actually verified rather than invent a new
+one -- checked, and `thegregcoteshow.com` (the address this function
+previously used, `picks@thegregcoteshow.com`) is documented as NOT
+verified in Resend (unresolved, needs DNS console access nobody has, per
+multiple earlier BUILD_LOG entries), while `onboarding@resend.dev` is the
+one every other email in this codebase already successfully uses. Kept
+the new display name but switched to the proven-working address rather
+than pairing "PFPI Commissioner" with a sender that's documented as
+non-functional -- this also happens to fix this specific email actually
+being sendable at all, which it wasn't before (real weekly picks emails
+currently only go to the 2 sandboxed FAMILY_MEMBERS test accounts via
+`handleWeeklyTrigger`, so this hasn't been a live production email path
+yet either way). Noted in-code to swap back to `picks@thegregcoteshow.com`
+once that domain is actually verified -- nothing else about the function
+needs to change when that happens. Not click-tested with a real send this
+round (the weekly trigger's own send-time floor logic wasn't due to fire
+during this session), but `sendPicksEmail`'s only change was the `from`
+string -- everything else about the send path is identical to what's
+already proven working via `sendPfpiEmail` using the same sender.
+
+## Deploy status (this round)
+
+- `pfpi-scores-worker` redeployed with `computePreseasonSnapshot()`. Cron
+  trigger confirmed intact (`schedule: * * * * *`). Live-verified: the new
+  `stats` field appeared in the real published file on the very next
+  5-minute tick after deploy.
+- `pfpi-picks-worker` redeployed with full-team-name emails and the new
+  `PFPI Commissioner` sender. Cron trigger confirmed intact
+  (`schedule: 0 * * * *`).
+- `shared.js`/`index.html`/`worker.js`/`picks-worker.js` committed and
+  pushed to `main`.
+
+**Not yet verified**: the frontend actually rendering non-zero preseason
+stats in a real browser (blocked on real games finishing, not a code
+issue -- the zero-state end-to-end pipeline and the underlying math are
+both independently confirmed above), and a real end-to-end send of the
+new-sender picks-link email. Both will be naturally exercisable once real
+preseason games start playing out this weekend.

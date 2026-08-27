@@ -286,6 +286,16 @@ let CURRENT_WEEK = 1;
 const REAL = {
   currentWeek: null, standings: null, standingsPct: null, weeks: {}, briefs: {}, tieNotes: {},
   weeklyTitles: null, weeksLeading: null, bestWeek: null,
+  // Preseason's own Standings/Weekly Titles/Weeks Leading/Best Week
+  // snapshot (2026-08-27 round) -- deliberately a completely separate
+  // object from the five fields above, loaded from data/week-preseason-3
+  // .json's own `stats` field, never from data/standings.json. See
+  // worker.js's computePreseasonSnapshot() for why this file-level
+  // separation is the structural guarantee that preseason can never sum
+  // into real regular-season cumulative totals -- there is no code path
+  // here that reads preseason data into any of the five REAL.* fields
+  // above, or vice versa.
+  preseasonStats: null,
 };
 
 async function fetchJSON(path) {
@@ -333,6 +343,12 @@ async function loadRealWeek(week) {
   if (week === PRESEASON_WEEK_KEY) {
     const data = await fetchJSON(`data/week-${week}.json`);
     REAL.weeks[week] = (data && Array.isArray(data.games)) ? data.games : null;
+    // Same fetch already has preseason's own stats snapshot (`stats`,
+    // written by worker.js's computePreseasonSnapshot()) -- captured here
+    // rather than a second request, and guarded against a stale cached
+    // file from before this field existed (same GitHub Pages
+    // propagation-lag gap noted elsewhere in this file).
+    REAL.preseasonStats = (data && data.stats) ? data.stats : null;
     return REAL.weeks[week];
   }
   if (!REAL.currentWeek || week > REAL.currentWeek) { REAL.weeks[week] = null; return null; }
@@ -348,8 +364,22 @@ async function loadRealBrief(week) {
   return REAL.briefs[week];
 }
 
+// Routes to the right source object for a given week -- preseason's own
+// isolated snapshot (REAL.preseasonStats) vs. the real regular-season
+// cumulative data (REAL.*). `field` is "standings", "standingsPct",
+// "weeklyTitles", "weeksLeading", or "bestWeek" -- same names on both
+// sides, since computePreseasonSnapshot() (worker.js) deliberately mirrors
+// computeStandings()'s output shape so every existing consumer below
+// (hasRealDataForWeek, the isStandings pct lookup, etc.) works unchanged
+// regardless of which source it's pointed at.
+function realDataFor(field, week) {
+  if (week === PRESEASON_WEEK_KEY) return REAL.preseasonStats ? REAL.preseasonStats[field] : null;
+  return REAL[field];
+}
+
 function hasRealStandingsForWeek(week) {
-  return !!REAL.standings && TEAMS.every(t => REAL.standings[t] && REAL.standings[t][String(week)] !== undefined);
+  const source = realDataFor("standings", week);
+  return !!source && TEAMS.every(t => source[t] && source[t][String(week)] !== undefined);
 }
 
 // Generic version of the check above, for any per-team-per-week data object
@@ -373,19 +403,19 @@ const CATEGORIES = {
     label: "Standings",
     title: "Season standings",
     desc: "Cumulative correct picks through the selected week.",
-    getData: w => hasRealStandingsForWeek(w) ? REAL.standings : null, unit: "", key: w => w, isStandings: true
+    getData: w => hasRealStandingsForWeek(w) ? realDataFor("standings", w) : null, unit: "", key: w => w, isStandings: true
   },
   weeksLeading: {
     label: "Weeks Leading",
     title: "Weeks leading",
     desc: "Points for holding first place in the overall standings, split on ties.",
-    getData: w => hasRealDataForWeek(REAL.weeksLeading, w) ? REAL.weeksLeading : null, unit: "pts", key: w => w
+    getData: w => hasRealDataForWeek(realDataFor("weeksLeading", w), w) ? realDataFor("weeksLeading", w) : null, unit: "pts", key: w => w
   },
   weeklyTitles: {
     label: "Weekly Titles",
     title: "Weekly titles",
     desc: "Points for the best record in each individual week, split on ties.",
-    getData: w => hasRealDataForWeek(REAL.weeklyTitles, w) ? REAL.weeklyTitles : null, unit: "pts", key: w => w
+    getData: w => hasRealDataForWeek(realDataFor("weeklyTitles", w), w) ? realDataFor("weeklyTitles", w) : null, unit: "pts", key: w => w
   },
   tenWin: {
     label: "10-Win Weeks",
@@ -403,7 +433,7 @@ const CATEGORIES = {
     label: "Best Week",
     title: "Best week (running record)",
     desc: "Each team's best single-week record so far this season — only increases when beaten.",
-    getData: w => hasRealDataForWeek(REAL.bestWeek, w) ? REAL.bestWeek : null, unit: "", key: w => w, isBestWeek: true
+    getData: w => hasRealDataForWeek(realDataFor("bestWeek", w), w) ? realDataFor("bestWeek", w) : null, unit: "", key: w => w, isBestWeek: true
   }
 };
 
@@ -457,6 +487,15 @@ async function render(){
 
   const isPreseason = currentWeek === PRESEASON_WEEK_KEY;
   const isFinal = !isPreseason && currentWeek === NUM_WEEKS;
+
+  // Preseason's stats snapshot (REAL.preseasonStats) is only ever
+  // populated as a side effect of loadRealWeek() -- previously only
+  // called from the Games-tab branch below, which meant selecting a chart
+  // category (Standings etc.) for preseason without ever visiting Games
+  // first would leave it null. Called unconditionally here instead so
+  // every category tab has it available; loadRealWeek() already caches
+  // per-session, so this is a no-op re-fetch once it's loaded once.
+  if (isPreseason) await loadRealWeek(PRESEASON_WEEK_KEY);
   const weekLabelEl = document.getElementById("weekLabel");
   weekLabelEl.textContent = isPreseason ? "Preseason Week 3" : isFinal ? "Final — Week 18" : "Through Week " + currentWeek;
   weekLabelEl.className = "week-label" + (isFinal?" final":"");
@@ -576,8 +615,10 @@ async function render(){
   } else if (cat.isStandings) {
     // Reaching here means dataset came from getData() non-null, which for
     // this category only ever happens when hasRealStandingsForWeek() is
-    // true (see CATEGORIES above) — so REAL.standingsPct is guaranteed set.
-    const pctSource = REAL.standingsPct;
+    // true (see CATEGORIES above) — so the matching pct source is
+    // guaranteed set too (standings/standingsPct are always written
+    // together, on both the real-season and preseason sides).
+    const pctSource = realDataFor("standingsPct", currentWeek);
     TEAMS.forEach(t => {
       const v = dataset[t][wKey];
       values[t] = v;

@@ -2838,3 +2838,135 @@ dropdown correctly repopulated with all of preseason's real matchups
 (hl-566641 CHI @ TEN, hl-566640 DET @ IND, etc.) with their real kickoff
 times -- proving Game genuinely tracks whichever Week is selected rather
 than showing a stale or fixed list.
+
+## Correction link tightened: kickoff expiry, single-game scope (2026-08-27)
+
+Yeti flagged that a correction link (a) stayed valid a flat 24 hours
+regardless of when the game actually kicked off, and (b) showed the whole
+week's games (others locked but visible) -- both a cheating risk and
+confusing next to the original weekly link. Fixed in picks-worker.js,
+backend-enforced, not just hidden in the UI:
+
+- `generateCorrectionToken()` now takes the game's real `kickoffISO` and
+  sets the KV token's `expirationTtl` to the seconds remaining until
+  kickoff (floored at KV's 60s minimum) instead of a flat 24h. Kickoff is
+  the real boundary Yeti wants ("it's too late if you missed the window
+  and the game has started") -- 24h was only ever an approximation that
+  could run past kickoff on a short-deadline game or expire well before it
+  on a Sat/Sun/Mon flat-cutoff one.
+- `handleSendCorrectionEmail()` now flatly refuses to issue a link at all
+  once the target game has already kicked off (`400`, clear error message)
+  -- consistent with the same principle on the issuing side, not just the
+  token's own expiry.
+- `handleGetPicks()` now filters the schedule down to ONLY the
+  `correctionGameId` game before building the response -- a correction
+  link's picks.html view shows exactly one game, never the rest of that
+  week's slate at all (previously showed everything, other games just
+  locked).
+- `handleSubmitPicks()` now rejects any gameId other than
+  `correctionGameId` outright when a correction token is used, regardless
+  of whether that other game happens to still be open -- closes a real
+  latent gap where a correction token could otherwise double as a general
+  late-submission link for the rest of that week's still-open games, not
+  just the one it was issued to fix. Normal weekly tokens are completely
+  unaffected (this branch only triggers when `correctionGameId` is
+  present).
+- Updated the correction email's own wording (no more "valid for 24
+  hours") and picks.html's correction banner/subtitle to match the new
+  single-game, expires-at-kickoff behavior.
+
+Deployed to `pfpi-picks-worker` (version `b4f7177b-8b72-4232-9b0b-
+6c0bf9fa4468`). **Not yet live-tested end-to-end** (would require actually
+issuing a real correction link and letting a real game's kickoff pass) --
+verified by code inspection and by re-reading the exact request/response
+paths involved, not a live click-through this round.
+
+## Live game clock on the Games tab (2026-08-27)
+
+Yeti asked, mid-session, whether the Games tab could show the live game
+clock if the API provides one, reflecting whatever was true as of the
+last poll (not a client-side ticking clock) -- "gives a more live feel."
+
+**Checked first, not assumed**: only `state.description` and
+`state.score.current` were being read from Highlightly's raw response
+(see normalizeHighlightlyGame). Rather than guess whether more was
+available, temporarily deployed a one-line diagnostic log of one real
+in-progress game's full raw payload during tonight's actual PIT@BUF game,
+tailed the live Worker logs, and confirmed the real shape:
+`state.clock` (573, seconds remaining), `state.period` (1), and
+`state.report` -- a ready-made string, `"7:10 - 1st Quarter"` at capture
+time (573s = 9:33, matching `state.report`'s wording at that exact
+moment). Removed the diagnostic immediately after capturing it.
+
+**Fix**: `normalizeHighlightlyGame()` now exposes `clockReport` (Highlightly's
+`state.report`, only populated while `status === "in_progress"` -- null
+for scheduled/final so the frontend can tell "no clock" apart from
+"0:00"). `normalizeGame()` (Big Balls, real season) exposes `clockReport:
+null` unconditionally -- confirmed Big Balls has no in-progress status
+concept at all (only ever "final" or "scheduled," inferred from score
+presence), so there is no live-clock data source for real weeks, only
+preseason's Highlightly feed. `buildWeekPublicJSON()` (real-season path)
+now passes `clockReport` through explicitly since it enumerates fields
+rather than spreading the game object; the preseason merge path already
+spreads the full Highlightly-normalized object, so it needed no change.
+index.html's Games tab shows a small second line under the "Live" badge
+with the clock text when present.
+
+**Verified live**, not just by inspection: pulled the real published
+`data/week-preseason-3.json` mid-game and confirmed `hl-566529`
+(PIT@BUF) carried `"clockReport": "7:10 - 1st Quarter"` with `homeScore:
+7, awayScore: 3, status: "in_progress"` -- genuinely live data, not a
+synthetic test. Then opened the real Games tab in a browser and confirmed
+it rendered exactly that: "LIVE" / "7:10 - 1st Quarter" under the real
+7-3 score. Deployed to `pfpi-scores-worker`.
+
+## Mobile layout: two real overflow bugs found and fixed (2026-08-27)
+
+Yeti reported that on his phone (OnePlus 13R), the Standings chart "falls
+off the page and outside of the graph," and that the top tab row required
+a horizontal swipe instead of just wrapping to more lines. Rather than
+guess a device width, reproduced this directly: loaded the real site in
+an iframe sized to real phone viewport widths (412px down to 320px, well
+within the existing `@media(max-width:650px)` breakpoint) and measured
+actual DOM overflow, not just eyeballing a screenshot.
+
+**Bug 1 -- mascot label width, not just height**: `sizeMascotLabels()`
+sized each vertical team-name label purely off its bar-col's HEIGHT,
+with no regard for WIDTH at all. Fine on desktop (columns always wide),
+but on a narrow mobile column (8 columns can shrink to ~17-20px each),
+the height-based font-size still produced a label (`1.3em` wide, per its
+own CSS) that exceeded the column's actual width. Since `.bars-area`/
+`.chart-panel` deliberately use `overflow:visible` (so crowns/value-labels
+can float above bars), this wasn't clipped -- it pushed the whole page
+wider than the viewport. Measured directly: at 320px viewport width, a
+19.5px-wide label sat inside a 17.4px column, and
+`document.documentElement.scrollWidth (383) > clientWidth (301)` --
+real, confirmed horizontal overflow, not a hunch. Fixed by adding a
+width-based cap (`columnWidth / 1.3`) alongside the existing height-based
+one, taking whichever is tighter.
+
+**Bug 2 -- fixed-size team avatars, found while re-testing bug 1's fix**:
+even after fixing the label sizing, overflow persisted at a WIDTH-
+INDEPENDENT ~383px floor. Traced to `.bar-team-avatar` -- a hard
+`width:28px;height:28px` circle with no shrink logic at all. 8 of them
+plus gaps have a fixed ~294px content-width floor regardless of screen
+size, which alone was enough to force horizontal scroll on narrow phones
+even with bug 1 fixed. Fixed by shrinking the avatar to 20px and
+tightening the row's gap, mobile-only (`@media(max-width:650px)`).
+
+**Bug 3 -- tab row required horizontal swipe**: `.tabs` used
+`overflow-x:auto` unconditionally. Added a mobile-only override
+(`flex-wrap:wrap; overflow-x:visible; width:100%`) so it wraps onto as
+many lines as needed instead.
+
+**Verified live**, not just by inspection: after each fix, re-measured
+`scrollWidth` vs `clientWidth` at 320/340/360/375/390/412px in the same
+real-page iframe harness -- confirmed zero overflow at every width after
+both fixes landed (was `true` at all widths <412px before). Screenshotted
+the real result at 412px: tab row now wraps across 3 lines cleanly (no
+scrollbar), Standings chart renders fully inside the frame with legible,
+non-overlapping mascot labels and correctly-sized avatars. All three
+fixes are shared CSS/JS used by every bar-chart category (Standings,
+Weeks Leading, Weekly Titles, Best Week) and the shared tab bar, not
+Standings-specific, so this covers all of them, not just the one Yeti
+happened to screenshot mentally.

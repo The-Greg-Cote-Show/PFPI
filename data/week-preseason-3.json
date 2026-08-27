@@ -103,7 +103,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Giraffes": "NYJ"
+      }
     },
     {
       "id": "hl-566558",
@@ -155,7 +157,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Giraffes": "WSH"
+      }
     },
     {
       "id": "hl-566531",
@@ -168,7 +172,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Giraffes": "LAC"
+      }
     },
     {
       "id": "hl-566530",
@@ -181,7 +187,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Giraffes": "CLE"
+      }
     },
     {
       "id": "hl-566532",
@@ -194,7 +202,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Giraffes": "SF"
+      }
     },
     {
       "id": "hl-566529",
@@ -207,8 +217,10 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Giraffes": "PIT"
+      }
     }
   ],
-  "updatedAt": "2026-08-27T02:55:23.875Z"
+  "updatedAt": "2026-08-27T03:00:47.109Z"
 }

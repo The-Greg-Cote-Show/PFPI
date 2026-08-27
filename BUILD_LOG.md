@@ -2533,9 +2533,26 @@ already proven working via `sendPfpiEmail` using the same sender.
 - `shared.js`/`index.html`/`worker.js`/`picks-worker.js` committed and
   pushed to `main`.
 
-**Not yet verified**: the frontend actually rendering non-zero preseason
-stats in a real browser (blocked on real games finishing, not a code
-issue -- the zero-state end-to-end pipeline and the underlying math are
-both independently confirmed above), and a real end-to-end send of the
-new-sender picks-link email. Both will be naturally exercisable once real
-preseason games start playing out this weekend.
+**Live browser verification (added after deploy, same round)**: opened
+`index.html?nocache=1` in a real browser, selected the "Preseason" week
+selector, and clicked through all four data-backed categories --
+Standings, Weeks Leading, Weekly Titles, and Best Week. All four render
+without error, correctly show the "Preseason Week 3" badge instead of a
+week number, and honestly display an all-zero/all-tied state across all
+8 teams (crowns shared by every team, 0/0.00 values) -- exactly the
+expected result since no real preseason game has finished yet. This
+confirms the full pipeline end-to-end in the browser: worker computes via
+`computePreseasonSnapshot()` -> commits to `data/week-preseason-3.json`'s
+`stats` field -> frontend fetches via `loadRealWeek()` -> routes through
+the new `realDataFor()` helper -> renders in the same chart component
+used by real weeks. Combined with the earlier offline Node.js test (which
+proved the tie-splitting math itself is correct using real pick data),
+item 1 is now verified as thoroughly as possible before real preseason
+results exist.
+
+**Still not yet verified**: the frontend rendering *non-zero* preseason
+stats (mechanically blocked on real games finishing -- first kickoffs are
+Wednesday evening ET), and a real end-to-end send of the new-sender
+picks-link email. Both will be naturally exercisable once real preseason
+games start playing out this weekend -- worth a quick real-data spot
+check then, though nothing about today's verification suggests a problem.

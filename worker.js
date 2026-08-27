@@ -186,12 +186,42 @@ function normalizeHighlightlyGame(g) {
 }
 
 // Throttled to fit Highlightly's 100/day free-tier budget, per Yeti
-// (2026-08-25) — poll only within each real game day's window, at an
-// interval chosen so that day's window alone stays comfortably under 100
-// (each day's budget resets independently, so this is per-day, not summed
-// across all three): Aug 27/28 (~4hr windows) every 3 min -> 80 polls;
-// Aug 29 (~8hr window) every 5 min -> 96 polls, exactly as specified.
-// Outside these specific dates/hours: no call is made at all -- not just a
+// (2026-08-25), REVISED 2026-08-27 after two corrections to the original
+// design:
+//
+// 1. The real game split is NOT evenly spread across the three days -- it's
+//    4 games Thu Aug 27, 10 games Fri Aug 28, 2 games Sat Aug 29 (confirmed
+//    against the real published schedule + Yeti directly), with one game
+//    each Thu and Fri night kicking off late enough to finish after
+//    midnight ET (LAR@LAC, 10pm ET Thu -> est. finish ~1:15-1:30am ET Fri;
+//    MIN@DEN, 9pm ET Fri -> est. finish ~12:15am ET Sat). The original
+//    per-day windows below cut off well before those two games actually
+//    end, which would have delayed their final score by many hours (until
+//    the next day's window opened) instead of missing it outright.
+//
+// 2. This key is consumed via RapidAPI (see the `x-rapidapi-key` header
+//    below), and RapidAPI's "100/day" quota is NOT a midnight-UTC or
+//    midnight-ET calendar-day reset -- per RapidAPI's own docs, it's a
+//    ROLLING 24-hour window anchored to the account's original subscription
+//    timestamp. Yeti confirmed that timestamp is ~1:00-1:30am ET (signup
+//    confirmation email logged at 1:16am ET). 1:00am ET is used below as
+//    the conservative (earliest-possible) daily boundary between one day's
+//    budget and the next -- a window that closes a few minutes before the
+//    real boundary just leaves unused headroom; one that assumes a later
+//    boundary and is wrong would risk spending the next day's budget early.
+//
+// Budgets under this design (all well under 100, verified by hand):
+//   "Thu" quota day (1am ET Thu -> 1am ET Fri): ~72 polls (7pm-1am, every 5
+//     min), covering all 4 Thu games including the first hour of LAR@LAC.
+//   "Fri" quota day (1am ET Fri -> 1am ET Sat): ~85 polls -- the last ~6
+//     polls of LAR@LAC's tail (1:00-1:30am ET Fri, technically Friday's
+//     budget, negligible against its much larger 10-game allowance),
+//     6pm-1am covering all 10 Fri games, plus MIN@DEN's tail into Sat.
+//   "Sat" quota day (1am ET Sat -> 1am ET Sun): ~84 polls across two short
+//     windows (1-4:30pm, 6-9:30pm ET) bracketing the day's only 2 games,
+//     skipping the dead ~4:30-6pm gap between them.
+//
+// Outside these specific windows: no call is made at all -- not just a
 // no-op response, an actual skipped fetch, so nothing is spent when
 // there's nothing to learn. After Aug 29 this returns false forever; this
 // was only ever a testing bridge, not an ongoing source (see scope notice
@@ -200,10 +230,32 @@ function shouldPollHighlightlyThisTick(now) {
   const parts = getEasternDateParts(now);
   const dateKey = `${parts.year}-${parts.month}-${parts.day}`;
   const hour = parseInt(parts.hour, 10);
-  const minute = now.getUTCMinutes(); // safe: whole-hour ET/UTC offset, see notice above
-  if (dateKey === "2026-08-27") return hour >= 19 && hour < 23 && minute % 3 === 0;
-  if (dateKey === "2026-08-28") return hour >= 18 && hour < 22 && minute % 3 === 0;
-  if (dateKey === "2026-08-29") return hour >= 13 && hour < 21 && minute % 5 === 0;
+  const minute = now.getUTCMinutes(); // safe: whole-hour ET/UTC offset (EDT) all three days
+
+  // Thu Aug 27 evening (PIT@BUF 7pm, NE@CLE 8pm, SF@LV 8pm ET) through the
+  // Aug27/28 ET midnight rollover.
+  if (dateKey === "2026-08-27" && hour >= 19) return minute % 5 === 0;
+  if (dateKey === "2026-08-28" && hour < 1) return minute % 5 === 0;
+  // Tail end of LAR@LAC (10pm ET Thu kickoff, est. finish ~1:15-1:30am ET
+  // Fri) -- deliberately spills a handful of polls past the ~1am ET quota
+  // boundary into Friday's own (much larger) budget rather than stop short
+  // and miss this game's final score for hours.
+  if (dateKey === "2026-08-28" && hour === 1 && minute <= 30) return minute % 5 === 0;
+
+  // Fri Aug 28 evening (10 games, 6-9pm ET kickoffs) through the Aug28/29
+  // ET midnight rollover.
+  if (dateKey === "2026-08-28" && hour >= 18) return minute % 5 === 0;
+  // Tail end of MIN@DEN (9pm ET Fri kickoff, est. finish ~12:15am ET Sat) --
+  // still inside Friday's own quota day (1am Fri -> 1am Sat), not
+  // Saturday's.
+  if (dateKey === "2026-08-29" && hour === 0 && minute <= 35) return minute % 5 === 0;
+
+  // Sat Aug 29: only 2 games (DET@IND 1pm ET, CHI@TEN 6pm ET), each
+  // finishing well within its own window -- two short windows instead of
+  // one long one spanning the dead ~4:30-6pm gap between them.
+  if (dateKey === "2026-08-29" && hour >= 13 && hour < 17) return minute % 5 === 0;
+  if (dateKey === "2026-08-29" && hour >= 18 && hour < 22) return minute % 5 === 0;
+
   return false;
 }
 

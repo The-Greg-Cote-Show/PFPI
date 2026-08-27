@@ -2556,3 +2556,52 @@ Wednesday evening ET), and a real end-to-end send of the new-sender
 picks-link email. Both will be naturally exercisable once real preseason
 games start playing out this weekend -- worth a quick real-data spot
 check then, though nothing about today's verification suggests a problem.
+
+## Highlightly polling window fix (2026-08-27, hours before Thu kickoff)
+
+Yeti asked whether live/final preseason scores would actually show as
+games progress. Checked the real published schedule (`data/week-
+preseason-3.json`) against `shouldPollHighlightlyThisTick()`'s original
+per-day windows and found two real problems with the original design (not
+just theoretical -- these would have caused real, hours-long delays in
+several games' final scores tonight/tomorrow):
+
+1. **Wrong game distribution assumed.** The original windows treated the
+   three preseason days as roughly evenly loaded. The real split (per the
+   published schedule + confirmed directly by Yeti) is 4 games Thu Aug 27,
+   10 games Fri Aug 28, 2 games Sat Aug 29 -- and one game each Thu and Fri
+   night kicks off late enough to finish after midnight ET: LAR@LAC (10pm
+   ET Thu, est. finish ~1:15-1:30am ET Fri) and MIN@DEN (9pm ET Fri, est.
+   finish ~12:15am ET Sat). The original windows (Thu/Fri cutting off at
+   11pm/10pm ET) would have stopped polling 2+ hours before those two games
+   actually ended -- not a total loss (the next day's window would
+   eventually pick up the final score), but a many-hours-late one.
+
+2. **Wrong quota-reset model assumed.** The original design assumed a
+   per-ET-calendar-day budget (implicitly resetting at midnight). Checked
+   this against real documentation: this key is consumed via RapidAPI
+   (`x-rapidapi-key` header), and RapidAPI's own docs confirm the "100/day"
+   quota is a ROLLING 24-hour window anchored to the account's original
+   subscription timestamp, not a midnight reset. Yeti confirmed that
+   timestamp is ~1:00-1:30am ET (signup confirmation email logged 1:16am
+   ET). Used 1:00am ET as the conservative boundary going forward (a window
+   that ends a little before the true boundary just leaves unused
+   headroom; assuming a later boundary that turns out wrong risks spending
+   the next day's budget too early).
+
+**Fix**: rewrote `shouldPollHighlightlyThisTick()` in worker.js with
+windows keyed to the real per-night game spread and the real ~1am ET
+quota boundary -- Thu 7pm ET through a tail ending 1:30am ET Fri (~72
+polls against Thu's quota day + ~6 against Fri's), Fri 6pm ET through a
+tail ending 12:35am ET Sat (~85 polls against Fri's quota day), and two
+short Sat windows (1-4:30pm and 6-9:30pm ET, ~84 polls against Sat's quota
+day) skipping the dead gap between the day's only 2 games. All three
+quota-day totals verified by hand to stay comfortably under 100, with
+10-16 spare polls per day as a buffer against a game running long.
+Deployed to `pfpi-scores-worker` (version `775ae6ea-2561-4ec0-b175-
+4804ad5dfd35`) and pushed to `main` ahead of tonight's 7pm ET kickoff.
+
+**Not yet verified**: cannot confirm live behavior until real games are
+actually in progress tonight -- recommend Yeti (or a future session)
+spot-check that Live status/scores are updating during tonight's games
+and that final scores land within the expected windows, not hours late.

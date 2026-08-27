@@ -2671,3 +2671,10 @@ support ticket to Yeti's real inbox for a synthetic test case.
 button click on a real team's live picks page, and the submit-time race
 path) -- both only exercisable once a real game's deadline actually
 passes tonight, which Yeti said he'd test himself using a real team.
+
+**Follow-up tweak (same day)**: per Yeti, reordered the modal so OK sits
+above the Contact Yeti message/button (was Contact Yeti first, OK below),
+and changed the supporting text to "If you feel you received this message
+in error, please contact Yeti." Live-verified via the same
+`showDeadlinePassedModal()` console call -- screenshot confirms OK (now
+primary/gold) above the new wording and the Contact Yeti button.

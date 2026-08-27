@@ -2678,3 +2678,50 @@ and changed the supporting text to "If you feel you received this message
 in error, please contact Yeti." Live-verified via the same
 `showDeadlinePassedModal()` console call -- screenshot confirms OK (now
 primary/gold) above the new wording and the Contact Yeti button.
+
+## Weekly Digest gated on the week actually being final (2026-08-27)
+
+Yeti asked to confirm the Commissioner's Portal's Weekly Digest doesn't
+show up until after that week's Monday Night game (or whatever its last
+game is) goes final -- explicitly different from the public PFPI stats
+charts on index.html, which are supposed to show real partial progress
+live all week.
+
+**Checked first, not assumed**: `populateDigestWeeks()` (brief.html) built
+its week dropdown as 1..currentWeek and defaulted to `currentWeek` with no
+completeness check at all -- `renderDigest()` would happily show whatever
+partial standings existed for the in-progress current week the moment
+someone opened the tab, any day Thu-Mon. This was a real gap, not
+already-handled.
+
+**Fix**: added `isWeekComplete(games)` -- true only if every game in that
+week's real published schedule (`data/week-N.json`, fetched via the same
+`fetchWeekGames()` the Missing Picks tab already uses) is `status:
+"final"`. `populateDigestWeeks()` now checks this for just the latest
+week (every earlier week is already guaranteed done by its own Tuesday-
+morning current-week rollover -- see shared.js) and caps the selectable
+dropdown at the last week that's actually complete. If even Week 1 isn't
+done yet, the dropdown is left empty with a plain status message instead
+of silently defaulting to nothing. Older, already-final weeks are
+completely unaffected -- can still view/copy any past week's digest same
+as before.
+
+**Verified live**, not just by inspection: pushed to `main`, confirmed
+GitHub Pages propagation, then exercised both branches directly in the
+Commissioner's Portal's own JS (real current data, no login needed to run
+the tab's own functions from the console):
+- **Real current state right now** (regular season hasn't started --
+  `data/current.json` says `currentWeek: 1`, all 16 of `data/week-1.json`'s
+  games are `status: "scheduled"`): dropdown came back empty and the
+  status message read "Week 1 isn't finished yet -- the digest will be
+  available once its Monday Night game (or last game) goes final."
+  This is the exact real-world case the fix targets, not a synthetic one.
+- **Simulated "week complete"** (patched the shared `mpGamesCache` in-page
+  to mark Week 1's 16 games final, without touching real data): dropdown
+  correctly showed "Week 1", auto-selected it, and rendered real digest
+  content -- confirming the gate lifts correctly once a week is actually
+  done, not just that it blocks correctly beforehand.
+
+**Not yet verified**: real end-to-end behavior across an actual week
+finishing (only exercisable once real regular-season Week 1 plays out
+starting Sept 9 -- SEASON_START_ET in shared.js).

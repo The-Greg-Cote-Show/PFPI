@@ -2725,3 +2725,68 @@ the tab's own functions from the console):
 **Not yet verified**: real end-to-end behavior across an actual week
 finishing (only exercisable once real regular-season Week 1 plays out
 starting Sept 9 -- SEASON_START_ET in shared.js).
+
+## Weekly Digest extended to Preseason (2026-08-27)
+
+Yeti wants to use tonight's real preseason games to test that the digest's
+underlying math is correct -- reasonable, since real regular-season data
+won't exist until Sept 9. The digest had no Preseason option at all before
+this.
+
+**Backend gap found**: `computePreseasonSnapshot()` (worker.js) never
+returned a `gamesPlayed` field, unlike real weeks' `data/standings.json`.
+The digest's `buildStandingsBlock()` needs that to compute each team's
+loss count (`losses: gamesPlayed - wins`) -- without it, preseason
+standings would have silently rendered every team at `W-NaN`. Fixed by
+adding `gamesPlayed: { "preseason-3": weekTotal }` to that function's
+return (flat, single-key -- matches the real-week shape exactly, just
+without a running cumulative since preseason is only ever one "week").
+Deployed to `pfpi-scores-worker` (version `d24f90d9-a2f1-4402-b0b9-
+f749e821a57f`).
+
+**Frontend (brief.html)**: added a "Preseason" option to the digest's week
+dropdown (reusing the same `PRESEASON_MP_KEY = "preseason-3"` constant the
+Missing Picks tab already established) -- offered unconditionally,
+regardless of whether any real week is finished, since it's a
+testing/verification sandbox, not a "final week" narrative digest (the
+completeness gate added earlier today stays real-weeks-only). Added a
+separate `fetchPreseasonStats()` pulling `data/week-preseason-3.json`'s
+`stats` field into its own cache variable, never merged with
+`fetchStandingsData()`'s real-season cache -- same isolation-by-
+construction principle as the backend's `computePreseasonSnapshot()`
+(the two datasets are only ever read one-at-a-time by the same generic,
+stateless render functions; nothing sums or merges them). Two small
+render-function tweaks: `buildStandingsBlock()` now takes an optional
+title override (preseason shows "PFPI PRESEASON STANDINGS (Week 3,
+unified)" instead of the nonsensical "PFPI WEEK preseason-3 STANDINGS"),
+and `buildBestWeekBlock()`'s week-tag now checks whether `week` is a
+number before prefixing "W" (preseason's `week` field is the string
+"Preseason", not a number -- was rendering "4-1/WPreseason", now reads
+"4-1/Preseason").
+
+**Verified live**, not just by inspection: pushed both files, deployed the
+Worker, confirmed the real published `data/week-preseason-3.json` now
+carries `gamesPlayed: {"preseason-3":0}` (had to check via `git show
+origin/main:...` directly -- raw.githubusercontent.com was serving a
+stale cached copy that didn't reflect the new automated commit for
+several minutes; the actual committed content was correct immediately).
+Then in a real browser:
+- **Real current zero-state**: Preseason appeared as the only dropdown
+  option (Week 1 still not finished), auto-selected, and rendered a
+  correctly-formatted honest zero-state -- 0-0 records for all 8 teams,
+  "Weeks Leading"/"Weekly Titles" showing all 8 tied at 0.00, "Best Week:
+  No weeks decided yet."
+- **Non-zero calculation check**: injected the same hand-verified scenario
+  from this morning's offline Node test (Lobos & Roughriders tied 4-1
+  leaders, Giraffes 3-2, everyone else 0-5) directly into the page's own
+  `renderDigest()` and confirmed every line -- W-L records, GB column
+  (0/0/1/4/4/4/4/4), the tied-leader split-share formatting on Weeks
+  Leading/Weekly Titles (joined with "&", count omitted for ties, exactly
+  matching the established tie-formatting rule), and "Best Week: Lobos
+  .800 (4-1/Preseason) & Roughriders .800 (4-1/Preseason)" -- all correct
+  against hand math, not just "rendered without erroring."
+
+**Not yet verified**: real non-zero data actually flowing through end to
+end from a real finished preseason game tonight (today's checks used
+real-zero-state + a hand-injected non-zero scenario, not a real completed
+game yet) -- naturally exercisable once tonight's games start finishing.

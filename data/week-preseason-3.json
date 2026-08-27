@@ -263,7 +263,7 @@
       "id": "hl-566529",
       "home": "BUF",
       "away": "PIT",
-      "homeScore": 6,
+      "homeScore": 7,
       "awayScore": 3,
       "status": "in_progress",
       "kickoffISO": "2026-08-27T23:00:00.000Z",
@@ -504,5 +504,5 @@
       "preseason-3": 0
     }
   },
-  "updatedAt": "2026-08-27T23:20:23.351Z"
+  "updatedAt": "2026-08-27T23:25:23.379Z"
 }

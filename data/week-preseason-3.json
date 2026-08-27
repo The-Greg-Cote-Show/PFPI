@@ -464,7 +464,10 @@
           "week": "Preseason"
         }
       }
+    },
+    "gamesPlayed": {
+      "preseason-3": 0
     }
   },
-  "updatedAt": "2026-08-27T19:35:10.780Z"
+  "updatedAt": "2026-08-27T19:40:10.763Z"
 }

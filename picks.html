@@ -146,6 +146,24 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
 </div>
 
+<!-- Shown whenever a pick attempt hits an already-passed deadline -- either
+     clicking a locked game's button directly, or the rarer race where a
+     click landed just before the deadline but the server saw it just after
+     (per Yeti, 2026-08-27). Offers "Contact Yeti" straight into the same
+     support form as tech issues, pre-filled with which game so he doesn't
+     have to ask. -->
+<div class="modal-overlay hidden" id="deadlinePassedModal">
+  <div class="modal-box">
+    <div class="modal-title">Deadline passed</div>
+    <div class="modal-text" id="deadlinePassedText"></div>
+    <div class="modal-text">If you disagree with this, contact Yeti below and he'll take a look.</div>
+    <div class="modal-actions">
+      <button class="modal-btn primary" id="deadlinePassedContactBtn" type="button">Contact Yeti</button>
+      <button class="modal-btn secondary" id="deadlinePassedOkBtn" type="button">OK</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // Points at the deployed picks-worker directly (a different origin than this
 // static page). Bird Feeder principle is unaffected: this is a write action
@@ -293,20 +311,29 @@ async function loadPicks() {
         <div class="kickoff-time">${fmtKickoffTime(game.kickoffISO)}</div>
         ${game.locked ? '<div class="locked-tag">Locked</div>' : ""}
         <div class="pick-buttons">
-          <button class="pick-btn" data-team="${game.away}" ${game.locked ? "disabled" : ""}>${game.away}</button>
-          <button class="pick-btn" data-team="${game.home}" ${game.locked ? "disabled" : ""}>${game.home}</button>
+          <button class="pick-btn" data-team="${game.away}">${game.away}</button>
+          <button class="pick-btn" data-team="${game.home}">${game.home}</button>
         </div>
         <div class="save-status"></div>
       `;
       const buttons = card.querySelectorAll(".pick-btn");
       buttons.forEach(btn => {
         if (btn.dataset.team === game.pick) btn.classList.add("selected");
-        // Clicking the already-selected team deselects it instead of doing
-        // nothing (per Yeti, 2026-08-26) -- guards against an accidental
-        // first click locking someone in before they've made up their mind.
+        // Buttons on a locked game stay enabled (not the native `disabled`
+        // attribute) specifically so a click still does something -- per
+        // Yeti (2026-08-27), someone trying to pick after the deadline
+        // should be told plainly via the deadline-passed popup, not just
+        // met with silence. Clicking the already-selected team on an
+        // unlocked game deselects it instead of doing nothing (per Yeti,
+        // 2026-08-26) -- guards against an accidental first click locking
+        // someone in before they've made up their mind.
         btn.onclick = () => {
+          if (game.locked) {
+            showDeadlinePassedModal(game);
+            return;
+          }
           const clearing = btn.classList.contains("selected");
-          savePick(game.id, clearing ? null : btn.dataset.team, buttons, card.querySelector(".save-status"));
+          savePick(game, clearing ? null : btn.dataset.team, buttons, card.querySelector(".save-status"));
         };
       });
       groupEl.appendChild(card);
@@ -324,7 +351,7 @@ async function loadPicks() {
   document.getElementById("submitSection").classList.remove("hidden");
 }
 
-async function savePick(gameId, teamPicked, buttons, statusEl) {
+async function savePick(game, teamPicked, buttons, statusEl) {
   buttons.forEach(b => b.classList.toggle("selected", b.dataset.team === teamPicked));
   statusEl.textContent = teamPicked ? "Saving..." : "Clearing...";
   statusEl.className = "save-status";
@@ -336,12 +363,19 @@ async function savePick(gameId, teamPicked, buttons, statusEl) {
     const res = await fetch(`${WORKER_BASE}/submit-picks`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, picks: { [gameId]: teamPicked } }),
+      body: JSON.stringify({ token, picks: { [game.id]: teamPicked } }),
     });
     const data = await res.json();
-    if (data.rejectedLockedGames && data.rejectedLockedGames.includes(gameId)) {
+    if (data.rejectedLockedGames && data.rejectedLockedGames.includes(game.id)) {
+      // Rare race: the game was still unlocked when this card rendered, but
+      // its deadline passed in the moments before the server saw this
+      // request. Same popup as clicking an already-locked button (per
+      // Yeti, 2026-08-27) -- undoes the optimistic `selected` toggle above
+      // so the UI doesn't show a pick that was never actually saved.
+      buttons.forEach(b => b.classList.toggle("selected", b.dataset.team === game.pick));
       statusEl.textContent = "That game already locked, pick not saved.";
       statusEl.className = "save-status rejected";
+      showDeadlinePassedModal(game);
     } else {
       statusEl.textContent = teamPicked ? "Saved." : "Cleared.";
       statusEl.className = "save-status saved";
@@ -428,16 +462,51 @@ document.getElementById("submitConfirmYesBtn").onclick = () => {
 };
 
 // ============================================================
+// DEADLINE PASSED (per Yeti, 2026-08-27) -- shown when a pick attempt hits
+// an already-locked game, whether from clicking a locked button directly
+// or the rarer submit-time race (see savePick above). "Contact Yeti" drops
+// straight into the same support form as tech issues, pre-filled with
+// which game so a visitor who disagrees doesn't have to explain it twice.
+// ============================================================
+
+// Set by showDeadlinePassedModal, read once by the Contact Yeti button
+// below, then cleared -- so a later, unrelated "Contact Yeti" click (e.g.
+// from the main submit-section button) doesn't carry stale game context.
+let pendingDeadlineGame = null;
+
+function showDeadlinePassedModal(game) {
+  pendingDeadlineGame = game;
+  document.getElementById("deadlinePassedText").textContent =
+    `The deadline for ${game.away} @ ${game.home} was ${fmtDeadlineFull(game.deadline)} -- this pick can no longer be changed.`;
+  document.getElementById("deadlinePassedModal").classList.remove("hidden");
+}
+document.getElementById("deadlinePassedOkBtn").onclick = () => {
+  pendingDeadlineGame = null;
+  document.getElementById("deadlinePassedModal").classList.add("hidden");
+};
+document.getElementById("deadlinePassedContactBtn").onclick = () => {
+  document.getElementById("deadlinePassedModal").classList.add("hidden");
+  openContactModal();
+};
+
+// ============================================================
 // CONTACT YETI (per Yeti, 2026-08-26) -- was a plain mailto: link, now an
 // actual in-page form that emails the support inbox via the Worker, since
 // a mailto only works if the visitor's device has a mail client configured.
 // ============================================================
 
-document.getElementById("contactYetiBtn").onclick = () => {
+function openContactModal() {
   document.getElementById("contactStatus").textContent = "";
   document.getElementById("contactStatus").className = "submit-status";
+  // Pre-fill from a deadline-passed popup (see above) if that's how we got
+  // here; otherwise leave blank as before.
+  document.getElementById("contactMessage").value = pendingDeadlineGame
+    ? `I tried to pick ${pendingDeadlineGame.away} @ ${pendingDeadlineGame.home} after the deadline (${fmtDeadlineFull(pendingDeadlineGame.deadline)}) and would like to discuss.`
+    : "";
+  pendingDeadlineGame = null;
   document.getElementById("contactModal").classList.remove("hidden");
-};
+}
+document.getElementById("contactYetiBtn").onclick = openContactModal;
 document.getElementById("contactCancelBtn").onclick = () => {
   document.getElementById("contactModal").classList.add("hidden");
 };

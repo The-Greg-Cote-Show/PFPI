@@ -772,6 +772,29 @@ async function fetchStandingsData() {
   }
 }
 
+// Separate cache, separate file, separate fetch from fetchStandingsData()
+// above -- deliberately never merged with real-season standingsData, same
+// isolation-by-construction principle as computePreseasonSnapshot() in
+// worker.js (see BUILD_LOG.md). data/week-preseason-3.json's `stats` field
+// has the exact same shape as data/standings.json (same key names, just
+// keyed by "preseason-3" instead of a week number), so the same
+// buildStandingsBlock/buildPointBlock/buildBestWeekBlock render functions
+// below work unchanged on either -- only the raw data objects stay apart.
+let preseasonStatsData = null;
+
+async function fetchPreseasonStats() {
+  if (preseasonStatsData !== null) return preseasonStatsData;
+  try {
+    const res = await fetch(`data/week-${PRESEASON_MP_KEY}.json?t=${Date.now()}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    preseasonStatsData = (data && data.stats) ? data.stats : null;
+    return preseasonStatsData;
+  } catch (e) {
+    return null;
+  }
+}
+
 // Same formatting rule as index.html's fmtPct (duplicated intentionally --
 // it's a formatting helper, not scoring logic, and this is a separate page).
 function fmtPct(v) {
@@ -799,21 +822,23 @@ async function populateDigestWeeks() {
   const statusEl = document.getElementById("digestStatus");
   sel.innerHTML = "";
 
-  // Only the latest week can possibly still be in progress -- every prior
-  // week's own Tuesday-morning rollover (see shared.js's current-week
-  // formula) has already passed, so by construction those are done. Check
-  // just this one week rather than every week in the dropdown every time.
+  // Preseason is always offered, regardless of real-season completeness
+  // below -- per Yeti (2026-08-27), it's a testing/verification sandbox
+  // (same PRESEASON_MP_KEY the Missing Picks tab already uses), not a
+  // "final week" narrative digest, so it shouldn't wait on anything.
+  const preseasonOpt = document.createElement("option");
+  preseasonOpt.value = PRESEASON_MP_KEY;
+  preseasonOpt.textContent = "Preseason";
+  sel.appendChild(preseasonOpt);
+
+  // Only the latest real week can possibly still be in progress -- every
+  // prior week's own Tuesday-morning rollover (see shared.js's
+  // current-week formula) has already passed, so by construction those
+  // are done. Check just this one week rather than every week in the
+  // dropdown every time.
   const latestGames = await fetchWeekGames(currentWeek);
   const latestComplete = isWeekComplete(latestGames);
   const maxSelectableWeek = latestComplete ? currentWeek : currentWeek - 1;
-
-  if (maxSelectableWeek < 1) {
-    statusEl.textContent = "Week 1 isn't finished yet — the digest will be available once its Monday Night game (or last game) goes final.";
-    statusEl.className = "status show";
-    document.getElementById("digestOutput").innerHTML = "";
-    currentDigestPlainText = "";
-    return;
-  }
 
   for (let w = 1; w <= maxSelectableWeek; w++) {
     const opt = document.createElement("option");
@@ -821,7 +846,15 @@ async function populateDigestWeeks() {
     opt.textContent = "Week " + w;
     sel.appendChild(opt);
   }
-  sel.value = maxSelectableWeek;
+
+  if (maxSelectableWeek < 1) {
+    statusEl.textContent = "No regular-season week is finished yet -- Preseason is available to test now; real weeks will appear here once each one's last game goes final.";
+    statusEl.className = "status show";
+  }
+
+  // Default to the most useful real week if one's actually finished;
+  // otherwise Preseason is the only thing there is to look at right now.
+  sel.value = maxSelectableWeek >= 1 ? String(maxSelectableWeek) : PRESEASON_MP_KEY;
   await renderDigest();
 }
 
@@ -832,7 +865,7 @@ async function populateDigestWeeks() {
 // wins -- the full "(winDiff + lossDiff)/2" formula and this reduce to the
 // same integer here. Verified against Greg's real worked example (177/176/
 // 175/175/168/160/156 wins -> GB 0/1/2/2/9/17/21) before relying on it.
-function buildStandingsBlock(st, week, isFinal) {
+function buildStandingsBlock(st, week, isFinal, titleOverride) {
   const wKey = String(week);
   const gp = (st.gamesPlayed && st.gamesPlayed[wKey]) || 0;
   const rows = REAL_TEAMS.map(t => {
@@ -844,8 +877,11 @@ function buildStandingsBlock(st, week, isFinal) {
 
   // Header: same bold/underline/ALL-CAPS treatment all season, per Yeti
   // (2026-08-25) -- only the wording changes between mid-season and final.
+  // `titleOverride` (added 2026-08-27 for Preseason) skips both the
+  // week-number and "final" wording entirely -- preseason isn't a numbered
+  // week or a real season final, so neither reads sensibly there.
   const lines = [];
-  lines.push(isFinal ? `PFPI OFFICIAL FINAL ${SEASON_YEAR} STANDINGS` : `PFPI WEEK ${week} STANDINGS`);
+  lines.push(titleOverride || (isFinal ? `PFPI OFFICIAL FINAL ${SEASON_YEAR} STANDINGS` : `PFPI WEEK ${week} STANDINGS`));
   lines.push(`Team`.padEnd(32) + (isFinal ? "Final Season" : "Season").padEnd(13) + "GB");
   rows.forEach(r => {
     const name = TEAM_SHORT[r.team].padEnd(32);
@@ -901,8 +937,12 @@ function buildBestWeekBlock(st, week) {
 
   const maxPct = Math.max(...entries.map(e => e.pct));
   const holders = entries.filter(e => e.pct === maxPct);
+  // Real weeks' own `week` field is a number ("W12"); preseason's is the
+  // literal string "Preseason" (see computePreseasonSnapshot() in
+  // worker.js) -- reads as "4-1/Preseason" rather than the nonsensical
+  // "4-1/WPreseason".
   const text = holders
-    .map(e => `${e.team} ${fmtPct(e.pct)} (${e.correct}-${e.total - e.correct}/W${e.week})`)
+    .map(e => `${e.team} ${fmtPct(e.pct)} (${e.correct}-${e.total - e.correct}/${typeof e.week === "number" ? "W" + e.week : e.week})`)
     .join(" & ");
   return `Best Week: ${text}.`;
 }
@@ -934,28 +974,35 @@ let currentDigestPlainText = "";
 async function renderDigest() {
   const outputEl = document.getElementById("digestOutput");
   const statusEl = document.getElementById("digestStatus");
-  const week = parseInt(document.getElementById("digestWeekSelect").value, 10);
+  const rawWeek = document.getElementById("digestWeekSelect").value;
+  const isPreseason = rawWeek === PRESEASON_MP_KEY;
+  const week = isPreseason ? PRESEASON_MP_KEY : parseInt(rawWeek, 10);
 
   statusEl.textContent = "Loading...";
   statusEl.className = "status show";
   outputEl.innerHTML = "";
   currentDigestPlainText = "";
 
-  const st = await fetchStandingsData();
+  // Two entirely separate data sources/fetches (see fetchPreseasonStats()'s
+  // own isolation note above) -- never merged, only one used per render.
+  const st = isPreseason ? await fetchPreseasonStats() : await fetchStandingsData();
   if (!st || !st.weeklyTitles || !st.weeksLeading || !st.bestWeek || !st.gamesPlayed) {
     // Missing new fields specifically (rather than the whole fetch failing)
-    // means a stale cached data/standings.json from before this build --
-    // same GitHub Pages propagation-lag gap noted elsewhere in this file.
-    statusEl.textContent = "Digest data isn't available yet — check back in a few minutes.";
+    // means a stale cached data file from before this build -- same GitHub
+    // Pages propagation-lag gap noted elsewhere in this file.
+    statusEl.textContent = isPreseason
+      ? "Preseason stats aren't available yet — check back once games are underway."
+      : "Digest data isn't available yet — check back in a few minutes.";
     statusEl.className = "status show";
     return;
   }
   statusEl.textContent = "";
   statusEl.className = "status";
 
-  const isFinal = week === NUM_WEEKS;
+  const isFinal = !isPreseason && week === NUM_WEEKS;
+  const titleOverride = isPreseason ? "PFPI PRESEASON STANDINGS (Week 3, unified)" : null;
   const parts = [
-    buildStandingsBlock(st, week, isFinal),
+    buildStandingsBlock(st, week, isFinal, titleOverride),
     buildPointBlock("Weeks Leading", st.weeksLeading, st.weeksLeadingCount, week),
     buildPointBlock("Weekly Titles", st.weeklyTitles, st.weeklyTitlesCount, week),
     "10-Win Weeks: Not available yet — no real data source for this category.",

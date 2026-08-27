@@ -513,7 +513,16 @@ function computePreseasonSnapshot(finalResults, picksByTeam, weekLabel) {
     };
   });
 
-  return { standings, standingsPct, weeklyTitles, weeklyTitlesCount, weeksLeading, weeksLeadingCount, bestWeek };
+  // gamesPlayed (added 2026-08-27 for the Commissioner's Digest, which
+  // needs a loss count -- `wins`/`gamesPlayed` -- the same way it already
+  // does for real weeks via data/standings.json's own gamesPlayed field).
+  // Flat, not per-team, matching that same real-week shape exactly:
+  // computeStandings() above keys this identically (gamesPlayed[week] =
+  // total games), it's just a single-week value here instead of a running
+  // cumulative total, since there's only ever one preseason "week."
+  const gamesPlayed = { [weekLabel]: weekTotal };
+
+  return { standings, standingsPct, weeklyTitles, weeklyTitlesCount, weeksLeading, weeksLeadingCount, bestWeek, gamesPlayed };
 }
 
 // ============================================================

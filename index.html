@@ -167,6 +167,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
      intentional rather than a lopsided leftover single column. */
   .header-top{flex-wrap:wrap;}
   .tabs{flex-wrap:wrap;overflow-x:visible;width:100%;}
+  /* Second independent overflow source found alongside the mascot-label
+     fix above (2026-08-27): .bar-team-avatar is a hard 28px circle with no
+     shrink logic at all -- 8 of them plus gaps have a ~294px content-width
+     floor no matter how narrow the screen is, which alone was enough to
+     force the whole page into horizontal scroll on narrow phones even
+     with the label-width fix in place. Shrunk here (and the row's own gap
+     tightened) rather than hidden, unlike .bar-team-name above, since the
+     avatar is the only per-team identifier left once the name is hidden. */
+  .bar-team-avatar{width:20px;height:20px;font-size:.5rem;}
+  .labels-cols{gap:4px;}
 }
 </style>
 </head>

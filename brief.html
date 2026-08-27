@@ -779,17 +779,49 @@ function fmtPct(v) {
   return s === "1.000" ? "1.000" : s.replace(/^0/, "");
 }
 
+// A week's games are never all decided until its own last game (normally
+// Monday Night Football) goes final -- per Yeti (2026-08-27), the digest
+// is meant for Greg's own use once a week is fully wrapped, unlike the
+// public PFPI stats charts (index.html), which are supposed to show real
+// partial progress live throughout the week. "Complete" here means every
+// game in that week's real published schedule (data/week-N.json, the same
+// file the Missing Picks tab already reads via fetchWeekGames) is
+// status:"final" -- not tied to which weekday it happens to be, so it
+// still holds up against a rescheduled/postponed game landing on some
+// other day.
+function isWeekComplete(games) {
+  return Array.isArray(games) && games.length > 0 && games.every(g => g.status === "final");
+}
+
 async function populateDigestWeeks() {
   const currentWeek = await fetchCurrentWeek();
   const sel = document.getElementById("digestWeekSelect");
+  const statusEl = document.getElementById("digestStatus");
   sel.innerHTML = "";
-  for (let w = 1; w <= currentWeek; w++) {
+
+  // Only the latest week can possibly still be in progress -- every prior
+  // week's own Tuesday-morning rollover (see shared.js's current-week
+  // formula) has already passed, so by construction those are done. Check
+  // just this one week rather than every week in the dropdown every time.
+  const latestGames = await fetchWeekGames(currentWeek);
+  const latestComplete = isWeekComplete(latestGames);
+  const maxSelectableWeek = latestComplete ? currentWeek : currentWeek - 1;
+
+  if (maxSelectableWeek < 1) {
+    statusEl.textContent = "Week 1 isn't finished yet — the digest will be available once its Monday Night game (or last game) goes final.";
+    statusEl.className = "status show";
+    document.getElementById("digestOutput").innerHTML = "";
+    currentDigestPlainText = "";
+    return;
+  }
+
+  for (let w = 1; w <= maxSelectableWeek; w++) {
     const opt = document.createElement("option");
     opt.value = w;
     opt.textContent = "Week " + w;
     sel.appendChild(opt);
   }
-  sel.value = currentWeek;
+  sel.value = maxSelectableWeek;
   await renderDigest();
 }
 

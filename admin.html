@@ -17,7 +17,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .title-main{font-size:1.3rem;font-weight:800;margin-bottom:1.25rem;}
 .title-main span{color:var(--gold);}
 label{display:block;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:.85rem 0 .3rem;}
-input{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:.6rem .7rem;border-radius:8px;font-size:.85rem;}
+input,select{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:.6rem .7rem;border-radius:8px;font-size:.85rem;}
 button{margin-top:1.1rem;background:var(--blue);border:none;color:#08111f;font-weight:700;padding:.65rem 1.1rem;border-radius:8px;cursor:pointer;font-size:.82rem;}
 button:hover{opacity:.9;}
 .status{font-size:.75rem;margin-top:.75rem;min-height:1em;}
@@ -154,9 +154,9 @@ button:hover{opacity:.9;}
       </optgroup>
     </select>
     <label for="correctionWeek">Week</label>
-    <input type="text" id="correctionWeek" placeholder="preseason-3, or 1-18">
-    <label for="correctionGameId">Game ID</label>
-    <input type="text" id="correctionGameId" placeholder="matches the id in data/week-N.json">
+    <select id="correctionWeek"></select>
+    <label for="correctionGameId">Game</label>
+    <select id="correctionGameId"></select>
     <button id="correctionBtn">Email me this correction link</button>
     <div class="status" id="correctionStatus"></div>
   </div>
@@ -200,6 +200,7 @@ function showLoggedIn() {
   document.getElementById("correctionPanel").classList.remove("hidden");
   document.getElementById("clearPicksPanel").classList.remove("hidden");
   loadBriefForWeek();
+  populateCorrectionWeeks();
 }
 
 // Clears a rejected/expired session and falls back to the login gate --
@@ -475,12 +476,100 @@ document.getElementById("testEmailBtn").onclick = async () => {
   }
 };
 
+// ============================================================
+// SEND CORRECTION FORM -- Week and Game ID were both hand-typed before
+// (per Yeti, 2026-08-27): Game ID specifically required already knowing
+// the exact opaque id from data/week-N.json, with no team names shown at
+// all. Both are now dropdowns -- Week lists Preseason + every real week
+// through the current one, and Game always reflects whichever Week is
+// currently selected, populated from that week's own real published
+// schedule (the same public data/week-N.json / data/week-preseason-3.json
+// files the rest of the site already reads), so it's impossible to pick a
+// game that isn't actually on that week's real schedule.
+// ============================================================
+
+async function fetchCorrectionCurrentWeek() {
+  try {
+    const res = await fetch(`${WORKER_BASE}/current-week`);
+    const data = await res.json();
+    return data.currentWeek || 1;
+  } catch (e) {
+    return 1;
+  }
+}
+
+function fmtCorrectionKickoff(iso) {
+  return new Date(iso).toLocaleString("en-US", {
+    timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+  }) + " ET";
+}
+
+async function populateCorrectionWeeks() {
+  const sel = document.getElementById("correctionWeek");
+  const currentWeek = await fetchCorrectionCurrentWeek();
+  sel.innerHTML = "";
+  const preseasonOpt = document.createElement("option");
+  preseasonOpt.value = "preseason-3";
+  preseasonOpt.textContent = "Preseason";
+  sel.appendChild(preseasonOpt);
+  for (let w = 1; w <= currentWeek; w++) {
+    const opt = document.createElement("option");
+    opt.value = String(w);
+    opt.textContent = "Week " + w;
+    sel.appendChild(opt);
+  }
+  sel.value = String(currentWeek);
+  await populateCorrectionGames();
+}
+
+async function populateCorrectionGames() {
+  const week = document.getElementById("correctionWeek").value;
+  const gameSel = document.getElementById("correctionGameId");
+  gameSel.innerHTML = "";
+
+  let games = [];
+  try {
+    const res = await fetch(`data/week-${week}.json?t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      games = Array.isArray(data.games) ? data.games : [];
+    }
+  } catch (e) {
+    games = [];
+  }
+
+  if (games.length === 0) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No schedule loaded for this week yet";
+    gameSel.appendChild(opt);
+    gameSel.disabled = true;
+    return;
+  }
+
+  games.forEach(g => {
+    const opt = document.createElement("option");
+    opt.value = g.id;
+    opt.textContent = `${g.away} @ ${g.home} — ${fmtCorrectionKickoff(g.kickoffISO)}`;
+    gameSel.appendChild(opt);
+  });
+  gameSel.disabled = false;
+}
+
+document.getElementById("correctionWeek").onchange = populateCorrectionGames;
+
 document.getElementById("correctionBtn").onclick = async () => {
   const statusEl = document.getElementById("correctionStatus");
+  const gameId = document.getElementById("correctionGameId").value;
+  if (!gameId) {
+    statusEl.textContent = "No game selected -- pick a week with a loaded schedule first.";
+    statusEl.className = "status error";
+    return;
+  }
   const body = {
     team: document.getElementById("correctionTeam").value,
     week: document.getElementById("correctionWeek").value,
-    gameId: document.getElementById("correctionGameId").value,
+    gameId,
   };
   statusEl.textContent = "Sending...";
   statusEl.className = "status";

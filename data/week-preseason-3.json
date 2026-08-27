@@ -12,7 +12,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "CHI"
+      }
     },
     {
       "id": "hl-566640",
@@ -25,7 +27,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "DET"
+      }
     },
     {
       "id": "hl-566560",
@@ -38,7 +42,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "DEN"
+      }
     },
     {
       "id": "hl-566557",
@@ -51,7 +57,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "SEA"
+      }
     },
     {
       "id": "hl-566561",
@@ -64,7 +72,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "DAL"
+      }
     },
     {
       "id": "hl-566553",
@@ -77,7 +87,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "PHI"
+      }
     },
     {
       "id": "hl-566562",
@@ -90,7 +102,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "GB"
+      }
     },
     {
       "id": "hl-566555",
@@ -103,7 +117,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "NYG"
+      }
     },
     {
       "id": "hl-566558",
@@ -116,7 +132,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "JAX"
+      }
     },
     {
       "id": "hl-566556",
@@ -129,7 +147,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "MIA"
+      }
     },
     {
       "id": "hl-566559",
@@ -142,7 +162,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "HOU"
+      }
     },
     {
       "id": "hl-566554",
@@ -155,7 +177,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "BAL"
+      }
     },
     {
       "id": "hl-566531",
@@ -168,7 +192,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "LAC"
+      }
     },
     {
       "id": "hl-566530",
@@ -181,7 +207,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "NE"
+      }
     },
     {
       "id": "hl-566532",
@@ -194,7 +222,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "SF"
+      }
     },
     {
       "id": "hl-566529",
@@ -207,7 +237,9 @@
       "winner": null,
       "tie": false,
       "hasRealTime": true,
-      "picks": {}
+      "picks": {
+        "Lobos": "BUF"
+      }
     }
   ],
   "stats": {
@@ -434,5 +466,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-27T18:45:21.388Z"
+  "updatedAt": "2026-08-27T18:50:10.810Z"
 }

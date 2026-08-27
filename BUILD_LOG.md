@@ -2790,3 +2790,51 @@ Then in a real browser:
 end from a real finished preseason game tonight (today's checks used
 real-zero-state + a hand-injected non-zero scenario, not a real completed
 game yet) -- naturally exercisable once tonight's games start finishing.
+
+## Admin correction form: dropdowns instead of hand-typed Week/Game ID (2026-08-27)
+
+Yeti reported the admin portal's "Send correction form" required typing a
+raw Game ID with no way to look one up -- the field's own placeholder
+said "matches the id in data/week-N.json," meaning you'd have to go open
+that file yourself and find something like `hl-566529` with no team names
+shown anywhere.
+
+**Fix (admin.html only -- no backend change; `/admin/send-correction-
+email` already accepted the same team/week/gameId fields, just previously
+hand-typed)**:
+- `Week` is now a `<select>` -- "Preseason" plus every real week through
+  the current one (via the same `/current-week` endpoint other pages use),
+  not capped on completeness the way the Digest tab is, since this tool's
+  main real-world use is fixing a pick on the CURRENT, still-in-progress
+  week.
+- `Game` (renamed from "Game ID") is now a `<select>` that repopulates
+  every time Week changes, reading that week's real published schedule
+  (`data/week-N.json` / `data/week-preseason-3.json`, the same public
+  files the rest of the site already reads) and listing each game as
+  "AWAY @ HOME — Weekday, Month Day, H:MM AM/PM ET", with the real
+  schedule id as the option's value underneath -- picking a game no longer
+  requires knowing an id, a team abbreviation, or the file format at all.
+  If a week's schedule hasn't loaded yet, the dropdown shows a plain "No
+  schedule loaded for this week yet" placeholder and disables itself
+  rather than allowing a bad submission.
+- Added a `select` rule alongside the existing `input` CSS rule -- the two
+  pre-existing selects on this page (Team pickers) had no matching style
+  rule at all before this and were rendering as unstyled default browser
+  dropdowns; fixed for all selects on the page, not just the two new ones.
+- Send button now checks for an actual selected game id before submitting
+  ("No game selected -- pick a week with a loaded schedule first.")
+  instead of silently POSTing an empty gameId.
+
+**Verified live**, not by inspection alone: pushed to `main`, confirmed
+GitHub Pages propagation, then exercised the real dropdown-population
+functions directly in the browser console (no login needed to test the
+panel's own JS, same approach used earlier today for picks.html/
+brief.html): confirmed Week correctly listed "Preseason" + "Week 1" (real
+season hasn't gone beyond Week 1 yet) and defaulted to Week 1; confirmed
+Week 1's Game dropdown populated with all 16 real Week 1 matchups and
+real (if Big Balls-placeholder-timed, a pre-existing unrelated gap) game
+ids; then switched the Week select to Preseason and confirmed the Game
+dropdown correctly repopulated with all of preseason's real matchups
+(hl-566641 CHI @ TEN, hl-566640 DET @ IND, etc.) with their real kickoff
+times -- proving Game genuinely tracks whichever Week is selected rather
+than showing a stale or fixed list.

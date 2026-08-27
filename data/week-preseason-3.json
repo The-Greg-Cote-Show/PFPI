@@ -274,7 +274,7 @@
         "Lobos": "BUF",
         "Critters": "BUF"
       },
-      "clockReport": "15:00 - 2nd Quarter"
+      "clockReport": "11:59 - 2nd Quarter"
     }
   ],
   "stats": {
@@ -504,5 +504,5 @@
       "preseason-3": 0
     }
   },
-  "updatedAt": "2026-08-27T23:45:29.317Z"
+  "updatedAt": "2026-08-27T23:50:23.306Z"
 }

@@ -137,6 +137,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .game-at{color:var(--muted);font-size:.68rem;font-weight:600;}
 .game-status{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;min-width:78px;text-align:right;flex-shrink:0;line-height:1.3;}
 .game-status.final{color:var(--green);}
+.game-clock{font-size:.6rem;color:var(--muted);text-transform:none;letter-spacing:0;margin-top:.1rem;}
 .game-expand-icon{color:var(--muted);font-size:.7rem;flex-shrink:0;transition:transform .15s;width:14px;text-align:center;}
 .game-card.expanded .game-expand-icon{transform:rotate(180deg);}
 
@@ -160,6 +161,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   .bars-area{gap:5px;}
   .bar-team-name{display:none;}
   .picks-grid{grid-template-columns:repeat(2,1fr);}
+  /* Per Yeti (2026-08-27): the tab row required a horizontal swipe to see
+     every category on mobile -- wraps to as many lines as needed instead
+     (normally two on a phone-width screen), full-width so the wrap looks
+     intentional rather than a lopsided leftover single column. */
+  .header-top{flex-wrap:wrap;}
+  .tabs{flex-wrap:wrap;overflow-x:visible;width:100%;}
 }
 </style>
 </head>
@@ -742,12 +749,29 @@ async function render(){
 // via getBoundingClientRect() rather than hardcoded, so it stays correct
 // across the desktop/mobile plot-row height breakpoint without duplicating
 // that number here.
+// Width cap added 2026-08-27, per Yeti (real bug on his OnePlus 13R,
+// reproduced and confirmed here at real narrow viewport widths): this
+// function used to size purely off the bar-col's HEIGHT, with no regard
+// for its WIDTH at all. `.bar-mascot-label` is 1.3em wide (see its own CSS
+// comment), so on a wide desktop column that was never a problem -- but on
+// a narrow mobile column (8 columns can shrink to ~17-20px each), the
+// height-based font-size still came out large enough that 1.3em exceeded
+// the column's actual width. Since `.bars-area`/`.chart-panel` deliberately
+// use overflow:visible (so crowns/value-labels can float above the bars),
+// that overflow wasn't clipped -- it pushed the whole page wider than the
+// viewport, forcing real horizontal scroll (measured: docScrollWidth >
+// docClientWidth at 320px width, label 19.5px wide inside a 17.4px
+// column). Fix: also cap the font-size so the label's own box (1.3 *
+// fontSize) never exceeds the column's real width, whichever constraint
+// (height or width) is tighter.
 function sizeMascotLabels(barsArea) {
   barsArea.querySelectorAll(".bar-mascot-label").forEach(el => {
     const barCol = el.closest(".bar-col");
-    const heightPx = barCol.getBoundingClientRect().height;
-    const available = heightPx * 0.82;
-    const size = Math.max(9, Math.min(15, available / (el.textContent.length * 1.05)));
+    const rect = barCol.getBoundingClientRect();
+    const available = rect.height * 0.82;
+    const heightBasedSize = available / (el.textContent.length * 1.05);
+    const widthBasedSize = rect.width / 1.3;
+    const size = Math.max(9, Math.min(15, heightBasedSize, widthBasedSize));
     el.style.fontSize = size + "px";
   });
 }
@@ -805,7 +829,15 @@ function renderGames(realGames){
         <div class="game-score">${awayDisplay}</div>
         <div class="game-team${awayWon ? " winner" : ""}">${g.away}</div>
       </div>
-      <div class="game-status${isFinal ? " final" : ""}">${statusLabel}</div>
+      <div class="game-status${isFinal ? " final" : ""}">${statusLabel}${
+        // Live game clock (added 2026-08-27, per Yeti): only ever populated
+        // for in_progress preseason games via Highlightly's own
+        // state.report field (see normalizeHighlightlyGame, worker.js) --
+        // reflects whatever was true as of the last poll, not a real-time
+        // ticking clock, hence "as of" rather than implying second-by-
+        // second accuracy.
+        g.status === "in_progress" && g.clockReport ? `<div class="game-clock">${g.clockReport}</div>` : ""
+      }</div>
       <div class="game-expand-icon">&#9660;</div>
     `;
     row.onclick = () => {

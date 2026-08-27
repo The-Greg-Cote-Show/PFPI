@@ -72,16 +72,27 @@ async function generateWeeklyToken(team, week, env) {
 // form... much better than me making the changes." Unlike a normal weekly
 // token, this one carries a correctionGameId that unlocks exactly that one
 // game past its deadline (see handleGetPicks/handleSubmitPicks) -- nothing
-// else about the token or the picks flow changes. 24h TTL (weekly tokens
-// have none) since this grants a real, if narrow, unlock capability and
-// shouldn't linger indefinitely.
-async function generateCorrectionToken(team, week, gameId, env) {
+// else about the token or the picks flow changes.
+//
+// TTL changed (2026-08-27, per Yeti) from a flat 24h to expiring exactly
+// at that game's own kickoff -- "it's too late if you missed the window
+// and the game has started." A flat 24h window could let a correction
+// outlive kickoff entirely (a deadline that passed hours before a late
+// kickoff) or, for the Sat/Sun/Mon flat-cutoff rule, expire well BEFORE a
+// Monday game's real kickoff even though the correction should still be
+// valid until then -- kickoff is the actual real-world boundary Yeti
+// wants, a flat 24h was only ever an approximation of it. Cloudflare KV
+// requires a minimum 60s TTL, so this floors there rather than reject a
+// correction for a game about to kick off in under a minute (the request
+// itself is still refused outright below if kickoff has already passed).
+async function generateCorrectionToken(team, week, gameId, kickoffISO, env) {
   const payload = { team, week, correctionGameId: gameId, issued: Date.now() };
   const signed = await signPayload(payload, env.FAMILY_TOKEN_SECRET);
+  const secondsUntilKickoff = Math.floor((new Date(kickoffISO).getTime() - Date.now()) / 1000);
   await env.PFPI_KV.put(
     `token:${signed}`,
     JSON.stringify({ team, week, correctionGameId: gameId }),
-    { expirationTtl: 24 * 60 * 60 }
+    { expirationTtl: Math.max(60, secondsUntilKickoff) }
   );
   return signed;
 }
@@ -253,17 +264,22 @@ async function handleGetPicks(request, env) {
   const schedule = await getWeekSchedule(week, env);
   const saved = await getSavedPicks(team, week, env) || {};
 
-  const games = schedule.map(g => ({
+  // A correction token (see handleSendCorrectionEmail) shows ONLY the one
+  // game it names -- not the rest of that week's slate, locked or
+  // otherwise. Changed 2026-08-27 per Yeti: seeing the whole week's games
+  // (even locked) both risked cheating (a peek at what everyone else
+  // picked/how the week is shaping up past deadline) and read as
+  // confusing next to the original weekly link. A normal weekly token is
+  // completely unaffected -- correctionGameId is simply absent from its
+  // payload, so `visibleSchedule` below is the full schedule as before.
+  const visibleSchedule = correctionGameId ? schedule.filter(g => g.id === correctionGameId) : schedule;
+
+  const games = visibleSchedule.map(g => ({
     id: g.id,
     home: g.home,
     away: g.away,
     kickoffISO: g.kickoffISO,
     deadline: g.deadline,
-    // An admin-issued correction token (see handleSendCorrectionEmail)
-    // unlocks exactly the one game it names, even past its deadline --
-    // every other game on a correction token stays locked normally, and
-    // every normal weekly token is completely unaffected since
-    // correctionGameId is simply absent from its payload.
     locked: g.id === correctionGameId ? false : isGameLocked(g.deadline),
     pick: saved[g.id] || null,
   }));
@@ -295,10 +311,16 @@ async function handleSubmitPicks(request, env) {
   for (const [gameId, pick] of Object.entries(picks || {})) {
     const game = schedule.find(g => g.id === gameId);
     if (!game) continue;
-    // See handleGetPicks for the matching correctionGameId note -- same
-    // one-game bypass, same "every other game stays locked normally"
-    // guarantee.
-    if (gameId !== correctionGameId && isGameLocked(game.deadline)) {
+    // A correction token may only ever touch the one game it was issued
+    // for -- never any other game in that week's schedule, whether locked
+    // or still open (per Yeti, 2026-08-27: without this, a correction
+    // token could be used as a general submission link for the rest of
+    // that week's still-open games, not just the one it was meant to fix).
+    // A normal weekly token (correctionGameId absent) keeps the original
+    // per-game deadline check unchanged.
+    if (correctionGameId) {
+      if (gameId !== correctionGameId) { rejected.push(gameId); continue; }
+    } else if (isGameLocked(game.deadline)) {
       rejected.push(gameId);
       continue;
     }
@@ -549,13 +571,21 @@ async function handleSendCorrectionEmail(request, env) {
     return jsonResponse({ error: `No game with id "${gameId}" found in week ${week}'s schedule.` }, 400, request);
   }
 
-  const correctionToken = await generateCorrectionToken(team, week, gameId, env);
+  // Per Yeti (2026-08-27): "it's too late if you missed the window and the
+  // game has started" -- a correction exists to fix a pick before kickoff,
+  // even though its own per-game deadline already passed; once the game
+  // has actually started there's nothing left to correct.
+  if (Date.now() >= new Date(game.kickoffISO).getTime()) {
+    return jsonResponse({ error: `${game.away} @ ${game.home} has already kicked off -- a correction link can no longer unlock this pick.` }, 400, request);
+  }
+
+  const correctionToken = await generateCorrectionToken(team, week, gameId, game.kickoffISO, env);
   const link = `https://the-greg-cote-show.github.io/PFPI/picks.html?token=${correctionToken}`;
 
   const sent = await sendPfpiEmail(
     ADMIN_EMAIL,
     `[CORRECTION] PFPI Week ${week} — ${fullTeamName(team)} — ${game.away} @ ${game.home}`,
-    `One-time correction link for "${fullTeamName(team)}", Week ${week}, ${game.away} @ ${game.home}.\n\nThis link unlocks ONLY that one game, even though its deadline has passed — every other game on this link stays locked normally. Forward it to whoever needs to fix their pick.\n\nValid for 24 hours:\n\n${link}`,
+    `One-time correction link for "${fullTeamName(team)}", Week ${week}, ${game.away} @ ${game.home}.\n\nThis link shows and unlocks ONLY that one game -- no other games from this week are shown or accessible on it, even if still open. It expires automatically at kickoff (${game.kickoffISO}), not on a flat timer, so it's impossible to use once the game has actually started. Forward it to whoever needs to fix their pick.\n\n${link}`,
     env
   );
 

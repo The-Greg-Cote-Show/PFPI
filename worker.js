@@ -98,7 +98,13 @@ function normalizeGame(raw) {
     // only for these games, never a fabricated time -- contrast
     // normalizeHighlightlyGame()'s hasRealTime: true, which has genuine
     // kickoff timestamps.
-    home, away, homeScore, awayScore, status, kickoffISO, winner, tie, hasRealTime: false,
+    // clockReport: always null -- Big Balls has no "in_progress" status at
+    // all (see the gap notice above: status here is only ever "final" or
+    // "scheduled", inferred from whether scores are populated), so there
+    // is no live game-clock data source for real regular-season games,
+    // unlike Highlightly's preseason feed (see normalizeHighlightlyGame's
+    // own clockReport, confirmed against a real live game 2026-08-27).
+    home, away, homeScore, awayScore, status, kickoffISO, winner, tie, hasRealTime: false, clockReport: null,
   };
 }
 
@@ -170,6 +176,17 @@ function normalizeHighlightlyGame(g) {
     winner = homeScore > awayScore ? home : away;
   }
 
+  // Live game clock (added 2026-08-27, per Yeti) -- confirmed by directly
+  // logging one real in-progress game's raw payload (not guessed):
+  // Highlightly's `state.report` is a ready-made string, e.g. "9:33 - 1st
+  // Quarter", matching `state.clock`/`state.period` (573 seconds, period 1)
+  // exactly. Only meaningful while in_progress -- null for scheduled/final,
+  // so the frontend can tell "no clock to show" apart from "0:00". This
+  // reflects whatever Highlightly returned as of THIS poll, not a live
+  // client-side ticking clock -- see shouldPollHighlightlyThisTick's own
+  // cadence for how fresh that actually is.
+  const clockReport = status === "in_progress" ? (g.state?.report || null) : null;
+
   return {
     id: `hl-${g.id}`,
     // hasRealTime: true -- unlike Big Balls, Highlightly's `date` is a real
@@ -181,7 +198,7 @@ function normalizeHighlightlyGame(g) {
     // an empty object keeps this game's shape consistent with regular-season
     // games (buildWeekPublicJSON always includes one, possibly empty),
     // which the frontend's picks-breakdown expects to exist.
-    home, away, homeScore, awayScore, status, kickoffISO: g.date, winner, tie, hasRealTime: true, picks: {},
+    home, away, homeScore, awayScore, status, kickoffISO: g.date, winner, tie, hasRealTime: true, picks: {}, clockReport,
   };
 }
 
@@ -547,6 +564,12 @@ async function buildWeekPublicJSON(week, results, env) {
       kickoffISO: g.kickoffISO, hasRealTime: !!g.hasRealTime, status: g.status,
       homeScore: g.homeScore, awayScore: g.awayScore,
       winner: g.winner, tie: !!g.tie, picks,
+      // Always null for this path (Big Balls has no live-clock data at all
+      // -- see normalizeGame's own note); this field is only ever
+      // meaningful via the preseason/Highlightly path, which spreads the
+      // normalized game object through directly instead of enumerating
+      // fields like this function does.
+      clockReport: g.clockReport || null,
       // Same computeGameDeadline() the picks worker uses for /my-picks — not
       // a second deadline calculation, just exposed here too so a public
       // page (Greg's dashboard) can sort by urgency without needing an

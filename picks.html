@@ -250,7 +250,9 @@ async function loadPicks() {
 
   currentTeam = data.team;
   currentWeekLabel = data.week;
-  subtitle.textContent = `${data.team} — Week ${data.week}. Pick any time this week, deadlines are per game.`;
+  subtitle.textContent = data.isCorrection
+    ? `${data.team} — Week ${data.week} (one-time correction)`
+    : `${data.team} — Week ${data.week}. Pick any time this week, deadlines are per game.`;
   content.innerHTML = "";
 
   if (data.games.length === 0) {
@@ -259,11 +261,13 @@ async function loadPicks() {
   }
 
   // Admin-issued correction links (see handleSendCorrectionEmail,
-  // picks-worker.js) unlock exactly one already-locked game -- flagged
-  // here so whoever's using the link knows that's what's going on, not
-  // just silently seeing one unlocked game among locked ones.
+  // picks-worker.js) show and unlock ONLY the one game they name -- the
+  // backend already filters `data.games` down to just that game (2026-08-
+  // 27, per Yeti: seeing the rest of the week's games, even locked, risked
+  // both cheating and confusion with the original weekly link), so this
+  // banner just explains why only one game appears here.
   if (data.isCorrection) {
-    content.innerHTML = `<div class="banner info">This is a one-time correction link — only the affected game below is unlocked past its deadline. Everything else stays locked normally.</div>`;
+    content.innerHTML = `<div class="banner info">This is a one-time correction link for one game only — no other games from this week are shown on it. It expires automatically at kickoff.</div>`;
   }
 
   // Chronological by kickoff, then grouped by kickoff calendar date (ET) --

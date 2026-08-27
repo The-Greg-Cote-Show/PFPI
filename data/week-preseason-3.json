@@ -193,7 +193,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "LAC"
+        "Lobos": "LAC",
+        "Critters": "LAR"
       }
     },
     {
@@ -208,7 +209,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "NE"
+        "Lobos": "NE",
+        "Critters": "NE"
       }
     },
     {
@@ -223,7 +225,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "SF"
+        "Lobos": "SF",
+        "Critters": "SF"
       }
     },
     {
@@ -238,7 +241,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "BUF"
+        "Lobos": "BUF",
+        "Critters": "BUF"
       }
     }
   ],
@@ -469,5 +473,5 @@
       "preseason-3": 0
     }
   },
-  "updatedAt": "2026-08-27T20:55:10.647Z"
+  "updatedAt": "2026-08-27T21:00:21.081Z"
 }

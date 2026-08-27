@@ -15,7 +15,8 @@
       "picks": {
         "Lobos": "CHI",
         "Giraffes": "TEN"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566640",
@@ -31,7 +32,8 @@
       "picks": {
         "Lobos": "DET",
         "Giraffes": "DET"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566560",
@@ -47,7 +49,8 @@
       "picks": {
         "Lobos": "DEN",
         "Giraffes": "MIN"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566561",
@@ -63,7 +66,8 @@
       "picks": {
         "Lobos": "DAL",
         "Giraffes": "NO"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566562",
@@ -79,7 +83,8 @@
       "picks": {
         "Lobos": "GB",
         "Giraffes": "GB"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566557",
@@ -95,7 +100,8 @@
       "picks": {
         "Lobos": "SEA",
         "Giraffes": "SEA"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566553",
@@ -111,7 +117,8 @@
       "picks": {
         "Lobos": "PHI",
         "Giraffes": "PHI"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566558",
@@ -127,7 +134,8 @@
       "picks": {
         "Lobos": "JAX",
         "Giraffes": "TB"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566555",
@@ -143,7 +151,8 @@
       "picks": {
         "Lobos": "NYG",
         "Giraffes": "NYG"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566559",
@@ -159,7 +168,8 @@
       "picks": {
         "Lobos": "HOU",
         "Giraffes": "CAR"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566556",
@@ -175,7 +185,8 @@
       "picks": {
         "Lobos": "MIA",
         "Giraffes": "MIA"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566554",
@@ -191,7 +202,8 @@
       "picks": {
         "Lobos": "BAL",
         "Giraffes": "WSH"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566531",
@@ -208,7 +220,8 @@
         "Lobos": "LAC",
         "Critters": "LAR",
         "Giraffes": "LAR"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566532",
@@ -225,7 +238,8 @@
         "Lobos": "SF",
         "Critters": "SF",
         "Giraffes": "LV"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566530",
@@ -242,13 +256,14 @@
         "Lobos": "NE",
         "Critters": "NE",
         "Giraffes": "CLE"
-      }
+      },
+      "clockReport": null
     },
     {
       "id": "hl-566529",
       "home": "BUF",
       "away": "PIT",
-      "homeScore": 0,
+      "homeScore": 6,
       "awayScore": 3,
       "status": "in_progress",
       "kickoffISO": "2026-08-27T23:00:00.000Z",
@@ -258,7 +273,8 @@
       "picks": {
         "Lobos": "BUF",
         "Critters": "BUF"
-      }
+      },
+      "clockReport": "7:10 - 1st Quarter"
     }
   ],
   "stats": {
@@ -488,5 +504,5 @@
       "preseason-3": 0
     }
   },
-  "updatedAt": "2026-08-27T23:15:20.936Z"
+  "updatedAt": "2026-08-27T23:20:23.351Z"
 }

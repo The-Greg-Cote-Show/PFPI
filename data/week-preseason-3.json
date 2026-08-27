@@ -13,7 +13,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "CHI"
+        "Lobos": "CHI",
+        "Giraffes": "TEN"
       }
     },
     {
@@ -28,7 +29,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "DET"
+        "Lobos": "DET",
+        "Giraffes": "DET"
       }
     },
     {
@@ -43,7 +45,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "DEN"
+        "Lobos": "DEN",
+        "Giraffes": "MIN"
       }
     },
     {
@@ -58,7 +61,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "SEA"
+        "Lobos": "SEA",
+        "Giraffes": "SEA"
       }
     },
     {
@@ -73,7 +77,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "DAL"
+        "Lobos": "DAL",
+        "Giraffes": "NO"
       }
     },
     {
@@ -88,7 +93,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "PHI"
+        "Lobos": "PHI",
+        "Giraffes": "PHI"
       }
     },
     {
@@ -103,7 +109,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "GB"
+        "Lobos": "GB",
+        "Giraffes": "GB"
       }
     },
     {
@@ -118,7 +125,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "NYG"
+        "Lobos": "NYG",
+        "Giraffes": "NYG"
       }
     },
     {
@@ -133,7 +141,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "JAX"
+        "Lobos": "JAX",
+        "Giraffes": "TB"
       }
     },
     {
@@ -148,7 +157,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "MIA"
+        "Lobos": "MIA",
+        "Giraffes": "MIA"
       }
     },
     {
@@ -163,7 +173,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "HOU"
+        "Lobos": "HOU",
+        "Giraffes": "CAR"
       }
     },
     {
@@ -178,7 +189,8 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "BAL"
+        "Lobos": "BAL",
+        "Giraffes": "WSH"
       }
     },
     {
@@ -194,7 +206,8 @@
       "hasRealTime": true,
       "picks": {
         "Lobos": "LAC",
-        "Critters": "LAR"
+        "Critters": "LAR",
+        "Giraffes": "LAR"
       }
     },
     {
@@ -210,7 +223,8 @@
       "hasRealTime": true,
       "picks": {
         "Lobos": "NE",
-        "Critters": "NE"
+        "Critters": "NE",
+        "Giraffes": "CLE"
       }
     },
     {
@@ -226,7 +240,8 @@
       "hasRealTime": true,
       "picks": {
         "Lobos": "SF",
-        "Critters": "SF"
+        "Critters": "SF",
+        "Giraffes": "LV"
       }
     },
     {
@@ -473,5 +488,5 @@
       "preseason-3": 0
     }
   },
-  "updatedAt": "2026-08-27T21:00:21.081Z"
+  "updatedAt": "2026-08-27T21:05:10.743Z"
 }

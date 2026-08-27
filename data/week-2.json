@@ -13,6 +13,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-17T10:00:00.000Z"
     },
     {
@@ -27,6 +28,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -41,6 +43,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -55,6 +58,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -69,6 +73,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -83,6 +88,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -97,6 +103,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -111,6 +118,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -125,6 +133,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -139,6 +148,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -153,6 +163,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -167,6 +178,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -181,6 +193,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -195,6 +208,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -209,6 +223,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -223,6 +238,7 @@
       "winner": null,
       "tie": false,
       "picks": {},
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     }
   ]

@@ -209,7 +209,7 @@
       "id": "hl-566531",
       "home": "LAC",
       "away": "LAR",
-      "homeScore": 16,
+      "homeScore": 18,
       "awayScore": 20,
       "status": "in_progress",
       "kickoffISO": "2026-08-28T02:00:00.000Z",
@@ -221,7 +221,7 @@
         "Critters": "LAR",
         "Giraffes": "LAR"
       },
-      "clockReport": "12:52 - 4th Quarter"
+      "clockReport": "12:12 - 4th Quarter"
     },
     {
       "id": "hl-566532",
@@ -580,5 +580,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-28T04:25:23.372Z"
+  "updatedAt": "2026-08-28T04:30:29.748Z"
 }

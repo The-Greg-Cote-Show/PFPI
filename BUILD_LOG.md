@@ -3376,3 +3376,30 @@ real public index.html page (forced a fresh render to route around
 `loadRealBrief()`'s own pre-existing lack of cache-busting, unrelated to
 this task) and confirmed the Commissioner's Report panel shows the same
 table with the same clean alignment, in a visibly monospace font.
+
+## Digest insert: leading blank lines for Greg's headline/column (2026-08-28)
+
+Yeti's follow-up: "Insert into brief text" was dropping the stats table
+right at the very top of the textarea, leaving no room for Greg (a real
+sportswriter) to write his own personality-driven headline and column
+above the numbers without manually adding space himself every week.
+
+**Fix**: `digestInsertBtn`'s click handler (brief.html and admin.html,
+identical change in both) now prepends 4 blank lines (`"\n\n\n\n"`) ahead
+of `currentDigestPlainText` before handing it to `showBriefEditView()` --
+`showBriefEditView()` itself is untouched, so "Edit" on an already-saved
+brief and loading a past version from history still behave exactly as
+before; only this one insert action gets the extra space. Also
+explicitly moves the cursor to the very start of the textarea
+(`setSelectionRange(0,0)` + `scrollTop = 0`) rather than leaving it
+wherever the browser defaults a programmatic `.value` set to (the end) --
+Greg lands with his cursor ready in the blank space, not scrolled down
+past it.
+
+**Verified live**, admin.html, real authenticated session: called the
+real Digest tab, clicked the real "Insert into brief text" button, and
+confirmed via direct DOM inspection that `briefText.value` starts with
+exactly `"\n\n\n\n"` followed by the real digest text, and that
+`selectionStart`/`selectionEnd`/`scrollTop` are all `0`. Screenshotted the
+textarea: clear empty space at the top before "PFPI PRESEASON STANDINGS"
+begins, cursor visibly blinking at the top-left, ready to type.

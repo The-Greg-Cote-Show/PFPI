@@ -3562,3 +3562,136 @@ the request-stream bugfix and debug-diagnostic cleanup committed and
 pushed separately in `a9aa1ff` once found and verified. Both the Worker
 deploy and the GitHub Pages push were needed for the fix to be fully
 live, per this project's usual two-part deploy split.
+
+## Persistent notrack opt-out + real links for Yeti/Greg/Chris (2026-08-28, overnight)
+
+Yeti's follow-up task: he, Greg, and Chris want their own visits excluded
+from the public visitor numbers permanently after clicking an opt-out
+link once, same spirit as Cote Cup's own mechanism -- not something that
+needs re-adding on every visit.
+
+**Checked first, per the task's own instruction, not assumed:** grepped
+`?notrack=1` across every HTML file and `worker.js`. Confirmed the
+existing implementation was **request-only** -- `new
+URLSearchParams(location.search).get("notrack")` read fresh on every
+pageload, nothing written to `localStorage` anywhere in the codebase. A
+visitor who clicked an opt-out link once would be excluded for that one
+pageload only, then tracked normally again on their very next visit
+without the parameter. This needed to be built, not just confirmed.
+
+**Built:** both `index.html`'s and `picks.html`'s tracking beacon
+scripts (the only two pages feeding the public visitor pipeline --
+`brief.html`/`admin.html` untouched, already tracked separately as
+internal-tool traffic) now also read/write a `localStorage` flag
+(`pfpi_notrack`):
+- `?notrack=1` present -> sets `localStorage.pfpi_notrack = "1"` (in
+  addition to suppressing tracking on that pageload, as before).
+- Every pageload (with or without the URL parameter) checks
+  `localStorage.pfpi_notrack === "1"` and treats that as `notrack: true`
+  in the `/track` beacon call if so.
+- Both reads/writes wrapped in try/catch so a browser with localStorage
+  disabled (private browsing edge cases) just falls back to the old
+  request-only behavior rather than breaking the page.
+
+**Real limitation, flagged plainly per the task's own instruction, not
+hidden:** this is inherently per-browser/per-device, like any
+localStorage-based opt-out (including, almost certainly, Cote Cup's
+own). Clicking the link on a laptop does not exclude that same person's
+phone -- each device that should be excluded needs its own one-time
+click. Telling Yeti this directly so he can decide whether to send the
+link to each of his, Greg's, and Chris' devices individually.
+
+**One link covers both pages, confirmed live, not assumed:**
+`localStorage` is scoped per-origin, not per-path -- since `index.html`
+and `picks.html` are served from the same origin
+(`the-greg-cote-show.github.io`), a single click on either page's
+opt-out link sets a flag both pages read. Only one link is needed per
+person per device, not one per page.
+
+**Real bug found mid-verification, unrelated to the notrack logic
+itself:** initial verification using `wrangler kv key get`/`key list`
+kept showing "Value not found" / empty lists after real, confirmed-live
+test requests (confirmed live via `wrangler tail` showing the request
+completing with no thrown error). Root cause: newer `wrangler` versions
+default `kv key get`/`list`/`put`/`delete` to **local** emulated
+storage, not the real remote KV, unless `--remote` is passed explicitly.
+Every KV read in this task (and, in hindsight, likely some verification
+reads described as confirmed in earlier rounds' BUILD_LOG entries) needs
+`--remote` to actually reflect production state -- flagging this clearly
+since it explains why earlier "Value not found" checks below initially
+looked like a broken pipeline when the pipeline was actually working
+correctly the whole time.
+
+**Real verification performed, with `--remote` KV evidence:**
+1. Visited `index.html?notrack=1` (real page, real live site) --
+   confirmed via direct DOM/localStorage inspection that
+   `localStorage.pfpi_notrack === "1"` was set.
+2. Visited `index.html` again with **no URL parameter at all** --
+   confirmed via `wrangler tail` that the real beacon request server-side
+   resolved `notrack: true` purely from the persisted flag, and the
+   `analytics:pageviews:2026-08-28:index` remote counter did not move.
+3. Visited `picks.html` with **no URL parameter**, same browser/session
+   -- confirmed via `wrangler tail` that this ALSO resolved `notrack:
+   true` from the same shared flag (never having clicked an opt-out link
+   on `picks.html` itself), proving the one-link-covers-both-pages claim
+   with real evidence, not just localStorage-scoping theory.
+4. **Control test**: cleared the `localStorage` flag, visited
+   `picks.html` again with no parameter -- confirmed via `wrangler tail`
+   that this correctly resolved `notrack: false` and completed the write,
+   and the remote `analytics:pageviews:2026-08-28:picks` counter
+   incremented by exactly 1 -- proving the earlier "no change" results in
+   steps 2-3 were real suppression, not a coincidentally broken pipeline.
+
+**Test-data cleanup on the live counters:** verification in this round
+(plus a few earlier manual `/track` calls made while chasing the
+`--remote` red herring) added real writes to today's (2026-08-28) KV
+counters. Reconstructed the exact attribution from the sequence of
+actions taken and confirmed every one of today's `daily-unique`, `new`,
+`weekly-unique-sum`, `monthly-unique-sum`, and `alltime-unique-sum`
+values was exactly `1` -- fully attributable to this session's own test
+browser, with no evidence of any other real visitor mixed in (this
+analytics system has recorded no real unique visitors since the previous
+round's own cleanup). Deleted all of those keys, deleted three
+test-referrer buckets (`other:tail-test.example.com`,
+`other:tail-test2.example.com`, `other:manual-test.example.com`, both
+the daily and all-time versions), and corrected the `direct` referrer
+counters (daily and all-time) down from `3` to `1` (the two test-driven
+`direct` hits subtracted out, leaving the one real `index.html`
+pageview's `direct` count intact). `analytics:pageviews:2026-08-28:index`
+(`= 1`, real, never touched by any of tonight's testing since every
+index-page test visit was correctly suppressed) was left untouched, as
+was `analytics:first-event-date` (genuinely the real first day this
+system went live, not test-corrupted). Left per-visitor dedup markers
+(`analytics:seen:*`, `analytics:stable-first-seen:*`) for the test
+browser in place rather than hunting them down -- they don't display
+anywhere on the dashboard and only affect how this one test browser's
+own future visits get classified, not anyone else's data.
+
+**Temporary debug logging**, added mid-troubleshooting to `handleTrack`
+to rule out a silent server-side exception (there wasn't one -- the real
+issue was the CLI's local-vs-remote default), was removed before the
+final deploy -- confirmed via `git diff worker.js` showing zero
+difference from the last committed version once removed.
+
+**The real, ready-to-send link(s) for Yeti to send to himself, Greg, and
+Chris** (send to each of their own devices individually, per the
+per-device limitation above):
+
+```
+https://the-greg-cote-show.github.io/PFPI/index.html?notrack=1
+```
+
+One click on this link, on a given device/browser, is all that's needed
+-- it covers that device's future visits to both `index.html` and
+`picks.html`, indefinitely (no expiration on the flag). No separate
+`picks.html?notrack=1` link is needed unless someone's very first visit
+to the site happens to be `picks.html` directly (e.g. a bookmarked
+picks-page link) -- in that case
+`https://the-greg-cote-show.github.io/PFPI/picks.html?notrack=1` works
+identically and sets the same shared flag.
+
+**Deployed and pushed.** Worker: clean (no debug logging) version live
+at version `cb5e3db3-27aa-499d-bb8b-091c9c67e256`. Git: `index.html`/
+`picks.html` persistent-opt-out changes committed and pushed in
+`fef912d`. `worker.js` needed no net code change once debug logging was
+removed (only a temporary live diagnostic, never committed).

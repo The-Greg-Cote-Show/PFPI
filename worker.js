@@ -133,13 +133,14 @@ function normalizeGame(raw) {
 // returns only 1 of the 4 real Aug-27-ET games, missing the three 8pm+ ET
 // games that land on 2026-08-28 in UTC) — don't use it for this purpose.
 //
-// UNCONFIRMED, flagged not guessed: `state.score.current` is a combined
-// "X - Y" string with no separate home/away fields, and every game is
-// still 0-0/"Scheduled" as of this writing (games haven't kicked off yet).
-// Assumed "away - home" order below, matching this site's own away@home
-// convention elsewhere — genuinely unverified against a real score. Isolated
-// entirely in normalizeHighlightlyGame() so it's a one-function fix once
-// any of these games actually finishes (very soon — Aug 27).
+// CONFIRMED 2026-08-27 ~11pm ET (was flagged unconfirmed here originally):
+// `state.score.current` is a combined "X - Y" string with no separate
+// home/away fields. The initial guess ("away - home", matching this
+// site's own away@home display convention) was wrong -- real evidence
+// from PIT@BUF proved it's actually "home - away". See
+// normalizeHighlightlyGame()'s own note at the fix site for the real
+// evidence and the full blast radius (scores, winner, and every
+// downstream pick-correctness result were all affected, not just display).
 
 const HIGHLIGHTLY_BASE = "https://american-football.highlightly.net";
 const PRESEASON_WEEK3_ET_DATES = new Set(["2026-08-27", "2026-08-28", "2026-08-29"]);
@@ -168,13 +169,21 @@ function normalizeHighlightlyGame(g) {
   const desc = (g.state?.description || "").toLowerCase();
   const status = (desc.includes("final") || desc.includes("finished")) ? "final" : desc.includes("scheduled") ? "scheduled" : "in_progress";
 
-  // UNCONFIRMED order — see gap notice above.
+  // REAL BUG FOUND AND FIXED 2026-08-27 ~11pm ET, per Yeti checking real
+  // results against the live site: the gap notice above flagged this order
+  // as an unconfirmed guess ("away - home"), and the guess was wrong. Real
+  // evidence: PIT@BUF's `state.score.current` was "27 - 28", and Yeti
+  // confirmed the real-world result is BUF 28, PIT 27 (BUF won) -- so the
+  // first number in the string is HOME's score, not away's. This single
+  // parsing bug corrupted every preseason score and, downstream, every
+  // `winner` determination and therefore every pick-correctness result in
+  // computePreseasonSnapshot() -- not just a display issue.
   let awayScore = null, homeScore = null;
   const current = g.state?.score?.current;
   if (current && current !== "0 - 0") {
     const parts = current.split(" - ").map(s => parseInt(s.trim(), 10));
     if (parts.length === 2 && parts.every(n => !isNaN(n))) {
-      [awayScore, homeScore] = parts;
+      [homeScore, awayScore] = parts;
     }
   }
 

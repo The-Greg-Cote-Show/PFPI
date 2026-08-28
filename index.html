@@ -833,11 +833,11 @@ function renderGames(realGames){
     row.className = "game-row";
     row.innerHTML = `
       <div class="game-matchup">
-        <div class="game-team${homeWon ? " winner" : ""}">${g.home}</div>
-        <div class="game-score">${homeDisplay}</div>
-        <div class="game-at"></div>
-        <div class="game-score">${awayDisplay}</div>
         <div class="game-team${awayWon ? " winner" : ""}">${g.away}</div>
+        <div class="game-score">${awayDisplay}</div>
+        <div class="game-at"></div>
+        <div class="game-score">${homeDisplay}</div>
+        <div class="game-team${homeWon ? " winner" : ""}">${g.home}</div>
       </div>
       <div class="game-status${isFinal ? " final" : ""}">${statusLabel}${
         // Live game clock (added 2026-08-27, per Yeti): only ever populated

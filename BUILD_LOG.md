@@ -3403,3 +3403,162 @@ exactly `"\n\n\n\n"` followed by the real digest text, and that
 `selectionStart`/`selectionEnd`/`scrollTop` are all `0`. Screenshotted the
 textarea: clear empty space at the top before "PFPI PRESEASON STANDINGS"
 begins, cursor visibly blinking at the top-left, ready to type.
+
+## In-house visitor analytics (unique/repeat/traffic-source) + dashboard (2026-08-28/29, overnight)
+
+Yeti's overnight task, run fully autonomously with standing commit/push
+authorization ("as if I were asleep"): build real, honest visitor
+analytics good enough for advertisers -- unique daily visitors, repeat
+visitors, cumulative totals, traffic-source breakdown -- entirely
+in-house, specifically to avoid paying for a third-party tool
+(Fathom/Plausible/etc.). Hard rule going in: no paid service of any kind,
+period.
+
+**Cote Cup checked, never touched.** Read the reference file Yeti left at
+`C:\Users\ggent\Downloads\Cote_Cup_26_Visitor_Tracking.html` (not part of
+this repo) to understand the "similar spirit" ask. Confirmed Cote Cup is
+a fully separate, real, already-live site with its own Worker
+(`cotecup-worker.yeti-f3c.workers.dev`) and its own `/visitors` endpoint
+-- confirmed its `daily` counts are raw hits with zero dedup, exactly the
+weakness this task is meant to improve on. Never queried, deployed to, or
+modified any Cote Cup infrastructure; only read the static file Yeti
+already had locally.
+
+**Design: two separate SHA-256 hashes, one honest tradeoff, documented
+not hidden.**
+- `dailyHash = SHA256(IP + UA + today's ET date)` -- used only to dedup
+  "was this device/browser combo already counted today." Resets every
+  24h; mathematically cannot be linked across days. This is what powers
+  the daily-unique count.
+- `stableHash = SHA256(IP + UA)` -- no date, used only to tell new vs.
+  repeat visitors apart via a `visitor_first_seen:{stableHash}` record.
+  This one is a real, acknowledged tradeoff: it can persist and
+  potentially be linked across days/weeks (until IP or UA changes) in a
+  way `dailyHash` cannot. Per Yeti's explicit instruction this is NOT
+  hidden -- it's called out in code comments in `worker.js` and again in
+  plain language in analytics.html's own "Methodology" panel, alongside
+  the standard limitation shared with Fathom/Plausible-style tools:
+  this identifies devices/browsers, not people. Raw IP is never stored
+  anywhere, only irreversible hashes.
+
+**What was built:**
+- `worker.js` (pfpi-scores-worker): new `POST /track` beacon endpoint,
+  non-blocking via `ctx.waitUntil()`, and new admin-gated
+  `GET /admin/analytics-data` endpoint (reuses the existing
+  `verifyAdminSession`/admin-session KV lookup added for the earlier
+  manual-poll-trigger feature -- no new auth built, per instruction).
+  `/track` respects `?notrack=1` (checked both client- and server-side)
+  by skipping all logging entirely, including the basic pageview count.
+- Every real pageload always increments a simple per-page-per-day
+  pageview counter. Only `index` and `picks` (real public visitor pages)
+  feed the unique/new/repeat/referrer pipeline; `brief` and `admin` are
+  tracked as plain pageviews only, explicitly separated out on the
+  dashboard as "Internal tool traffic (today) -- excluded from all
+  numbers above." This scope call (exclude Yeti/Greg's own admin/brief
+  testing from public visitor numbers) was Yeti's call to make and is
+  flagged plainly on the dashboard itself, not just in this log.
+- Daily unique count: check-before-increment against
+  `analytics:seen:{today}:{dailyHash}` (TTL 48h).
+- New-vs-repeat: `analytics:stable-first-seen:{stableHash}` -- absent
+  means new (write today, bump new-*), present with a different stored
+  date means repeat (bump repeat-*, original first-seen date is never
+  overwritten).
+- Cumulative rollups (daily/weekly/monthly/all-time unique, new, repeat)
+  are **sums of daily-unique counts, not true multi-day deduplication**.
+  Per Yeti's own explicit permission ("daily + summed totals... as a
+  documented fast-follow"), true cross-day dedup was **not built** --
+  flagging this clearly and explicitly per the task's own closing
+  instruction: true rolling multi-day dedup is deferred, not done. Both
+  `worker.js` comments and analytics.html's Methodology panel say so.
+- Referrer classification (`classifyReferrer()`): PFPI's own hostnames
+  first ("internal"), then twitter.com/x.com, instagram.com,
+  youtube.com/youtu.be, thegregcoteshow.com by exact hostname, empty
+  referrer -> "direct", everything else -> "other:{host}" (with `www.`
+  stripped). Referrer counts are intentionally pageview-level (every
+  qualifying request bumps the bucket), a different concept from unique
+  visitors -- the same distinction real analytics tools draw between
+  "visitors" and "visits" by source.
+- Client beacon added to `index.html`, `picks.html`, `brief.html`,
+  `admin.html`: a small inline `<script>` right after `<body>`, fires a
+  `fetch(..., {keepalive:true})` POST to `/track` with `page`,
+  `document.referrer`, and the `notrack` flag, wrapped in try/catch so it
+  can never break the page.
+- New `analytics.html` dashboard: same login pattern/session handling as
+  admin.html (same admin credentials, no new auth), shows today/
+  week-to-date/month-to-date/all-time stat cards (unique/new/repeat), a
+  14-day trend table, a traffic-source breakdown with proportional bars,
+  the internal-traffic panel, and a plain-language Methodology section
+  covering the stable-hash tradeoff, the device-not-person limitation,
+  and the sum-vs-true-dedup caveat. Linked from a new "Visitor analytics"
+  panel in admin.html's Admin Portal tab (`analyticsLinkPanel`, shown/
+  hidden alongside the existing test-email panel).
+
+**Real bug found and fixed (this was the main event of the night):**
+first deployed version of `handleTrack(request, env)` read
+`request.json()` and `request.headers.get(...)` from inside the
+`ctx.waitUntil()`-deferred function, i.e. *after* the 204 `Response` had
+already been returned to the browser. Cloudflare Workers throws
+`TypeError: Can't read from request stream after response has been
+sent.` in that situation -- confirmed live via `wrangler tail --format
+pretty` against a real test request, after noticing zero KV writes
+despite successful 204s. Fixed by extracting `ip`/`ua`/`page`/`referrer`/
+`notrack` synchronously in the `fetch()` handler *before* constructing
+the response, then calling `handleTrack(env, {ip, ua, page, referrer,
+notrack})` with only plain values -- `handleTrack` no longer touches
+`request` at all. Re-verified via the same tail+curl approach: clean
+completion log line, no thrown error, and direct `wrangler kv key get`
+confirmed `analytics:daily-unique:*`, `analytics:new:*`,
+`analytics:referrer:*:twitter`, and `analytics:pageviews:*:index` all
+incremented correctly. This fix is what's actually live now (Worker
+version `aeec08fc-ba95-4373-9a3e-aecfdfc1cf34`, deployed 2026-08-28);
+the originally pushed commit (`ad14e08`/`f8ace6e`) contained the buggy
+pre-fix code, superseded by commit `a9aa1ff` which also removes a
+temporary debug diagnostic (`PFPI-Analytics-Test-Agent-Kilo` UA
+sentinel that dumped a computed `stableHash` into KV) that was added
+solely to make the next-day repeat-visitor test possible without
+waiting a real day.
+
+**Real verification performed, with actual KV evidence, not just code
+review:**
+- Multiple real test personas fired at `/track` and independently
+  confirmed via direct `wrangler kv key get`: daily-unique count,
+  new-count, referrer bucket (twitter, instagram, direct/empty, and an
+  "other:{domain}" case with correct `www.` stripping), and per-page
+  pageview counters all landed with the exact expected values.
+- `notrack=1` confirmed to suppress *all* logging, including the basic
+  pageview counter (not just the visitor-dedup pipeline).
+- `brief`/`admin` pages confirmed to bypass the unique/new-repeat/
+  referrer pipeline entirely while still incrementing their own simple
+  pageview counters, kept separate on the dashboard.
+- **New-vs-repeat cross-day simulation** (the hardest piece to test
+  without literally waiting a day): established a real
+  `stable-first-seen` record for a test persona, backdated it directly
+  in KV to "yesterday," cleared that persona's current-day `seen` dedup
+  marker, then fired a real second request. Confirmed all four expected
+  outcomes: new-count unchanged, repeat-count incremented, daily-unique
+  incremented (correctly counted as a distinct visitor for *today*), and
+  the original first-seen date preserved (not overwritten by the second
+  visit). This is real evidence the new-vs-repeat logic is correct
+  across day boundaries, not just within a single day.
+- All 32 synthetic test KV keys created during verification were deleted
+  afterward (`wrangler kv key delete`, piped through `echo "y" |` since
+  `--force` isn't a supported flag on this wrangler version) -- confirmed
+  via the deletion output for each key, so no test data pollutes the real
+  dashboard.
+
+**What was explicitly NOT done, per the task's own sanctioned tradeoffs:**
+true multi-day rolling deduplication for weekly/monthly/all-time unique
+counts (cumulative numbers are sums of daily uniques, a known
+overcount vs. true unique-over-period, documented on the dashboard
+itself); no third-party analytics service of any kind; no cookies or
+localStorage-based visitor IDs; no new authentication system for the
+dashboard (reuses existing admin login).
+
+**Deployed and pushed.** Worker: `wrangler deploy --config
+wrangler-scores.toml`, live at version `aeec08fc-ba95-4373-9a3e-
+aecfdfc1cf34`. Git: `index.html`/`picks.html`/`brief.html`/`admin.html`/
+`analytics.html` (new file) committed and pushed in `ad14e08`/`f8ace6e`;
+the request-stream bugfix and debug-diagnostic cleanup committed and
+pushed separately in `a9aa1ff` once found and verified. Both the Worker
+deploy and the GitHub Pages push were needed for the fix to be fully
+live, per this project's usual two-part deploy split.

@@ -56,9 +56,9 @@
       "clockReport": null
     },
     {
-      "id": "hl-566557",
-      "home": "KC",
-      "away": "SEA",
+      "id": "hl-566553",
+      "home": "PHI",
+      "away": "CIN",
       "homeScore": null,
       "awayScore": null,
       "status": "scheduled",
@@ -67,9 +67,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "SEA",
-        "Critters": "KC",
-        "Giraffes": "SEA"
+        "Lobos": "PHI",
+        "Critters": "CIN",
+        "Giraffes": "PHI"
       },
       "clockReport": null
     },
@@ -92,24 +92,6 @@
       "clockReport": null
     },
     {
-      "id": "hl-566553",
-      "home": "PHI",
-      "away": "CIN",
-      "homeScore": null,
-      "awayScore": null,
-      "status": "scheduled",
-      "kickoffISO": "2026-08-29T00:00:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "PHI",
-        "Critters": "CIN",
-        "Giraffes": "PHI"
-      },
-      "clockReport": null
-    },
-    {
       "id": "hl-566562",
       "home": "GB",
       "away": "ARI",
@@ -124,6 +106,24 @@
         "Lobos": "GB",
         "Critters": "ARI",
         "Giraffes": "GB"
+      },
+      "clockReport": null
+    },
+    {
+      "id": "hl-566557",
+      "home": "KC",
+      "away": "SEA",
+      "homeScore": null,
+      "awayScore": null,
+      "status": "scheduled",
+      "kickoffISO": "2026-08-29T00:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "SEA",
+        "Critters": "KC",
+        "Giraffes": "SEA"
       },
       "clockReport": null
     },
@@ -143,7 +143,7 @@
         "Critters": "JAX",
         "Giraffes": "TB"
       },
-      "clockReport": "8:36 - 1st Quarter"
+      "clockReport": "7:32 - 1st Quarter"
     },
     {
       "id": "hl-566555",
@@ -161,25 +161,7 @@
         "Critters": "NYG",
         "Giraffes": "NYG"
       },
-      "clockReport": "8:18 - 1st Quarter"
-    },
-    {
-      "id": "hl-566556",
-      "home": "MIA",
-      "away": "ATL",
-      "homeScore": 3,
-      "awayScore": 7,
-      "status": "in_progress",
-      "kickoffISO": "2026-08-28T23:00:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "MIA",
-        "Critters": "MIA",
-        "Giraffes": "MIA"
-      },
-      "clockReport": "0:56 - 1st Quarter"
+      "clockReport": "7:07 - 1st Quarter"
     },
     {
       "id": "hl-566559",
@@ -197,7 +179,25 @@
         "Critters": "HOU",
         "Giraffes": "CAR"
       },
-      "clockReport": "13:20 - 2nd Quarter"
+      "clockReport": "12:25 - 2nd Quarter"
+    },
+    {
+      "id": "hl-566556",
+      "home": "MIA",
+      "away": "ATL",
+      "homeScore": 3,
+      "awayScore": 7,
+      "status": "in_progress",
+      "kickoffISO": "2026-08-28T23:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "MIA",
+        "Critters": "MIA",
+        "Giraffes": "MIA"
+      },
+      "clockReport": "14:49 - 2nd Quarter"
     },
     {
       "id": "hl-566554",
@@ -214,7 +214,7 @@
         "Lobos": "BAL",
         "Giraffes": "WSH"
       },
-      "clockReport": "Halftime"
+      "clockReport": "13:53 - 3rd Quarter"
     },
     {
       "id": "hl-566531",
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-28T23:50:23.419Z"
+  "updatedAt": "2026-08-28T23:55:23.574Z"
 }

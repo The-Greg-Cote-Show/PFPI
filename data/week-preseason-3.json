@@ -221,7 +221,7 @@
         "Critters": "LAR",
         "Giraffes": "LAR"
       },
-      "clockReport": "9:41 - 1st Quarter"
+      "clockReport": "7:51 - 1st Quarter"
     },
     {
       "id": "hl-566530",
@@ -239,7 +239,7 @@
         "Critters": "NE",
         "Giraffes": "CLE"
       },
-      "clockReport": "12:00 - 4th Quarter"
+      "clockReport": "7:57 - 4th Quarter"
     },
     {
       "id": "hl-566532",
@@ -257,7 +257,7 @@
         "Critters": "SF",
         "Giraffes": "LV"
       },
-      "clockReport": "9:04 - 4th Quarter"
+      "clockReport": "7:53 - 4th Quarter"
     },
     {
       "id": "hl-566529",
@@ -504,5 +504,5 @@
       "preseason-3": 1
     }
   },
-  "updatedAt": "2026-08-28T02:25:27.474Z"
+  "updatedAt": "2026-08-28T02:30:29.835Z"
 }

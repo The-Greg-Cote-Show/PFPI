@@ -502,7 +502,57 @@
     },
     "gamesPlayed": {
       "preseason-3": 3
+    },
+    "uniqueHits": {
+      "Lobos": {
+        "preseason-3": {
+          "hits": 0,
+          "opps": 0
+        }
+      },
+      "Roughriders": {
+        "preseason-3": {
+          "hits": 0,
+          "opps": 0
+        }
+      },
+      "Maniacs": {
+        "preseason-3": {
+          "hits": 0,
+          "opps": 0
+        }
+      },
+      "Critters": {
+        "preseason-3": {
+          "hits": 0,
+          "opps": 0
+        }
+      },
+      "Chickens": {
+        "preseason-3": {
+          "hits": 0,
+          "opps": 0
+        }
+      },
+      "Ferraris": {
+        "preseason-3": {
+          "hits": 0,
+          "opps": 0
+        }
+      },
+      "Llamas": {
+        "preseason-3": {
+          "hits": 0,
+          "opps": 0
+        }
+      },
+      "Giraffes": {
+        "preseason-3": {
+          "hits": 1,
+          "opps": 2
+        }
+      }
     }
   },
-  "updatedAt": "2026-08-28T03:30:29.675Z"
+  "updatedAt": "2026-08-28T03:35:27.411Z"
 }

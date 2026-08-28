@@ -153,8 +153,20 @@ function normalizeHighlightlyGame(g) {
   const home = g.homeTeam?.abbreviation || null;
   const away = g.awayTeam?.abbreviation || null;
 
+  // REAL BUG FOUND AND FIXED 2026-08-27 ~10pm ET, live during PIT@BUF:
+  // Highlightly's actual completed-game `state.description` is "Finished",
+  // not "Final" -- confirmed by directly logging the raw payload of a game
+  // stuck reporting status:"in_progress" while its own state.report field
+  // already read "Final" (`desc.includes("final")` was false against
+  // "finished", which does not contain the substring "final"). This meant
+  // NO preseason game could ever be detected as final at all, silently --
+  // computePreseasonSnapshot()'s `finalResults` filter would stay
+  // permanently empty regardless of how many real games actually finished.
+  // Checking "finished" too, not replacing "final" with it, since it's
+  // unconfirmed whether Highlightly ever uses the literal word "final" in
+  // some other response shape/edge case.
   const desc = (g.state?.description || "").toLowerCase();
-  const status = desc.includes("final") ? "final" : desc.includes("scheduled") ? "scheduled" : "in_progress";
+  const status = (desc.includes("final") || desc.includes("finished")) ? "final" : desc.includes("scheduled") ? "scheduled" : "in_progress";
 
   // UNCONFIRMED order — see gap notice above.
   let awayScore = null, homeScore = null;

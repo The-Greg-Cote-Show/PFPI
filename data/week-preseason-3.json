@@ -128,24 +128,6 @@
       "clockReport": null
     },
     {
-      "id": "hl-566555",
-      "home": "NYJ",
-      "away": "NYG",
-      "homeScore": null,
-      "awayScore": null,
-      "status": "in_progress",
-      "kickoffISO": "2026-08-28T23:30:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "NYG",
-        "Critters": "NYG",
-        "Giraffes": "NYG"
-      },
-      "clockReport": "14:55 - 1st Quarter"
-    },
-    {
       "id": "hl-566558",
       "home": "JAX",
       "away": "TB",
@@ -161,25 +143,25 @@
         "Critters": "JAX",
         "Giraffes": "TB"
       },
-      "clockReport": "15:00 - 1st Quarter"
+      "clockReport": "12:13 - 1st Quarter"
     },
     {
-      "id": "hl-566559",
-      "home": "CAR",
-      "away": "HOU",
+      "id": "hl-566555",
+      "home": "NYJ",
+      "away": "NYG",
       "homeScore": null,
       "awayScore": null,
       "status": "in_progress",
-      "kickoffISO": "2026-08-28T23:00:00.000Z",
+      "kickoffISO": "2026-08-28T23:30:00.000Z",
       "winner": null,
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "HOU",
-        "Critters": "HOU",
-        "Giraffes": "CAR"
+        "Lobos": "NYG",
+        "Critters": "NYG",
+        "Giraffes": "NYG"
       },
-      "clockReport": "1:32 - 1st Quarter"
+      "clockReport": "11:29 - 1st Quarter"
     },
     {
       "id": "hl-566556",
@@ -197,7 +179,25 @@
         "Critters": "MIA",
         "Giraffes": "MIA"
       },
-      "clockReport": "4:14 - 1st Quarter"
+      "clockReport": "3:23 - 1st Quarter"
+    },
+    {
+      "id": "hl-566559",
+      "home": "CAR",
+      "away": "HOU",
+      "homeScore": null,
+      "awayScore": null,
+      "status": "in_progress",
+      "kickoffISO": "2026-08-28T23:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "HOU",
+        "Critters": "HOU",
+        "Giraffes": "CAR"
+      },
+      "clockReport": "15:00 - 2nd Quarter"
     },
     {
       "id": "hl-566554",
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-28T23:40:23.458Z"
+  "updatedAt": "2026-08-28T23:45:29.056Z"
 }

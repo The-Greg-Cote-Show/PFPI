@@ -909,8 +909,16 @@ async function handlePublishBrief(request, env) {
   }
 
   const { week, text, adminName } = await request.json();
-  const weekNum = parseInt(week, 10);
-  if (!Number.isInteger(weekNum) || weekNum < 1 || weekNum > NUM_WEEKS) {
+  // "preseason-3" is a valid week value too (per Yeti, 2026-08-28 -- the
+  // Commissioner's Report should be testable against the preseason
+  // sandbox the same way Missing Picks/Weekly Digest already are, since
+  // it's meant as a full dress rehearsal, not just a real-week tool).
+  // weekNum stays numeric-only for the NUM_WEEKS bounds check and for the
+  // handful of places below (version history, override log) that
+  // genuinely only make sense as a number; weekKey is whichever of the two
+  // actually names this brief's storage/file location.
+  const weekNum = week === "preseason-3" ? week : parseInt(week, 10);
+  if (weekNum !== "preseason-3" && (!Number.isInteger(weekNum) || weekNum < 1 || weekNum > NUM_WEEKS)) {
     return jsonResponse({ error: "Invalid week." }, 400, request);
   }
   const trimmedText = (text || "").trim();
@@ -922,7 +930,7 @@ async function handlePublishBrief(request, env) {
   const committed = await commitJSONToGitHub(
     `data/brief-week-${weekNum}.json`,
     { week: weekNum, text: trimmedText, updatedAt },
-    `Publish Week ${weekNum} brief${isAdmin ? " [admin correction]" : ""} [automated]`,
+    `Publish ${weekNum === "preseason-3" ? "Preseason" : "Week " + weekNum} brief${isAdmin ? " [admin correction]" : ""} [automated]`,
     env
   );
 
@@ -990,8 +998,9 @@ async function handleGetBriefHistory(request, env) {
   }
 
   const url = new URL(request.url);
-  const weekNum = parseInt(url.searchParams.get("week"), 10);
-  if (!Number.isInteger(weekNum) || weekNum < 1 || weekNum > NUM_WEEKS) {
+  const rawWeek = url.searchParams.get("week");
+  const weekNum = rawWeek === "preseason-3" ? rawWeek : parseInt(rawWeek, 10);
+  if (weekNum !== "preseason-3" && (!Number.isInteger(weekNum) || weekNum < 1 || weekNum > NUM_WEEKS)) {
     return jsonResponse({ error: "Invalid week." }, 400, request);
   }
 

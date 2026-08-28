@@ -552,24 +552,24 @@ async function render(){
   // Brief shows under the chart regardless of which category tab is active —
   // it's tied to the selected week, not the selected category — so this
   // runs before the games/chart branch split below, not inside either one.
-  // Doesn't apply to preseason at all (Greg's brief is a real-season thing),
-  // so it's hidden outright rather than showing a not-applicable empty state.
+  // Preseason now shows a brief too (per Yeti, 2026-08-28 -- the
+  // Commissioner's Report is meant to be testable as a full dress
+  // rehearsal, same as Missing Picks/Weekly Digest already are), reading
+  // from data/brief-week-preseason-3.json via the same loadRealBrief() as
+  // any real week -- that function already just string-interpolates
+  // whatever week it's given, so no change was needed there.
   const briefPanelEl = document.getElementById("briefPanel");
-  if (isPreseason) {
-    briefPanelEl.classList.add("hidden");
+  briefPanelEl.classList.remove("hidden");
+  const briefBodyEl = document.getElementById("briefBody");
+  const briefWeekTagEl = document.getElementById("briefWeekTag");
+  briefWeekTagEl.textContent = isPreseason ? "Preseason" : (isFinal ? "Week " + NUM_WEEKS + " — Final" : "Week " + currentWeek);
+  const brief = await loadRealBrief(currentWeek);
+  if (brief) {
+    briefBodyEl.textContent = brief;
+    briefBodyEl.className = "brief-body";
   } else {
-    briefPanelEl.classList.remove("hidden");
-    const briefBodyEl = document.getElementById("briefBody");
-    const briefWeekTagEl = document.getElementById("briefWeekTag");
-    briefWeekTagEl.textContent = isFinal ? "Week " + NUM_WEEKS + " — Final" : "Week " + currentWeek;
-    const brief = await loadRealBrief(currentWeek);
-    if (brief) {
-      briefBodyEl.textContent = brief;
-      briefBodyEl.className = "brief-body";
-    } else {
-      briefBodyEl.textContent = "Greg hasn't published a brief for this week yet.";
-      briefBodyEl.className = "brief-body empty";
-    }
+    briefBodyEl.textContent = "Greg hasn't published a brief for this week yet.";
+    briefBodyEl.className = "brief-body empty";
   }
 
   const chartPanel = document.getElementById("chartPanel");

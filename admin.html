@@ -6,14 +6,14 @@
 <title>PFPI Admin | The Greg Cote Show</title>
 <style>
 :root {
-  --bg:#080c14; --panel:#0f1623; --panel2:#141d2e;
+  --bg:#080c14; --panel:#0f1623; --panel2:#141d2e; --panel3:#1a2540;
   --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
-  --gold:#e8b84b; --red:#e05252; --green:#3ecf74; --blue:#4a9eff;
+  --gold:#e8b84b; --gold2:#f5d07a; --red:#e05252; --green:#3ecf74; --blue:#4a9eff;
   --text:#eef2f7; --muted:#7a8ba8;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;font-size:14px;}
-.wrap{max-width:520px;margin:0 auto;padding:2rem 1.25rem 3rem;}
+.wrap{max-width:560px;margin:0 auto;padding:2rem 1.25rem 3rem;}
 .title-main{font-size:1.3rem;font-weight:800;margin-bottom:1.25rem;}
 .title-main span{color:var(--gold);}
 label{display:block;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:.85rem 0 .3rem;}
@@ -27,6 +27,73 @@ button:hover{opacity:.9;}
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:1.5rem;}
 .hidden{display:none;}
 .footer-copyright{text-align:center;font-size:.7rem;color:var(--muted);margin-top:2rem;}
+
+/* Top-level tab bar (added 2026-08-28, per Yeti) -- Admin Portal is its own
+   row, the three Commissioner tabs sit in a second row under an "Acting
+   Commissioner" label, matching Yeti's own description ("a header above
+   those tabs"). Both rows stay visible together at all times once logged
+   in -- this isn't a drill-down, every tab is always one click away. */
+.top-tabs{display:flex;gap:6px;margin-top:1.5rem;}
+.top-tab-btn{flex:1;background:var(--panel2);border:1px solid var(--border2);color:var(--muted);font-size:.78rem;font-weight:700;padding:.6rem .5rem;border-radius:8px;cursor:pointer;}
+.top-tab-btn.active{background:var(--gold);color:#1a1305;border-color:var(--gold);}
+.acting-commissioner-header{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:1.25rem;margin-bottom:.5rem;}
+
+/* Everything below is ported from brief.html's Commissioner Portal (Missing
+   Picks / Weekly Digest / Commissioner's Report), 2026-08-28, per Yeti --
+   "so I can act as commissioner in case Greg can't do something." Scoped
+   entirely under #commissionerTabs so it can't collide with this page's
+   own pre-existing .panel/.status/button rules above (brief.html's .status
+   defaults to display:none until a .show class is added, which the ORIGINAL
+   admin panels' JS never does -- scoping, not renaming, keeps both totally
+   independent). The backend endpoints these call (POST /admin/publish-brief,
+   /greg/brief-history, /greg/send-reminder) already accept an admin session
+   token exactly like a Greg session, so this reuses admin.html's own
+   existing login/sessionToken -- no new auth was needed. Greg's own
+   brief.html is completely untouched and still fully functional -- this is
+   a parallel copy for Yeti's backup access, not a replacement. */
+#commissionerTabs .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:1.75rem;margin-top:1rem;}
+#commissionerTabs .field{margin-bottom:1.25rem;}
+#commissionerTabs .field label{display:block;font-size:.8rem;font-weight:700;color:var(--muted);margin-bottom:.5rem;text-transform:none;letter-spacing:normal;}
+#commissionerTabs .field input[type=text],
+#commissionerTabs .field select,
+#commissionerTabs .field textarea{
+  width:100%;background:var(--panel2);border:1px solid var(--border2);border-radius:8px;
+  color:var(--text);font-size:.95rem;padding:.7rem .85rem;font-family:inherit;
+}
+#commissionerTabs .field textarea{min-height:220px;resize:vertical;line-height:1.5;}
+#commissionerTabs .field input:focus,#commissionerTabs .field select:focus,#commissionerTabs .field textarea:focus{outline:none;border-color:var(--blue);}
+#commissionerTabs .btn{background:var(--gold);color:#1a1305;border:none;border-radius:8px;font-size:.9rem;font-weight:800;padding:.75rem 1.5rem;cursor:pointer;width:100%;margin-top:0;}
+#commissionerTabs .btn:hover{background:var(--gold2);}
+#commissionerTabs .btn:disabled{opacity:.5;cursor:not-allowed;}
+#commissionerTabs .status{font-size:.8rem;margin-top:1rem;padding:.7rem .9rem;border-radius:8px;display:none;}
+#commissionerTabs .status.show{display:block;}
+#commissionerTabs .status.ok{background:rgba(62,207,116,.12);color:var(--green);border:1px solid rgba(62,207,116,.3);}
+#commissionerTabs .status.err{background:rgba(224,82,82,.12);color:var(--red);border:1px solid rgba(224,82,82,.3);}
+#commissionerTabs .status.warn{background:rgba(232,184,75,.12);color:var(--gold);border:1px solid rgba(232,184,75,.3);}
+#commissionerTabs .char-count{font-size:.68rem;color:var(--muted);text-align:right;margin-top:.35rem;}
+
+#commissionerTabs .mp-row{background:var(--panel2);border:1px solid var(--border2);border-radius:10px;padding:.75rem .9rem;margin-bottom:.6rem;}
+#commissionerTabs .mp-row-header{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem;margin-bottom:.5rem;flex-wrap:wrap;}
+#commissionerTabs .mp-matchup{font-size:.85rem;font-weight:700;}
+#commissionerTabs .mp-chips{display:flex;flex-wrap:wrap;gap:6px;}
+#commissionerTabs .mp-chip{background:var(--panel3);border:1px solid rgba(224,82,82,.35);color:var(--red);font-size:.72rem;font-weight:600;padding:4px 9px;border-radius:6px;}
+#commissionerTabs .mp-chip-locked{border-color:var(--border2);color:var(--muted);}
+#commissionerTabs .mp-all-picked{color:var(--green);font-size:.78rem;font-weight:600;}
+#commissionerTabs .mp-reminder-btn{width:auto;margin-top:.7rem;font-size:.75rem;padding:.5rem .9rem;}
+#commissionerTabs .mp-reminder-status{font-size:.7rem;margin-top:.4rem;}
+#commissionerTabs .mp-reminder-status.ok{color:var(--green);}
+#commissionerTabs .mp-reminder-status.err{color:var(--red);}
+
+#commissionerTabs .digest-output{
+  width:100%;min-height:22rem;max-height:32rem;overflow:auto;box-sizing:border-box;
+  background:var(--panel2);border:1px solid var(--border2);border-radius:8px;
+  color:var(--text);font-size:.78rem;line-height:1.5;padding:.85rem;
+  font-family:"SF Mono",Consolas,"Courier New",monospace;white-space:pre-wrap;
+  margin-bottom:.85rem;
+}
+#commissionerTabs .digest-output:focus{outline:none;border-color:var(--blue);}
+#commissionerTabs .digest-actions{display:flex;gap:8px;}
+#commissionerTabs .digest-btn{width:auto;flex:1;font-size:.8rem;padding:.6rem 1rem;}
 </style>
 </head>
 <body>
@@ -57,125 +124,189 @@ button:hover{opacity:.9;}
     <div class="status" id="resetStatus"></div>
   </div>
 
-  <div class="panel hidden" id="overridePanel">
-    <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Override a pick</div>
-    <label for="team">Team</label>
-    <input type="text" id="team" placeholder="e.g. Greg's Lobos">
-    <label for="week">Week</label>
-    <input type="number" id="week" min="1" max="18">
-    <label for="gameId">Game ID</label>
-    <input type="text" id="gameId" placeholder="matches the id in data/week-N.json">
-    <label for="newPick">New pick (team name)</label>
-    <input type="text" id="newPick">
-    <label for="adminName">Your name (for the audit log)</label>
-    <input type="text" id="adminName" value="Yeti">
-    <button id="overrideBtn">Save override</button>
-    <div class="status" id="overrideStatus"></div>
+  <div class="top-tabs hidden" id="topTabsRow1">
+    <button class="top-tab-btn active" data-tab="admin" type="button">Admin Portal</button>
+  </div>
+  <div class="acting-commissioner-header hidden" id="actingCommissionerHeader">Acting Commissioner</div>
+  <div class="top-tabs hidden" id="topTabsRow2">
+    <button class="top-tab-btn" data-tab="missing" type="button">Missing Picks</button>
+    <button class="top-tab-btn" data-tab="digest" type="button">Weekly Digest</button>
+    <button class="top-tab-btn" data-tab="publish" type="button">Commissioner's Report</button>
   </div>
 
-  <div class="panel hidden" id="briefFixPanel">
-    <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Fix Greg's brief</div>
-    <label for="briefWeek">Week</label>
-    <input type="number" id="briefWeek" min="1" max="18">
-    <label for="briefFixText">Brief text</label>
-    <textarea id="briefFixText" rows="8" style="width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:.6rem .7rem;border-radius:8px;font-size:.85rem;font-family:inherit;resize:vertical;"></textarea>
-    <label for="briefFixAdminName">Your name (for the audit log)</label>
-    <input type="text" id="briefFixAdminName" value="Yeti">
-    <button id="briefFixBtn">Save brief (admin override)</button>
-    <div class="status" id="briefFixStatus"></div>
-  </div>
-
-  <div class="panel hidden" id="testEmailPanel">
-    <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Send test picks email</div>
-    <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
-      Emails a real, working picks link to your own admin address
-      (yeti@yetiblanc.com) as whichever team you pick below — always your
-      inbox, never a real family member, no matter what's selected. Use
-      "preseason-3" for week to test safely against real live data with
-      zero effect on real scoring; a real numbered week (1-18) plugs into
-      real standings once picks are saved against it, so only use one of
-      those once you actually mean to test against the live season.
-      <strong>These are two separate buckets that never mix</strong> — a
-      pick saved against "preseason-3" shows up on the Preseason Games tab
-      but will NEVER appear on the Commissioner Portal's Missing Picks
-      tracker (which only ever looks at real numbered weeks), and vice
-      versa. If you're testing the Missing Picks tracker specifically, use
-      a real week number here, not "preseason-3."
+  <!-- ============================================================
+       TAB: ADMIN PORTAL
+       ============================================================ -->
+  <div id="adminPortalTab">
+    <div class="panel hidden" id="testEmailPanel">
+      <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Send test picks email</div>
+      <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
+        Emails a real, working picks link to your own admin address
+        (yeti@yetiblanc.com) as whichever team you pick below — always your
+        inbox, never a real family member, no matter what's selected. Use
+        "preseason-3" for week to test safely against real live data with
+        zero effect on real scoring; a real numbered week (1-18) plugs into
+        real standings once picks are saved against it, so only use one of
+        those once you actually mean to test against the live season.
+        <strong>These are two separate buckets that never mix</strong> — a
+        pick saved against "preseason-3" shows up on the Preseason Games tab
+        but will NEVER appear on the Commissioner Portal's Missing Picks
+        tracker (which only ever looks at real numbered weeks), and vice
+        versa. If you're testing the Missing Picks tracker specifically, use
+        a real week number here, not "preseason-3."
+      </div>
+      <label for="testEmailTeam">Team (testing as)</label>
+      <select id="testEmailTeam">
+        <optgroup label="Real roster (counts toward real standings)">
+          <option value="Lobos">Greg's Lobos</option>
+          <option value="Roughriders">Dick's Roughriders</option>
+          <option value="Maniacs">Mom's Maniacs</option>
+          <option value="Critters">Chris' Critters</option>
+          <option value="Chickens">Mike's Chickens</option>
+          <option value="Ferraris">Christie's Ferraris</option>
+          <option value="Llamas">Tati's Llamas</option>
+          <option value="Giraffes">Gracelin's Giraffes</option>
+        </optgroup>
+        <optgroup label="Sandboxed test teams (never affect real standings)">
+          <option value="Yeti's Big Feet">Yeti's Big Feet</option>
+          <option value="Gentry's Neanderbrows">Gentry's Neanderbrows</option>
+        </optgroup>
+      </select>
+      <label for="testEmailWeek">Week</label>
+      <input type="text" id="testEmailWeek" value="preseason-3" placeholder="preseason-3, or 1-18">
+      <button id="testEmailBtn">Email me this test link</button>
+      <div class="status" id="testEmailStatus"></div>
     </div>
-    <label for="testEmailTeam">Team (testing as)</label>
-    <select id="testEmailTeam">
-      <optgroup label="Real roster (counts toward real standings)">
-        <option value="Lobos">Greg's Lobos</option>
-        <option value="Roughriders">Dick's Roughriders</option>
-        <option value="Maniacs">Mom's Maniacs</option>
-        <option value="Critters">Chris' Critters</option>
-        <option value="Chickens">Mike's Chickens</option>
-        <option value="Ferraris">Christie's Ferraris</option>
-        <option value="Llamas">Tati's Llamas</option>
-        <option value="Giraffes">Gracelin's Giraffes</option>
-      </optgroup>
-      <optgroup label="Sandboxed test teams (never affect real standings)">
-        <option value="Yeti's Big Feet">Yeti's Big Feet</option>
-        <option value="Gentry's Neanderbrows">Gentry's Neanderbrows</option>
-      </optgroup>
-    </select>
-    <label for="testEmailWeek">Week</label>
-    <input type="text" id="testEmailWeek" value="preseason-3" placeholder="preseason-3, or 1-18">
-    <button id="testEmailBtn">Email me this test link</button>
-    <div class="status" id="testEmailStatus"></div>
+
+    <div class="panel hidden" id="correctionPanel">
+      <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Send correction form</div>
+      <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
+        For fixing a pick after its deadline has already passed — a real
+        picks link that shows and unlocks ONLY the one game below, past its
+        deadline. No other games from that week are shown or accessible on
+        it. Always sent to your own admin address (yeti@yetiblanc.com) —
+        forward it to whoever needs to fix their pick once real family email
+        is set up. Expires automatically at that game's own kickoff, not on
+        a flat timer.
+      </div>
+      <label for="correctionTeam">Team</label>
+      <select id="correctionTeam">
+        <optgroup label="Real roster">
+          <option value="Lobos">Greg's Lobos</option>
+          <option value="Roughriders">Dick's Roughriders</option>
+          <option value="Maniacs">Mom's Maniacs</option>
+          <option value="Critters">Chris' Critters</option>
+          <option value="Chickens">Mike's Chickens</option>
+          <option value="Ferraris">Christie's Ferraris</option>
+          <option value="Llamas">Tati's Llamas</option>
+          <option value="Giraffes">Gracelin's Giraffes</option>
+        </optgroup>
+        <optgroup label="Sandboxed test teams">
+          <option value="Yeti's Big Feet">Yeti's Big Feet</option>
+          <option value="Gentry's Neanderbrows">Gentry's Neanderbrows</option>
+        </optgroup>
+      </select>
+      <label for="correctionWeek">Week</label>
+      <select id="correctionWeek"></select>
+      <label for="correctionGameId">Game</label>
+      <select id="correctionGameId"></select>
+      <button id="correctionBtn">Email me this correction link</button>
+      <div class="status" id="correctionStatus"></div>
+    </div>
+
+    <div class="panel hidden" id="triggerPollPanel">
+      <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Manually trigger a poll</div>
+      <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
+        Forces an immediate Big Balls (regular season) + Highlightly
+        (preseason) fetch-and-publish cycle right now, bypassing the normal
+        polling windows/cadence entirely — useful to pull fresh scores on
+        demand instead of waiting for the next scheduled tick. Each click is
+        a real API call against both providers' own daily budgets (Big
+        Balls 2000/day, Highlightly 100/day), so use this deliberately, not
+        as a casual refresh button.
+      </div>
+      <button id="triggerPollBtn">Trigger poll now</button>
+      <div class="status" id="triggerPollStatus"></div>
+    </div>
+
+    <div class="panel hidden" id="clearPicksPanel">
+      <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;color:var(--red);">Clear all picks for a week</div>
+      <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
+        Destructive — clears EVERY team's saved picks for the week below (all
+        8 real roster teams AND the 2 sandboxed test teams), not just one
+        team. No undo. Built for resetting preseason test data before a clean
+        multi-person test, but works on any week — remove this button
+        yourself before opening the site for real regular-season picks.
+      </div>
+      <label for="clearPicksWeek">Week</label>
+      <input type="text" id="clearPicksWeek" placeholder="preseason-3, or 1-18">
+      <label for="clearPicksAdminName">Your name (for the audit log)</label>
+      <input type="text" id="clearPicksAdminName" value="Yeti">
+      <button id="clearPicksBtn" style="background:var(--red);">Clear all picks for this week</button>
+      <div class="status" id="clearPicksStatus"></div>
+    </div>
   </div>
 
-  <div class="panel hidden" id="correctionPanel">
-    <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Send correction form</div>
-    <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
-      For fixing a pick after its deadline has already passed — a real
-      picks link that unlocks ONLY the one game below, past its deadline;
-      every other game on it stays locked normally. Always sent to your
-      own admin address (yeti@yetiblanc.com) — forward it to whoever
-      needs to fix their pick once real family email is set up. Valid 24
-      hours. This is the "much better than me making the changes"
-      alternative to the Override panel above.
+  <!-- ============================================================
+       TABS: MISSING PICKS / WEEKLY DIGEST / COMMISSIONER'S REPORT
+       Ported from brief.html -- see the CSS comment above for why.
+       ============================================================ -->
+  <div id="commissionerTabs">
+    <div class="card hidden" id="missingPicksTab">
+      <div class="field">
+        <label for="mpWeekSelect">Week</label>
+        <select id="mpWeekSelect"></select>
+        <div class="char-count" style="text-align:left;margin-top:.4rem;">Tracks real numbered weeks only — a Preseason test pick won't show up or count here.</div>
+      </div>
+      <div id="mpContent"></div>
+      <div class="status" id="mpStatus"></div>
     </div>
-    <label for="correctionTeam">Team</label>
-    <select id="correctionTeam">
-      <optgroup label="Real roster">
-        <option value="Lobos">Greg's Lobos</option>
-        <option value="Roughriders">Dick's Roughriders</option>
-        <option value="Maniacs">Mom's Maniacs</option>
-        <option value="Critters">Chris' Critters</option>
-        <option value="Chickens">Mike's Chickens</option>
-        <option value="Ferraris">Christie's Ferraris</option>
-        <option value="Llamas">Tati's Llamas</option>
-        <option value="Giraffes">Gracelin's Giraffes</option>
-      </optgroup>
-      <optgroup label="Sandboxed test teams">
-        <option value="Yeti's Big Feet">Yeti's Big Feet</option>
-        <option value="Gentry's Neanderbrows">Gentry's Neanderbrows</option>
-      </optgroup>
-    </select>
-    <label for="correctionWeek">Week</label>
-    <select id="correctionWeek"></select>
-    <label for="correctionGameId">Game</label>
-    <select id="correctionGameId"></select>
-    <button id="correctionBtn">Email me this correction link</button>
-    <div class="status" id="correctionStatus"></div>
-  </div>
 
-  <div class="panel hidden" id="clearPicksPanel">
-    <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;color:var(--red);">Clear all picks for a week</div>
-    <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
-      Destructive — clears EVERY team's saved picks for the week below (all
-      8 real roster teams AND the 2 sandboxed test teams), not just one
-      team. No undo. Built for resetting preseason test data before a clean
-      multi-person test, but works on any week — remove this button
-      yourself before opening the site for real regular-season picks.
+    <div class="card hidden" id="digestTab">
+      <div class="field">
+        <label for="digestWeekSelect">Week</label>
+        <select id="digestWeekSelect"></select>
+      </div>
+      <div id="digestOutput" class="digest-output" tabindex="0"></div>
+      <div class="digest-actions">
+        <button class="btn digest-btn" id="digestCopyBtn" type="button">Copy to clipboard</button>
+        <button class="btn digest-btn" id="digestInsertBtn" type="button">Insert into brief text</button>
+      </div>
+      <div class="status" id="digestStatus"></div>
     </div>
-    <label for="clearPicksWeek">Week</label>
-    <input type="text" id="clearPicksWeek" placeholder="preseason-3, or 1-18">
-    <label for="clearPicksAdminName">Your name (for the audit log)</label>
-    <input type="text" id="clearPicksAdminName" value="Yeti">
-    <button id="clearPicksBtn" style="background:var(--red);">Clear all picks for this week</button>
-    <div class="status" id="clearPicksStatus"></div>
+
+    <div class="card hidden" id="publishTab">
+      <div class="field">
+        <label for="weekSelect">Week</label>
+        <select id="weekSelect"></select>
+      </div>
+
+      <div id="briefSavedView" class="hidden">
+        <div class="field">
+          <label>This week's brief (saved)</label>
+          <div class="digest-output" id="briefSavedText" style="min-height:8rem;"></div>
+          <div class="char-count" id="briefSavedMeta" style="text-align:left;"></div>
+        </div>
+        <div class="field hidden" id="briefVersionsField">
+          <label for="briefVersionSelect">Previous versions</label>
+          <select id="briefVersionSelect"></select>
+          <div class="digest-output hidden" id="briefVersionPreview" style="min-height:6rem;margin-top:.6rem;"></div>
+          <button class="btn hidden" id="briefVersionLoadBtn" type="button" style="margin-top:.6rem;">Load this version into editor</button>
+        </div>
+        <button class="btn" id="briefEditBtn" type="button">Edit</button>
+      </div>
+
+      <div id="briefEditView">
+        <div class="field">
+          <label for="briefText">This week's brief</label>
+          <textarea id="briefText" placeholder="Write this week's PFPI brief..."></textarea>
+          <div class="char-count" id="charCount">0 characters</div>
+        </div>
+        <button class="btn" id="publishBtn">Publish brief</button>
+        <button class="btn hidden" id="briefCancelEditBtn" type="button" style="background:var(--panel3);color:var(--text);margin-top:.6rem;">Cancel</button>
+      </div>
+      <div class="status" id="publishStatus"></div>
+    </div>
   </div>
 
   <div class="footer-copyright">&copy;ThatKindaThing Productions, LLC</div>
@@ -183,8 +314,37 @@ button:hover{opacity:.9;}
 
 <script>
 const WORKER_BASE = "https://pfpi-picks-worker.yeti-f3c.workers.dev";
+const SCORES_WORKER_BASE = "https://pfpi-scores-worker.yeti-f3c.workers.dev";
 const SESSION_STORAGE_KEY = "pfpi-admin-session-token";
 let sessionToken = null;
+
+const REAL_TEAMS = ["Lobos", "Roughriders", "Maniacs", "Critters", "Chickens", "Ferraris", "Llamas", "Giraffes"];
+const TEAM_SHORT = {
+  Lobos: "Greg's Lobos", Roughriders: "Dick's Roughriders", Maniacs: "Mom's Maniacs", Critters: "Chris' Critters",
+  Chickens: "Mike's Chickens", Ferraris: "Christie's Ferraris", Llamas: "Tati's Llamas", Giraffes: "Gracelin's Giraffes",
+};
+
+// Same shared current-week value the rest of the site uses (written by the
+// scores worker into KV) — not recomputed or hardcoded here.
+async function fetchCurrentWeek() {
+  try {
+    const res = await fetch(`${WORKER_BASE}/current-week`);
+    if (!res.ok) return 1;
+    const data = await res.json();
+    return data.currentWeek || 1;
+  } catch (e) {
+    return 1;
+  }
+}
+
+// ============================================================
+// LOGIN (unchanged from before this round -- Admin Portal's own login gates
+// every tab on this page, including the ported Commissioner tabs below,
+// since their backend endpoints already accept an admin session token
+// exactly like a Greg session).
+// ============================================================
+
+let digestInitialized = false;
 
 // Per Yeti (2026-08-26): a saved browser password shouldn't matter if the
 // page throws the session away on every refresh -- the backend session is
@@ -194,13 +354,18 @@ let sessionToken = null;
 // did that at all, unlike brief.html).
 function showLoggedIn() {
   document.getElementById("loginPanel").classList.add("hidden");
-  document.getElementById("overridePanel").classList.remove("hidden");
-  document.getElementById("briefFixPanel").classList.remove("hidden");
   document.getElementById("testEmailPanel").classList.remove("hidden");
   document.getElementById("correctionPanel").classList.remove("hidden");
+  document.getElementById("triggerPollPanel").classList.remove("hidden");
   document.getElementById("clearPicksPanel").classList.remove("hidden");
-  loadBriefForWeek();
+  document.getElementById("topTabsRow1").classList.remove("hidden");
+  document.getElementById("actingCommissionerHeader").classList.remove("hidden");
+  document.getElementById("topTabsRow2").classList.remove("hidden");
+  switchTopTab("admin");
   populateCorrectionWeeks();
+  populateMissingPicksWeeks();
+  populateWeeks();
+  renderPublishTab();
 }
 
 // Clears a rejected/expired session and falls back to the login gate --
@@ -211,11 +376,16 @@ function clearSession(message) {
   sessionToken = null;
   localStorage.removeItem(SESSION_STORAGE_KEY);
   document.getElementById("loginPanel").classList.remove("hidden");
-  document.getElementById("overridePanel").classList.add("hidden");
-  document.getElementById("briefFixPanel").classList.add("hidden");
   document.getElementById("testEmailPanel").classList.add("hidden");
   document.getElementById("correctionPanel").classList.add("hidden");
+  document.getElementById("triggerPollPanel").classList.add("hidden");
   document.getElementById("clearPicksPanel").classList.add("hidden");
+  document.getElementById("topTabsRow1").classList.add("hidden");
+  document.getElementById("actingCommissionerHeader").classList.add("hidden");
+  document.getElementById("topTabsRow2").classList.add("hidden");
+  document.getElementById("missingPicksTab").classList.add("hidden");
+  document.getElementById("digestTab").classList.add("hidden");
+  document.getElementById("publishTab").classList.add("hidden");
   if (message) {
     const statusEl = document.getElementById("loginStatus");
     statusEl.textContent = message;
@@ -340,112 +510,32 @@ document.getElementById("resetForm").onsubmit = async (e) => {
   }
 };
 
-document.getElementById("overrideBtn").onclick = async () => {
-  const statusEl = document.getElementById("overrideStatus");
-  const body = {
-    team: document.getElementById("team").value,
-    week: parseInt(document.getElementById("week").value, 10),
-    gameId: document.getElementById("gameId").value,
-    newPick: document.getElementById("newPick").value,
-    adminName: document.getElementById("adminName").value,
-  };
-  statusEl.textContent = "Saving...";
-  statusEl.className = "status";
-  try {
-    const res = await fetch(`${WORKER_BASE}/admin/override-pick`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Admin-Token": sessionToken },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
-    if (!res.ok) {
-      statusEl.textContent = data.error || "Override failed.";
-      statusEl.className = "status error";
-      return;
-    }
-    statusEl.textContent = "Saved and logged.";
-    statusEl.className = "status ok";
-  } catch (e) {
-    statusEl.textContent = "Could not reach the server.";
-    statusEl.className = "status error";
-  }
-};
-
 // ============================================================
-// FIX GREG'S BRIEF (admin correction, not Greg's own posting flow)
+// TOP TAB SWITCHER (added 2026-08-28) -- Admin Portal vs the three ported
+// Commissioner tabs. Digest is lazily initialized on first visit (same
+// pattern brief.html itself already used), since it does real fetches the
+// other two tabs don't need on login.
 // ============================================================
 
-async function loadBriefForWeek() {
-  const weekInput = document.getElementById("briefWeek");
-  const textEl = document.getElementById("briefFixText");
-  const statusEl = document.getElementById("briefFixStatus");
-
-  if (!weekInput.value) {
-    try {
-      const res = await fetch(`${WORKER_BASE}/current-week`);
-      const data = await res.json();
-      weekInput.value = data.currentWeek || 1;
-    } catch (e) {
-      weekInput.value = 1;
-    }
-  }
-
-  try {
-    const res = await fetch(`data/brief-week-${weekInput.value}.json?t=${Date.now()}`);
-    if (res.ok) {
-      const data = await res.json();
-      textEl.value = data.text || "";
-      statusEl.textContent = "Loaded the currently published brief for this week.";
-      statusEl.className = "status";
-    } else {
-      textEl.value = "";
-      statusEl.textContent = "No brief published for this week yet.";
-      statusEl.className = "status";
-    }
-  } catch (e) {
-    textEl.value = "";
-    statusEl.textContent = "";
-    statusEl.className = "status";
+function switchTopTab(tab) {
+  document.querySelectorAll(".top-tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  document.getElementById("adminPortalTab").classList.toggle("hidden", tab !== "admin");
+  document.getElementById("missingPicksTab").classList.toggle("hidden", tab !== "missing");
+  document.getElementById("digestTab").classList.toggle("hidden", tab !== "digest");
+  document.getElementById("publishTab").classList.toggle("hidden", tab !== "publish");
+  if (tab === "digest" && !digestInitialized) {
+    digestInitialized = true;
+    populateDigestWeeks();
   }
 }
 
-document.getElementById("briefWeek").onchange = loadBriefForWeek;
+document.querySelectorAll(".top-tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => switchTopTab(btn.dataset.tab));
+});
 
-document.getElementById("briefFixBtn").onclick = async () => {
-  const statusEl = document.getElementById("briefFixStatus");
-  const body = {
-    week: parseInt(document.getElementById("briefWeek").value, 10),
-    text: document.getElementById("briefFixText").value,
-    adminName: document.getElementById("briefFixAdminName").value,
-  };
-  statusEl.textContent = "Saving...";
-  statusEl.className = "status";
-  try {
-    const res = await fetch(`${WORKER_BASE}/admin/publish-brief`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Session-Token": sessionToken },
-      body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
-    if (res.status === 202 && data.published === false) {
-      statusEl.textContent = data.error;
-      statusEl.className = "status error";
-      return;
-    }
-    if (!res.ok) {
-      statusEl.textContent = data.error || "Save failed.";
-      statusEl.className = "status error";
-      return;
-    }
-    statusEl.textContent = "Saved and logged.";
-    statusEl.className = "status ok";
-  } catch (e) {
-    statusEl.textContent = "Could not reach the server.";
-    statusEl.className = "status error";
-  }
-};
+// ============================================================
+// SEND TEST PICKS EMAIL
+// ============================================================
 
 document.getElementById("testEmailBtn").onclick = async () => {
   const statusEl = document.getElementById("testEmailStatus");
@@ -488,16 +578,6 @@ document.getElementById("testEmailBtn").onclick = async () => {
 // game that isn't actually on that week's real schedule.
 // ============================================================
 
-async function fetchCorrectionCurrentWeek() {
-  try {
-    const res = await fetch(`${WORKER_BASE}/current-week`);
-    const data = await res.json();
-    return data.currentWeek || 1;
-  } catch (e) {
-    return 1;
-  }
-}
-
 function fmtCorrectionKickoff(iso) {
   return new Date(iso).toLocaleString("en-US", {
     timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
@@ -506,7 +586,7 @@ function fmtCorrectionKickoff(iso) {
 
 async function populateCorrectionWeeks() {
   const sel = document.getElementById("correctionWeek");
-  const currentWeek = await fetchCorrectionCurrentWeek();
+  const currentWeek = await fetchCurrentWeek();
   sel.innerHTML = "";
   const preseasonOpt = document.createElement("option");
   preseasonOpt.value = "preseason-3";
@@ -594,6 +674,43 @@ document.getElementById("correctionBtn").onclick = async () => {
   }
 };
 
+// ============================================================
+// MANUAL POLL TRIGGER (added 2026-08-28) -- calls pfpi-scores-worker
+// directly (a different Worker than WORKER_BASE above), authenticated with
+// the SAME admin session token this page already holds -- that Worker reads
+// the identical admin-session:{token} KV key picks-worker.js's login flow
+// writes (both share one PFPI_KV namespace), so no separate login or secret
+// was needed for this to work securely.
+// ============================================================
+
+document.getElementById("triggerPollBtn").onclick = async () => {
+  const statusEl = document.getElementById("triggerPollStatus");
+  const btn = document.getElementById("triggerPollBtn");
+  btn.disabled = true;
+  statusEl.textContent = "Triggering...";
+  statusEl.className = "status";
+  try {
+    const res = await fetch(`${SCORES_WORKER_BASE}/admin/trigger-poll`, {
+      method: "POST",
+      headers: { "X-Admin-Token": sessionToken },
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Trigger failed.";
+      statusEl.className = "status error";
+      return;
+    }
+    statusEl.textContent = "Poll triggered — scores/standings should update within a few seconds.";
+    statusEl.className = "status ok";
+  } catch (e) {
+    btn.disabled = false;
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "status error";
+  }
+};
+
 // Real destructive action -- per Yeti (2026-08-26): a simple confirm()
 // popup is sufficient here, no typed-confirmation step. Clears every
 // team's picks for the selected week (real roster + sandboxed test teams
@@ -635,6 +752,644 @@ document.getElementById("clearPicksBtn").onclick = async () => {
     statusEl.className = "status error";
   }
 };
+
+// ============================================================
+// MISSING-PICKS TRACKER -- ported verbatim from brief.html (2026-08-28).
+// By team only, per Yeti (2026-08-25): the "By game" view is removed
+// entirely, not just hidden.
+// ============================================================
+
+const mpGamesCache = {};
+
+// Pulls the same public data/week-N.json games+picks that index.html's
+// Games tab already reads -- no separate calculation, just a different view
+// of who's missing rather than who's already in. `deadline` on each game
+// comes from worker.js's buildWeekPublicJSON, which calls the same
+// computeGameDeadline() the picks worker uses for /my-picks -- not a second
+// deadline calculation.
+async function fetchWeekGames(week) {
+  if (mpGamesCache[week] !== undefined) return mpGamesCache[week];
+  try {
+    const res = await fetch(`data/week-${week}.json?t=${Date.now()}`);
+    if (!res.ok) { mpGamesCache[week] = null; return null; }
+    const data = await res.json();
+    mpGamesCache[week] = Array.isArray(data.games) ? data.games : null;
+    return mpGamesCache[week];
+  } catch (e) {
+    mpGamesCache[week] = null;
+    return null;
+  }
+}
+
+// Per Yeti (2026-08-26): a "Preseason" entry so the whole tracker can
+// actually be tested before real family emails/roster picks exist for a
+// real week -- preseason-3 is the same cross-team sandbox worker.js
+// already merges TEAMS + FAMILY_MEMBERS picks into (see BUILD_LOG.md), so
+// this reuses that same real data rather than faking a preview.
+const PRESEASON_MP_KEY = "preseason-3";
+const PRESEASON_MP_TEAMS = [...REAL_TEAMS, "Yeti's Big Feet", "Gentry's Neanderbrows"];
+
+async function populateMissingPicksWeeks() {
+  const currentWeek = await fetchCurrentWeek();
+  const sel = document.getElementById("mpWeekSelect");
+  sel.innerHTML = "";
+  const preseasonOpt = document.createElement("option");
+  preseasonOpt.value = PRESEASON_MP_KEY;
+  preseasonOpt.textContent = "Preseason";
+  sel.appendChild(preseasonOpt);
+  for (let w = 1; w <= currentWeek; w++) {
+    const opt = document.createElement("option");
+    opt.value = w;
+    opt.textContent = "Week " + w;
+    sel.appendChild(opt);
+  }
+  sel.value = currentWeek;
+  await renderMissingPicks();
+}
+
+// `deadline` is a recent addition to data/week-N.json (worker.js) -- guard
+// against a stale cached file from before that field existed (GitHub Pages
+// commit-to-CDN propagation lag is untested/variable, see index.html) rather
+// than let an invalid Date throw inside Intl.DateTimeFormat.
+function fmtDeadline(iso) {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d.getTime())) return "TBD";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric",
+    hour: "numeric", minute: "2-digit",
+  }).format(d) + " ET";
+}
+
+function isPastDeadline(iso) {
+  if (!iso) return false;
+  const t = new Date(iso).getTime();
+  return !isNaN(t) && t < Date.now();
+}
+
+async function renderMissingPicks() {
+  const contentEl = document.getElementById("mpContent");
+  const statusEl = document.getElementById("mpStatus");
+  // Not parsed to an int here -- "preseason-3" is a valid value too, and
+  // every downstream use (fetchWeekGames, the reminder endpoint) already
+  // treats week as an opaque string/id, not strictly numeric.
+  const week = document.getElementById("mpWeekSelect").value;
+  const teamsForWeek = week === PRESEASON_MP_KEY ? PRESEASON_MP_TEAMS : REAL_TEAMS;
+
+  contentEl.innerHTML = "";
+  statusEl.textContent = "Loading...";
+  statusEl.className = "status show";
+
+  const games = await fetchWeekGames(week);
+  if (!games || games.length === 0) {
+    statusEl.textContent = "No games published for this week yet.";
+    statusEl.className = "status show";
+    return;
+  }
+  statusEl.textContent = "";
+  statusEl.className = "status";
+
+  // Soonest deadline first. Missing/invalid deadlines (see fmtDeadline's
+  // note) sort last rather than corrupting the order.
+  const deadlineMs = g => { const t = new Date(g.deadline).getTime(); return isNaN(t) ? Infinity : t; };
+  const sorted = [...games].sort((a, b) => deadlineMs(a) - deadlineMs(b));
+
+  // Team order stays fixed (REAL_TEAMS), matching the "never re-sorted"
+  // convention index.html's charts already use -- only each team's list of
+  // missing games is sorted by urgency. A "Send reminder" button appears for
+  // any team missing at least one game -- partial submissions count, not
+  // just zero picks (per Yeti, 2026-08-25).
+  contentEl.innerHTML = teamsForWeek.map(team => {
+    const missingGames = sorted.filter(g => !(g.picks && g.picks[team]));
+    const gamesHtml = missingGames.length === 0
+      ? `<span class="mp-all-picked">All picked</span>`
+      : missingGames.map(g => {
+          const locked = isPastDeadline(g.deadline);
+          return `<span class="mp-chip${locked ? " mp-chip-locked" : ""}">${g.away} @ ${g.home} — ${locked ? "deadline passed" : fmtDeadline(g.deadline)}</span>`;
+        }).join("");
+    const reminderHtml = missingGames.length === 0 ? "" : `
+      <button class="btn mp-reminder-btn" type="button" data-team="${team}" data-week="${week}">Send reminder</button>
+      <div class="mp-reminder-status" data-reminder-status="${team}"></div>
+    `;
+    return `
+      <div class="mp-row">
+        <div class="mp-row-header"><span class="mp-matchup">${TEAM_SHORT[team] || team}</span></div>
+        <div class="mp-chips">${gamesHtml}</div>
+        ${reminderHtml}
+      </div>
+    `;
+  }).join("");
+
+  contentEl.querySelectorAll(".mp-reminder-btn").forEach(btn => {
+    btn.addEventListener("click", () => sendMissingPicksReminder(btn));
+  });
+}
+
+// Real family email addresses aren't wired up yet -- per Yeti's explicit
+// instruction, every reminder (regardless of which team it names) goes to
+// yeti@yetiblanc.com, same testing pattern as this page's other sandboxed
+// send tools. The backend (handleSendReminderEmail) pulls the real list of
+// that team's still-missing matchups into the email body -- not a generic
+// "you have picks due" message.
+async function sendMissingPicksReminder(btn) {
+  const team = btn.dataset.team;
+  const week = btn.dataset.week;
+  const statusEl = document.querySelector(`[data-reminder-status="${team}"]`);
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = "Sending...";
+  statusEl.textContent = "";
+  statusEl.className = "mp-reminder-status";
+
+  try {
+    const res = await fetch(`${WORKER_BASE}/greg/send-reminder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Session-Token": sessionToken },
+      body: JSON.stringify({ team, week: week === PRESEASON_MP_KEY ? week : parseInt(week, 10) }),
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = originalText;
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Could not send reminder.";
+      statusEl.className = "mp-reminder-status err";
+      return;
+    }
+    statusEl.textContent = `Reminder sent (to yeti@yetiblanc.com for testing) — ${data.missingCount} game(s) listed.`;
+    statusEl.className = "mp-reminder-status ok";
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "mp-reminder-status err";
+  }
+}
+
+document.getElementById("mpWeekSelect").addEventListener("change", renderMissingPicks);
+
+// ============================================================
+// WEEKLY DIGEST -- ported verbatim from brief.html (2026-08-28). A stats
+// scaffold matching Greg's real house style, pulled from the same real
+// computed data the public charts use (worker.js's computeStandings).
+// ============================================================
+
+const SEASON_YEAR = 2026;
+let standingsData = null; // raw data/standings.json, cached after first fetch
+
+async function fetchStandingsData() {
+  if (standingsData !== null) return standingsData;
+  try {
+    const res = await fetch(`data/standings.json?t=${Date.now()}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    standingsData = (data && data.standings) ? data : null;
+    return standingsData;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Separate cache, separate file, separate fetch from fetchStandingsData()
+// above -- deliberately never merged with real-season standingsData, same
+// isolation-by-construction principle as computePreseasonSnapshot() in
+// worker.js.
+let preseasonStatsData = null;
+
+async function fetchPreseasonStats() {
+  if (preseasonStatsData !== null) return preseasonStatsData;
+  try {
+    const res = await fetch(`data/week-${PRESEASON_MP_KEY}.json?t=${Date.now()}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    preseasonStatsData = (data && data.stats) ? data.stats : null;
+    return preseasonStatsData;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Same formatting rule as index.html's fmtPct (duplicated intentionally --
+// it's a formatting helper, not scoring logic, and this is a separate page).
+function fmtPct(v) {
+  const s = v.toFixed(3);
+  return s === "1.000" ? "1.000" : s.replace(/^0/, "");
+}
+
+// A week's games are never all decided until its own last game (normally
+// Monday Night Football) goes final -- the digest is meant for narrative
+// use once a week is fully wrapped, unlike the public PFPI stats charts,
+// which show real partial progress live throughout the week.
+function isWeekComplete(games) {
+  return Array.isArray(games) && games.length > 0 && games.every(g => g.status === "final");
+}
+
+async function populateDigestWeeks() {
+  const currentWeek = await fetchCurrentWeek();
+  const sel = document.getElementById("digestWeekSelect");
+  const statusEl = document.getElementById("digestStatus");
+  sel.innerHTML = "";
+
+  const preseasonOpt = document.createElement("option");
+  preseasonOpt.value = PRESEASON_MP_KEY;
+  preseasonOpt.textContent = "Preseason";
+  sel.appendChild(preseasonOpt);
+
+  const latestGames = await fetchWeekGames(currentWeek);
+  const latestComplete = isWeekComplete(latestGames);
+  const maxSelectableWeek = latestComplete ? currentWeek : currentWeek - 1;
+
+  for (let w = 1; w <= maxSelectableWeek; w++) {
+    const opt = document.createElement("option");
+    opt.value = w;
+    opt.textContent = "Week " + w;
+    sel.appendChild(opt);
+  }
+
+  if (maxSelectableWeek < 1) {
+    statusEl.textContent = "No regular-season week is finished yet -- Preseason is available to test now; real weeks will appear here once each one's last game goes final.";
+    statusEl.className = "status show";
+  }
+
+  sel.value = maxSelectableWeek >= 1 ? String(maxSelectableWeek) : PRESEASON_MP_KEY;
+  await renderDigest();
+}
+
+// Standings block: sorted by wins descending, GB column, ties show "--".
+function buildStandingsBlock(st, week, isFinal, titleOverride) {
+  const wKey = String(week);
+  const gp = (st.gamesPlayed && st.gamesPlayed[wKey]) || 0;
+  const rows = REAL_TEAMS.map(t => {
+    const wins = st.standings[t][wKey];
+    return { team: t, wins, losses: gp - wins, pct: st.standingsPct[t][wKey] };
+  });
+  rows.sort((a, b) => b.wins - a.wins);
+  const leaderWins = rows.length ? rows[0].wins : 0;
+
+  const lines = [];
+  lines.push(titleOverride || (isFinal ? `PFPI OFFICIAL FINAL ${SEASON_YEAR} STANDINGS` : `PFPI WEEK ${week} STANDINGS`));
+  lines.push(`Team`.padEnd(32) + (isFinal ? "Final Season" : "Season").padEnd(13) + "GB");
+  rows.forEach(r => {
+    const name = TEAM_SHORT[r.team].padEnd(32);
+    const record = `${r.wins}-${r.losses}`;
+    const pct = fmtPct(r.pct);
+    const gb = r.wins === leaderWins ? "--" : String(leaderWins - r.wins);
+    lines.push(`${name}${record}   ${pct}${gb.padStart(6)}`);
+  });
+  return lines.join("\n");
+}
+
+// Weekly Titles / Weeks Leading block: all 8 teams always listed, ties
+// joined with "&" and drop the "(N)" count.
+function buildPointBlock(label, dataObj, countObj, week) {
+  const wKey = String(week);
+  const entries = REAL_TEAMS.map(t => ({ team: t, value: dataObj[t][wKey], count: countObj[t][wKey] }));
+
+  entries.sort((a, b) => b.value - a.value);
+  const groups = [];
+  for (const e of entries) {
+    const last = groups[groups.length - 1];
+    if (last && last[0].value === e.value) last.push(e);
+    else groups.push([e]);
+  }
+
+  const text = groups.map(group => {
+    const tied = group.length > 1;
+    return group.map(e => {
+      const valStr = e.value.toFixed(2);
+      return tied ? `${e.team} ${valStr}` : `${e.team} ${valStr} (${e.count})`;
+    }).join(" & ");
+  }).join(", ");
+
+  return `${label}: ${text}.`;
+}
+
+// 10-Win Weeks block -- same tie-grouping style as buildPointBlock, no
+// secondary "(N)" count since the value itself already is the count.
+function buildTenWinBlock(st, week) {
+  const wKey = String(week);
+  const entries = REAL_TEAMS.map(t => ({ team: t, value: (st.tenWinWeeks[t] && st.tenWinWeeks[t][wKey]) || 0 }));
+  entries.sort((a, b) => b.value - a.value);
+  const groups = [];
+  for (const e of entries) {
+    const last = groups[groups.length - 1];
+    if (last && last[0].value === e.value) last.push(e);
+    else groups.push([e]);
+  }
+  const text = groups.map(group => group.map(e => `${e.team} ${e.value}`).join(" & ")).join(", ");
+  return `10-Win Weeks: ${text}.`;
+}
+
+// Unique Hits block -- "Team H-O" (hits-opportunities), all 8 teams always
+// listed, sorted by hits then opportunities descending.
+function buildUniqueHitsBlock(st, week) {
+  const wKey = String(week);
+  const entries = REAL_TEAMS.map(t => (st.uniqueHits[t] && st.uniqueHits[t][wKey]) || { hits: 0, opps: 0 });
+  const named = REAL_TEAMS.map((t, i) => ({ team: t, ...entries[i] }));
+  named.sort((a, b) => b.hits - a.hits || b.opps - a.opps);
+  const text = named.map(e => `${e.team} ${e.hits}-${e.opps}`).join(", ");
+  return `Unique Hits: ${text}.`;
+}
+
+// Best Week block: co-holders of an identical season-best pct share the
+// line, joined with "&".
+function buildBestWeekBlock(st, week) {
+  const wKey = String(week);
+  const entries = REAL_TEAMS
+    .map(t => ({ team: t, ...st.bestWeek[t][wKey] }))
+    .filter(e => e.total > 0);
+
+  if (entries.length === 0) return "Best Week: No weeks decided yet.";
+
+  const maxPct = Math.max(...entries.map(e => e.pct));
+  const holders = entries.filter(e => e.pct === maxPct);
+  const text = holders
+    .map(e => `${e.team} ${fmtPct(e.pct)} (${e.correct}-${e.total - e.correct}/${typeof e.week === "number" ? "W" + e.week : e.week})`)
+    .join(" & ");
+  return `Best Week: ${text}.`;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// The digest is plain text everywhere it's actually stored/published, but
+// the header line needs bold+underline, which a plain string can't carry --
+// so a parallel HTML string wraps just the first line in <b><u>, used for
+// the on-page preview and the clipboard's text/html payload.
+function buildDigestHtml(plainText) {
+  return plainText
+    .split("\n")
+    .map((line, i) => (i === 0 ? `<b><u>${escapeHtml(line)}</u></b>` : escapeHtml(line)))
+    .join("\n");
+}
+
+let currentDigestPlainText = "";
+
+async function renderDigest() {
+  const outputEl = document.getElementById("digestOutput");
+  const statusEl = document.getElementById("digestStatus");
+  const rawWeek = document.getElementById("digestWeekSelect").value;
+  const isPreseason = rawWeek === PRESEASON_MP_KEY;
+  const week = isPreseason ? PRESEASON_MP_KEY : parseInt(rawWeek, 10);
+
+  statusEl.textContent = "Loading...";
+  statusEl.className = "status show";
+  outputEl.innerHTML = "";
+  currentDigestPlainText = "";
+
+  const st = isPreseason ? await fetchPreseasonStats() : await fetchStandingsData();
+  if (!st || !st.weeklyTitles || !st.weeksLeading || !st.bestWeek || !st.gamesPlayed || !st.tenWinWeeks || !st.uniqueHits) {
+    statusEl.textContent = isPreseason
+      ? "Preseason stats aren't available yet — check back once games are underway."
+      : "Digest data isn't available yet — check back in a few minutes.";
+    statusEl.className = "status show";
+    return;
+  }
+  statusEl.textContent = "";
+  statusEl.className = "status";
+
+  const isFinal = !isPreseason && week === NUM_WEEKS;
+  const titleOverride = isPreseason ? "PFPI PRESEASON STANDINGS (Week 3, unified)" : null;
+  const parts = [
+    buildStandingsBlock(st, week, isFinal, titleOverride),
+    buildPointBlock("Weeks Leading", st.weeksLeading, st.weeksLeadingCount, week),
+    buildPointBlock("Weekly Titles", st.weeklyTitles, st.weeklyTitlesCount, week),
+    buildTenWinBlock(st, week),
+    buildUniqueHitsBlock(st, week),
+    buildBestWeekBlock(st, week),
+  ];
+  currentDigestPlainText = parts.join("\n\n");
+  outputEl.innerHTML = buildDigestHtml(currentDigestPlainText);
+}
+
+document.getElementById("digestWeekSelect").addEventListener("change", renderDigest);
+
+document.getElementById("digestCopyBtn").addEventListener("click", async () => {
+  const statusEl = document.getElementById("digestStatus");
+  const outputEl = document.getElementById("digestOutput");
+  try {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        "text/plain": new Blob([currentDigestPlainText], { type: "text/plain" }),
+        "text/html": new Blob([outputEl.innerHTML], { type: "text/html" }),
+      }),
+    ]);
+    statusEl.textContent = "Copied to clipboard.";
+    statusEl.className = "status ok show";
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(currentDigestPlainText);
+      statusEl.textContent = "Copied to clipboard (plain text).";
+      statusEl.className = "status ok show";
+    } catch (e2) {
+      const range = document.createRange();
+      range.selectNodeContents(outputEl);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      statusEl.textContent = "Couldn't copy automatically -- text is selected, press Ctrl/Cmd+C.";
+      statusEl.className = "status warn show";
+    }
+  }
+});
+
+document.getElementById("digestInsertBtn").addEventListener("click", () => {
+  showBriefEditView(currentDigestPlainText);
+  document.getElementById("briefCancelEditBtn").classList.remove("hidden");
+  switchTopTab("publish");
+});
+
+// ============================================================
+// COMMISSIONER'S REPORT (publish) -- ported verbatim from brief.html
+// (2026-08-28). Each week's brief has its own independent version history
+// (KV key `brief-version:{week}:{timestamp}`, see picks-worker.js).
+// ============================================================
+
+// TEMPORARY -- for Yeti's testing (matches brief.html's own flag). REVERT
+// to `false` before real weekly use begins -- the backend never enforced
+// current-week-only itself, so flipping this back is the only change
+// needed to restore normal behavior.
+const TESTING_ALLOW_ALL_WEEKS = true;
+const NUM_WEEKS = 18;
+
+async function populateWeeks() {
+  const currentWeek = await fetchCurrentWeek();
+  const maxWeek = TESTING_ALLOW_ALL_WEEKS ? NUM_WEEKS : currentWeek;
+  const sel = document.getElementById("weekSelect");
+  sel.innerHTML = "";
+  const preseasonOpt = document.createElement("option");
+  preseasonOpt.value = PRESEASON_MP_KEY;
+  preseasonOpt.textContent = "Preseason";
+  sel.appendChild(preseasonOpt);
+  for (let w = 1; w <= maxWeek; w++) {
+    const opt = document.createElement("option");
+    opt.value = w;
+    opt.textContent = "Week " + w;
+    sel.appendChild(opt);
+  }
+  sel.value = currentWeek;
+}
+
+function updateCharCount() {
+  const text = document.getElementById("briefText").value;
+  document.getElementById("charCount").textContent = text.length + " characters";
+}
+
+function fmtBriefTimestamp(iso) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric",
+    year: "numeric", hour: "numeric", minute: "2-digit",
+  }).format(d) + " ET";
+}
+
+function showBriefEditView(prefillText) {
+  document.getElementById("briefSavedView").classList.add("hidden");
+  document.getElementById("briefEditView").classList.remove("hidden");
+  const textarea = document.getElementById("briefText");
+  textarea.value = prefillText || "";
+  updateCharCount();
+}
+
+async function renderPublishTab() {
+  const week = document.getElementById("weekSelect").value;
+  const statusEl = document.getElementById("publishStatus");
+  if (!week) return;
+
+  statusEl.textContent = "";
+  statusEl.className = "status";
+
+  let data;
+  try {
+    const res = await fetch(`${WORKER_BASE}/greg/brief-history?week=${week}`, {
+      headers: { "X-Session-Token": sessionToken },
+    });
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not load this week's brief.");
+  } catch (e) {
+    showBriefEditView("");
+    return;
+  }
+
+  if (!data.current) {
+    showBriefEditView("");
+    return;
+  }
+
+  document.getElementById("briefEditView").classList.add("hidden");
+  document.getElementById("briefSavedView").classList.remove("hidden");
+  document.getElementById("briefSavedText").textContent = data.current.text;
+  const who = data.current.source === "admin" ? `admin override (${data.current.adminName || "Yeti"})` : "Greg";
+  document.getElementById("briefSavedMeta").textContent =
+    `Last saved ${fmtBriefTimestamp(data.current.updatedAt)} — ${who}`;
+
+  const versionsField = document.getElementById("briefVersionsField");
+  const versionSelect = document.getElementById("briefVersionSelect");
+  const versionPreview = document.getElementById("briefVersionPreview");
+  const versionLoadBtn = document.getElementById("briefVersionLoadBtn");
+  versionPreview.classList.add("hidden");
+  versionLoadBtn.classList.add("hidden");
+
+  if (data.versions && data.versions.length > 1) {
+    versionsField.classList.remove("hidden");
+    versionSelect.innerHTML = '<option value="">Select a version to view...</option>' +
+      data.versions.map((v, i) => {
+        const who2 = v.source === "admin" ? ` (admin: ${v.adminName || "Yeti"})` : "";
+        return `<option value="${i}">${fmtBriefTimestamp(v.updatedAt)}${who2}${i === 0 ? " (current)" : ""}</option>`;
+      }).join("");
+    versionSelect.dataset.versions = JSON.stringify(data.versions);
+  } else {
+    versionsField.classList.add("hidden");
+  }
+}
+
+document.getElementById("weekSelect").addEventListener("change", renderPublishTab);
+
+document.getElementById("briefEditBtn").addEventListener("click", () => {
+  showBriefEditView(document.getElementById("briefSavedText").textContent);
+  document.getElementById("briefCancelEditBtn").classList.remove("hidden");
+});
+
+document.getElementById("briefCancelEditBtn").addEventListener("click", () => {
+  document.getElementById("briefCancelEditBtn").classList.add("hidden");
+  document.getElementById("publishStatus").className = "status";
+  renderPublishTab();
+});
+
+document.getElementById("briefVersionSelect").addEventListener("change", (e) => {
+  const versions = JSON.parse(e.target.dataset.versions || "[]");
+  const preview = document.getElementById("briefVersionPreview");
+  const loadBtn = document.getElementById("briefVersionLoadBtn");
+  const idx = e.target.value;
+  if (idx === "") {
+    preview.classList.add("hidden");
+    loadBtn.classList.add("hidden");
+    return;
+  }
+  const v = versions[parseInt(idx, 10)];
+  preview.textContent = v.text;
+  preview.classList.remove("hidden");
+  loadBtn.classList.remove("hidden");
+  loadBtn.onclick = () => {
+    showBriefEditView(v.text);
+    document.getElementById("briefCancelEditBtn").classList.remove("hidden");
+  };
+});
+
+async function publish() {
+  const week = document.getElementById("weekSelect").value;
+  const text = document.getElementById("briefText").value.trim();
+  const statusEl = document.getElementById("publishStatus");
+  const btn = document.getElementById("publishBtn");
+
+  if (!text) {
+    statusEl.textContent = "Write something before publishing.";
+    statusEl.className = "status err show";
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "Publishing...";
+  statusEl.textContent = "";
+  statusEl.className = "status show";
+
+  try {
+    const res = await fetch(`${WORKER_BASE}/admin/publish-brief`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Session-Token": sessionToken },
+      body: JSON.stringify({ week: week === PRESEASON_MP_KEY ? week : parseInt(week, 10), text, adminName: "Yeti" }),
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = "Publish brief";
+
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    if (res.status === 202 && data.published === false) {
+      statusEl.textContent = data.error;
+      statusEl.className = "status warn show";
+      return;
+    }
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Publish failed.";
+      statusEl.className = "status err show";
+      return;
+    }
+    statusEl.textContent = "Published for " + (week === PRESEASON_MP_KEY ? "Preseason" : "Week " + week) + ". It's now live under that week's chart.";
+    statusEl.className = "status ok show";
+    document.getElementById("briefCancelEditBtn").classList.add("hidden");
+    await renderPublishTab();
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = "Publish brief";
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "status err show";
+  }
+}
+
+document.getElementById("briefText").addEventListener("input", updateCharCount);
+document.getElementById("publishBtn").addEventListener("click", publish);
 </script>
 </body>
 </html>

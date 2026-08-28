@@ -25,7 +25,13 @@ button:hover{opacity:.9;}
 .status.ok{color:var(--green);}
 .status a{color:var(--blue);}
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:1.5rem;}
-.hidden{display:none;}
+/* !important (2026-08-28): without it, elements combining .hidden with
+   .top-tabs (display:flex, declared later in this file) rendered visible
+   anyway -- equal-specificity classes resolve by source order, not by
+   which one "sounds" like it should win. Real bug this round: the new tab
+   bars were showing even before login. Same fix brief.html's own .hidden
+   already used for the identical reason. */
+.hidden{display:none !important;}
 .footer-copyright{text-align:center;font-size:.7rem;color:var(--muted);margin-top:2rem;}
 
 /* Top-level tab bar (2026-08-28, per Yeti, revised same day into a real

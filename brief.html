@@ -958,6 +958,36 @@ function buildBestWeekBlock(st, week) {
   return `Best Week: ${text}.`;
 }
 
+// 10-Win Weeks block, added 2026-08-28 once real data existed (worker.js) --
+// same tie-grouping style as buildPointBlock above (all 8 teams always
+// listed, ties joined with "&"), just without a secondary "(N)" count since
+// the value itself already IS the count.
+function buildTenWinBlock(st, week) {
+  const wKey = String(week);
+  const entries = REAL_TEAMS.map(t => ({ team: t, value: (st.tenWinWeeks[t] && st.tenWinWeeks[t][wKey]) || 0 }));
+  entries.sort((a, b) => b.value - a.value);
+  const groups = [];
+  for (const e of entries) {
+    const last = groups[groups.length - 1];
+    if (last && last[0].value === e.value) last.push(e);
+    else groups.push([e]);
+  }
+  const text = groups.map(group => group.map(e => `${e.team} ${e.value}`).join(" & ")).join(", ");
+  return `10-Win Weeks: ${text}.`;
+}
+
+// Unique Hits block, added 2026-08-28 once real data existed (worker.js) --
+// "Team H-O" (hits-opportunities), all 8 teams always listed, sorted by
+// hits then opportunities descending.
+function buildUniqueHitsBlock(st, week) {
+  const wKey = String(week);
+  const entries = REAL_TEAMS.map(t => (st.uniqueHits[t] && st.uniqueHits[t][wKey]) || { hits: 0, opps: 0 });
+  const named = REAL_TEAMS.map((t, i) => ({ team: t, ...entries[i] }));
+  named.sort((a, b) => b.hits - a.hits || b.opps - a.opps);
+  const text = named.map(e => `${e.team} ${e.hits}-${e.opps}`).join(", ");
+  return `Unique Hits: ${text}.`;
+}
+
 function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -997,7 +1027,7 @@ async function renderDigest() {
   // Two entirely separate data sources/fetches (see fetchPreseasonStats()'s
   // own isolation note above) -- never merged, only one used per render.
   const st = isPreseason ? await fetchPreseasonStats() : await fetchStandingsData();
-  if (!st || !st.weeklyTitles || !st.weeksLeading || !st.bestWeek || !st.gamesPlayed) {
+  if (!st || !st.weeklyTitles || !st.weeksLeading || !st.bestWeek || !st.gamesPlayed || !st.tenWinWeeks || !st.uniqueHits) {
     // Missing new fields specifically (rather than the whole fetch failing)
     // means a stale cached data file from before this build -- same GitHub
     // Pages propagation-lag gap noted elsewhere in this file.
@@ -1016,8 +1046,8 @@ async function renderDigest() {
     buildStandingsBlock(st, week, isFinal, titleOverride),
     buildPointBlock("Weeks Leading", st.weeksLeading, st.weeksLeadingCount, week),
     buildPointBlock("Weekly Titles", st.weeklyTitles, st.weeklyTitlesCount, week),
-    "10-Win Weeks: Not available yet — no real data source for this category.",
-    "Unique Hits: Not available yet — no real data source for this category.",
+    buildTenWinBlock(st, week),
+    buildUniqueHitsBlock(st, week),
     buildBestWeekBlock(st, week),
   ];
   currentDigestPlainText = parts.join("\n\n");

@@ -204,8 +204,23 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 // the request still completes if the visitor navigates away immediately;
 // wrapped in try/catch and .catch() so a network hiccup here can never
 // break the actual page.
+//
+// Persistent opt-out (2026-08-29, per Yeti): visiting once with
+// ?notrack=1 also sets a localStorage flag, so a personal opt-out link
+// (for Yeti/Greg/Chris) only needs to be clicked once, not on every
+// visit. localStorage is scoped per-origin, so this flag is shared by
+// index.html and picks.html automatically (same site, same origin) --
+// it is NOT shared across separate devices/browsers, since localStorage
+// never is; each device that should be excluded needs its own one-time
+// click. This is the same limitation any localStorage-based opt-out has.
 (function () {
-  var notrack = new URLSearchParams(location.search).get("notrack") === "1";
+  var urlNotrack = new URLSearchParams(location.search).get("notrack") === "1";
+  var storedNotrack = false;
+  try { storedNotrack = localStorage.getItem("pfpi_notrack") === "1"; } catch (e) {}
+  if (urlNotrack) {
+    try { localStorage.setItem("pfpi_notrack", "1"); } catch (e) {}
+  }
+  var notrack = urlNotrack || storedNotrack;
   try {
     fetch("https://pfpi-scores-worker.yeti-f3c.workers.dev/track", {
       method: "POST",

@@ -257,13 +257,13 @@
         "Critters": "NE",
         "Giraffes": "CLE"
       },
-      "clockReport": "1:50 - 2nd Quarter"
+      "clockReport": "0:23 - 2nd Quarter"
     },
     {
       "id": "hl-566529",
       "home": "BUF",
       "away": "PIT",
-      "homeScore": 21,
+      "homeScore": 27,
       "awayScore": 17,
       "status": "in_progress",
       "kickoffISO": "2026-08-27T23:00:00.000Z",
@@ -274,7 +274,7 @@
         "Lobos": "BUF",
         "Critters": "BUF"
       },
-      "clockReport": "11:52 - 4th Quarter"
+      "clockReport": "11:11 - 4th Quarter"
     }
   ],
   "stats": {
@@ -504,5 +504,5 @@
       "preseason-3": 0
     }
   },
-  "updatedAt": "2026-08-28T01:25:29.071Z"
+  "updatedAt": "2026-08-28T01:30:30.166Z"
 }

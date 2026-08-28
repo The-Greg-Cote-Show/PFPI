@@ -1029,6 +1029,322 @@ async function pollAndPublish(env, force = false) {
 }
 
 // ============================================================
+// VISITOR ANALYTICS (2026-08-29 overnight round, per Yeti's handoff)
+// ============================================================
+// In-house, built specifically to avoid a paid third-party subscription
+// (Fathom/Plausible/etc.) while still doing real unique/repeat/traffic-
+// source tracking -- unlike Cote Cup's own existing analytics (a
+// completely separate site/Worker, `cotecup-worker` -- NEVER touched by
+// this work; only referenced for dashboard-page style/spirit via a
+// static HTML file Yeti left in his own Downloads folder, not by reading
+// or deploying to Cote Cup's real infrastructure at all).
+//
+// TWO SEPARATE HASHES -- deliberate, not two near-duplicate functions by
+// accident. Read this before changing either one:
+//
+// 1. dailyHash = SHA-256(IP + User-Agent + today's ET date). Used ONLY to
+//    count today's unique visitors. Baking the date in makes it
+//    mathematically impossible for the same value to ever repeat on a
+//    different day -- this is the genuinely privacy-preserving one,
+//    matching how Fathom/Plausible's own daily-reset hashing works: a
+//    full reset every 24 hours, no cross-day linkage possible even in
+//    principle.
+//
+// 2. stableHash = SHA-256(IP + User-Agent), no date. Used ONLY to detect
+//    whether someone is a RETURNING visitor across days -- a repeat-visit
+//    check that itself resets daily could never detect a repeat, by
+//    definition, so this one structurally can't include the date.
+//    HONEST TRADEOFF, stated here and on the dashboard itself, not
+//    hidden anywhere: this hash is a real, if modest, step back from the
+//    daily hash's privacy posture -- it persists for as long as someone's
+//    IP+browser combination stays the same (realistically days to weeks
+//    for most home/mobile users, not forever; changes the moment they
+//    switch networks or devices). Still fully anonymous -- one-way
+//    hashed, raw IP is NEVER stored anywhere, only the hash -- but
+//    coarser and longer-lived than the daily hash.
+//
+// KNOWN, EXPECTED LIMITATION (also on the dashboard, not hidden): this
+// identifies visitors by device/browser, not by person. The same person
+// on their phone and then their laptop the same day shows as two
+// different visitors. Every privacy-respecting analytics tool has this
+// exact limitation (Fathom and Plausible included) -- not a bug specific
+// to this build.
+//
+// SCOPE DECISION (flagged per the handoff's own instruction to flag
+// judgment calls, not just make them silently): only index.html and
+// picks.html feed the real "visitor" pipeline below (daily-unique dedup,
+// new-vs-repeat, referrer buckets, every rollup the dashboard's headline
+// numbers are built from) -- see ANALYTICS_PUBLIC_PAGES. brief.html and
+// admin.html are login-gated internal tools Yeti/Greg use to run the
+// site, not real audience; their hits are tracked separately as plain,
+// un-deduplicated pageview counts (no hashing, no referrer bucketing --
+// meaningless for a login-gated tool anyway), kept completely apart so
+// Yeti's own admin testing can never quietly inflate the advertiser-
+// facing numbers.
+//
+// CUMULATIVE ROLLUPS ARE SUMS OF DAILY UNIQUES, NOT TRUE MULTI-DAY DEDUP
+// (flagged here AND on the dashboard -- this is the judgment call the
+// handoff explicitly invited given overnight time constraints): the same
+// real person visiting Monday, Wednesday, and Friday counts 3 times
+// toward that week's cumulative total, not once. A true deduplicated
+// weekly/monthly unique count needs its own aggregation across the
+// stable hash over a date range -- KV has no efficient way to compute
+// set-cardinality across a date range without listing and checking every
+// stable-hash key seen in that window, a materially bigger feature.
+// DEFERRED AS A DOCUMENTED FAST-FOLLOW, not built tonight -- see
+// BUILD_LOG.md.
+//
+// KV IS EVENTUALLY CONSISTENT AND THESE COUNTERS AREN'T ATOMIC (real,
+// honest limitation, not hidden): every counter here is read-then-write,
+// so two truly simultaneous pageloads could in principle both read the
+// same starting value and one increment could be lost. Acceptable for
+// this site's real traffic volume; would need a different KV pattern (or
+// Durable Objects) at much higher concurrency than a hobby show site
+// actually sees.
+// ============================================================
+
+const ANALYTICS_PUBLIC_PAGES = new Set(["index", "picks"]);
+const ANALYTICS_ALL_PAGES = new Set(["index", "picks", "brief", "admin"]);
+// PFPI's own two real hostnames (github.io + the custom domain, see
+// ALLOWED_ORIGINS below) -- a referrer matching either of these is
+// in-site navigation, not a real external discovery source, so it gets
+// its own "internal" bucket rather than being misclassified as an
+// external referral or lumped into the generic "other:" catch-all.
+const PFPI_OWN_HOSTS = new Set(["the-greg-cote-show.github.io", "pfpi.thegregcoteshow.com"]);
+
+async function sha256Hex(text) {
+  const data = new TextEncoder().encode(text);
+  const digest = await crypto.subtle.digest("SHA-256", data);
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Small fixed set of named sources per the handoff, plus "other:domain"
+// (not one opaque "other" bucket) so a real, unexpected source stays
+// visible and actionable instead of disappearing into noise. Exact
+// hostname match (after stripping a leading "www."), not endsWith --
+// deliberately avoids misclassifying pfpi.thegregcoteshow.com (PFPI's
+// OWN custom domain, checked first as "internal") as the separate
+// "thegregcoteshow" external bucket just because it shares a parent
+// domain suffix. A rare mobile-subdomain referrer (e.g. m.youtube.com)
+// falls into "other:m.youtube.com" instead of "youtube" -- an honest
+// miss, not a misattribution, and easy to widen later once real data
+// shows it's worth it.
+function classifyReferrer(referrer) {
+  if (!referrer) return "direct";
+  let host;
+  try {
+    host = new URL(referrer).hostname.toLowerCase().replace(/^www\./, "");
+  } catch (e) {
+    return "other:unparseable";
+  }
+  if (PFPI_OWN_HOSTS.has(host)) return "internal";
+  if (host === "twitter.com" || host === "x.com") return "twitter";
+  if (host === "instagram.com") return "instagram";
+  if (host === "youtube.com" || host === "youtu.be") return "youtube";
+  if (host === "thegregcoteshow.com") return "thegregcoteshow";
+  return "other:" + host;
+}
+
+// Monday (ET) of the week containing this ET date string, as its own
+// YYYY-MM-DD -- avoids real ISO-8601 week-number edge cases at year
+// boundaries entirely by just using an actual calendar date as the
+// rollup key instead of a week number.
+function mondayOfWeekET(dateKey) {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const dow = dt.getUTCDay(); // 0=Sun..6=Sat
+  const diffToMonday = dow === 0 ? 6 : dow - 1;
+  dt.setUTCDate(dt.getUTCDate() - diffToMonday);
+  return dt.toISOString().slice(0, 10);
+}
+
+async function incrKV(env, key, ttlSeconds) {
+  const current = parseInt((await env.PFPI_KV.get(key)) || "0", 10);
+  const next = current + 1;
+  await env.PFPI_KV.put(key, String(next), ttlSeconds ? { expirationTtl: ttlSeconds } : undefined);
+  return next;
+}
+
+// Runs inside ctx.waitUntil() (see the /track route below) -- the visitor
+// gets an instant empty response, every KV write here happens in the
+// background after the response is already gone. Note this is a
+// deliberate, narrow exception to this Worker's own "visitors never hit
+// this Worker" framing at the top of the file -- that principle is about
+// not making visitors wait on a Worker for a READ GitHub Pages can serve
+// statically; a write-only tracking beacon a visitor's own browser fires
+// (and never waits on, given the instant response) doesn't conflict with
+// it.
+async function handleTrack(request, env) {
+  const url = new URL(request.url);
+  let body;
+  try {
+    body = await request.json();
+  } catch (e) {
+    return; // malformed body -- nothing to log, fail silent (this is a beacon, not a user-facing action)
+  }
+  if (body.notrack === true || url.searchParams.get("notrack") === "1") return;
+
+  const page = ANALYTICS_ALL_PAGES.has(body.page) ? body.page : "other";
+  const referrer = typeof body.referrer === "string" ? body.referrer : "";
+
+  const ip = request.headers.get("CF-Connecting-IP") || "0.0.0.0";
+  const ua = request.headers.get("User-Agent") || "unknown";
+
+  const parts = getEasternDateParts(new Date());
+  const today = `${parts.year}-${parts.month}-${parts.day}`;
+  const month = `${parts.year}-${parts.month}`;
+  const monday = mondayOfWeekET(today);
+
+  // Every page, every pageload, no hashing -- purely informational so
+  // Yeti can see admin/brief usage volume without it ever touching the
+  // visitor-dedup pipeline below.
+  await incrKV(env, `analytics:pageviews:${today}:${page}`);
+
+  if (!ANALYTICS_PUBLIC_PAGES.has(page)) return;
+
+  const dailyHash = await sha256Hex(`${ip}|${ua}|${today}`);
+  const stableHash = await sha256Hex(`${ip}|${ua}`);
+
+  const seenKey = `analytics:seen:${today}:${dailyHash}`;
+  const alreadySeenToday = await env.PFPI_KV.get(seenKey);
+
+  if (!alreadySeenToday) {
+    await env.PFPI_KV.put(seenKey, "1", { expirationTtl: 172800 }); // 2 days -- only needs to outlive "today"
+    await incrKV(env, `analytics:daily-unique:${today}`);
+    await incrKV(env, `analytics:weekly-unique-sum:${monday}`);
+    await incrKV(env, `analytics:monthly-unique-sum:${month}`);
+    await incrKV(env, `analytics:alltime-unique-sum`);
+
+    // New vs. repeat, per the handoff's exact spec: look up the stable
+    // hash's first-seen date. Doesn't exist -> new visitor, write today's
+    // date (NEVER overwritten again -- this key has no TTL, it must
+    // persist indefinitely to keep detecting repeats far in the future).
+    // Exists and isn't today -> repeat visitor today. Exists and IS today
+    // -> already handled this exact visitor today, falls through to here
+    // only if alreadySeenToday somehow missed it -- a no-op either way,
+    // not a double-count risk.
+    const firstSeenKey = `analytics:stable-first-seen:${stableHash}`;
+    const firstSeenDate = await env.PFPI_KV.get(firstSeenKey);
+    if (!firstSeenDate) {
+      await env.PFPI_KV.put(firstSeenKey, today);
+      await incrKV(env, `analytics:new:${today}`);
+      await incrKV(env, `analytics:new-weekly-sum:${monday}`);
+      await incrKV(env, `analytics:new-monthly-sum:${month}`);
+      await incrKV(env, `analytics:new-alltime-sum`);
+    } else if (firstSeenDate !== today) {
+      await incrKV(env, `analytics:repeat:${today}`);
+      await incrKV(env, `analytics:repeat-weekly-sum:${monday}`);
+      await incrKV(env, `analytics:repeat-monthly-sum:${month}`);
+      await incrKV(env, `analytics:repeat-alltime-sum`);
+    }
+
+    const firstEventDate = await env.PFPI_KV.get("analytics:first-event-date");
+    if (!firstEventDate) await env.PFPI_KV.put("analytics:first-event-date", today);
+  }
+
+  // Referrer bucket: raw pageview-level, not deduplicated -- a different
+  // concept than "unique visitors" above, same distinction real tools
+  // draw between "visitors" and "visits"/"sessions" by source. Labeled as
+  // such on the dashboard, not presented as "unique visitors by source."
+  const bucket = classifyReferrer(referrer);
+  await incrKV(env, `analytics:referrer:${today}:${bucket}`);
+  await incrKV(env, `analytics:referrer-alltime:${bucket}`);
+}
+
+async function handleAnalyticsData(request, env) {
+  const token = request.headers.get("X-Admin-Token");
+  if (!(await verifyAdminSession(token, env))) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const now = new Date();
+  const parts = getEasternDateParts(now);
+  const today = `${parts.year}-${parts.month}-${parts.day}`;
+  const month = `${parts.year}-${parts.month}`;
+  const monday = mondayOfWeekET(today);
+
+  const [
+    dailyUniqueToday, newToday, repeatToday,
+    weeklyUniqueSum, newWeeklySum, repeatWeeklySum,
+    monthlyUniqueSum, newMonthlySum, repeatMonthlySum,
+    alltimeUniqueSum, newAlltimeSum, repeatAlltimeSum,
+    firstEventDate, briefViewsToday, adminViewsToday,
+  ] = await Promise.all([
+    env.PFPI_KV.get(`analytics:daily-unique:${today}`),
+    env.PFPI_KV.get(`analytics:new:${today}`),
+    env.PFPI_KV.get(`analytics:repeat:${today}`),
+    env.PFPI_KV.get(`analytics:weekly-unique-sum:${monday}`),
+    env.PFPI_KV.get(`analytics:new-weekly-sum:${monday}`),
+    env.PFPI_KV.get(`analytics:repeat-weekly-sum:${monday}`),
+    env.PFPI_KV.get(`analytics:monthly-unique-sum:${month}`),
+    env.PFPI_KV.get(`analytics:new-monthly-sum:${month}`),
+    env.PFPI_KV.get(`analytics:repeat-monthly-sum:${month}`),
+    env.PFPI_KV.get(`analytics:alltime-unique-sum`),
+    env.PFPI_KV.get(`analytics:new-alltime-sum`),
+    env.PFPI_KV.get(`analytics:repeat-alltime-sum`),
+    env.PFPI_KV.get(`analytics:first-event-date`),
+    env.PFPI_KV.get(`analytics:pageviews:${today}:brief`),
+    env.PFPI_KV.get(`analytics:pageviews:${today}:admin`),
+  ]);
+
+  // 14-day trend, individual GETs -- bounded (42 reads total), only ever
+  // runs when the dashboard itself loads (Yeti/Greg, occasionally), never
+  // per visitor. Same "last 14 days" window Cote Cup's own report uses.
+  const trend = {};
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 86400000);
+    const dp = getEasternDateParts(d);
+    const dateKey = `${dp.year}-${dp.month}-${dp.day}`;
+    const [uniq, nw, rp] = await Promise.all([
+      env.PFPI_KV.get(`analytics:daily-unique:${dateKey}`),
+      env.PFPI_KV.get(`analytics:new:${dateKey}`),
+      env.PFPI_KV.get(`analytics:repeat:${dateKey}`),
+    ]);
+    trend[dateKey] = { unique: parseInt(uniq || "0", 10), new: parseInt(nw || "0", 10), repeat: parseInt(rp || "0", 10) };
+  }
+
+  // Referrer buckets, all-time -- realistically under a dozen distinct
+  // buckets ever exist, so one list() plus a handful of get()s is cheap.
+  const referrerList = await env.PFPI_KV.list({ prefix: "analytics:referrer-alltime:" });
+  const referrers = {};
+  for (const key of referrerList.keys) {
+    const bucket = key.name.slice("analytics:referrer-alltime:".length);
+    referrers[bucket] = parseInt((await env.PFPI_KV.get(key.name)) || "0", 10);
+  }
+
+  return jsonResponse({
+    today: {
+      unique: parseInt(dailyUniqueToday || "0", 10),
+      new: parseInt(newToday || "0", 10),
+      repeat: parseInt(repeatToday || "0", 10),
+    },
+    weekToDate: {
+      unique: parseInt(weeklyUniqueSum || "0", 10),
+      new: parseInt(newWeeklySum || "0", 10),
+      repeat: parseInt(repeatWeeklySum || "0", 10),
+    },
+    monthToDate: {
+      unique: parseInt(monthlyUniqueSum || "0", 10),
+      new: parseInt(newMonthlySum || "0", 10),
+      repeat: parseInt(repeatMonthlySum || "0", 10),
+    },
+    allTime: {
+      unique: parseInt(alltimeUniqueSum || "0", 10),
+      new: parseInt(newAlltimeSum || "0", 10),
+      repeat: parseInt(repeatAlltimeSum || "0", 10),
+    },
+    trend,
+    referrers,
+    internalPageviewsToday: {
+      brief: parseInt(briefViewsToday || "0", 10),
+      admin: parseInt(adminViewsToday || "0", 10),
+    },
+    trackingSince: firstEventDate || null,
+    generatedAt: new Date().toISOString(),
+  }, 200, request);
+}
+
+// ============================================================
 // ADMIN MANUAL POLL TRIGGER (added 2026-08-28, per Yeti)
 // ============================================================
 // This Worker never had its own auth system or session store -- rather
@@ -1079,13 +1395,22 @@ async function handleTriggerPoll(request, env) {
 // ============================================================
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     if (request.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders(request) });
     }
     const url = new URL(request.url);
     if (url.pathname === "/admin/trigger-poll" && request.method === "POST") {
       return handleTriggerPoll(request, env);
+    }
+    if (url.pathname === "/track" && request.method === "POST") {
+      // Instant empty response -- every KV write happens in the
+      // background afterward, the visitor never waits on any of it.
+      ctx.waitUntil(handleTrack(request, env));
+      return new Response(null, { status: 204, headers: corsHeaders(request) });
+    }
+    if (url.pathname === "/admin/analytics-data" && request.method === "GET") {
+      return handleAnalyticsData(request, env);
     }
     return jsonResponse({ ok: true, worker: "pfpi-scores-worker" }, 200, request);
   },

@@ -86,6 +86,23 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 </style>
 </head>
 <body>
+<script>
+// In-house visitor analytics beacon (2026-08-29, per Yeti) -- see
+// index.html's own copy of this comment / worker.js's handleTrack() for
+// the full reasoning. `?notrack=1` on this page's URL skips this
+// entirely, honored both here and again server-side.
+(function () {
+  var notrack = new URLSearchParams(location.search).get("notrack") === "1";
+  try {
+    fetch("https://pfpi-scores-worker.yeti-f3c.workers.dev/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ page: "picks", referrer: document.referrer, notrack: notrack }),
+      keepalive: true,
+    }).catch(function () {});
+  } catch (e) {}
+})();
+</script>
 <div class="wrap">
   <div class="header">
     <div class="title-main">PFPI <span>Picks</span></div>

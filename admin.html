@@ -111,6 +111,26 @@ button:hover{opacity:.9;}
 </style>
 </head>
 <body>
+<script>
+// In-house visitor analytics beacon (2026-08-29, per Yeti) -- see
+// index.html's own copy of this comment / worker.js's handleTrack() for
+// the full reasoning. This page is login-gated (Yeti's own tool, not
+// real public audience) -- tagged "admin" so the Worker tracks it as a
+// plain, un-hashed pageview count only, deliberately kept out of the
+// visitor-dedup pipeline entirely so it can never inflate the
+// advertiser-facing numbers. `?notrack=1` skips even that.
+(function () {
+  var notrack = new URLSearchParams(location.search).get("notrack") === "1";
+  try {
+    fetch("https://pfpi-scores-worker.yeti-f3c.workers.dev/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ page: "admin", referrer: document.referrer, notrack: notrack }),
+      keepalive: true,
+    }).catch(function () {});
+  } catch (e) {}
+})();
+</script>
 <div class="wrap">
   <div class="title-main">PFPI <span>Admin</span></div>
 
@@ -160,6 +180,14 @@ button:hover{opacity:.9;}
        TAB: ADMIN PORTAL
        ============================================================ -->
   <div id="adminPortalTab">
+    <div class="panel hidden" id="analyticsLinkPanel">
+      <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Visitor analytics</div>
+      <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
+        Real unique/repeat visitor counts and traffic-source breakdown --
+        in-house, not a third-party tool. Same admin login as this page.
+      </div>
+      <a href="analytics.html" target="_blank" rel="noopener"><button type="button">Open Analytics Dashboard</button></a>
+    </div>
     <div class="panel hidden" id="testEmailPanel">
       <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Send test picks email</div>
       <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
@@ -376,6 +404,7 @@ let digestInitialized = false;
 // did that at all, unlike brief.html).
 function showLoggedIn() {
   document.getElementById("loginPanel").classList.add("hidden");
+  document.getElementById("analyticsLinkPanel").classList.remove("hidden");
   document.getElementById("testEmailPanel").classList.remove("hidden");
   document.getElementById("correctionPanel").classList.remove("hidden");
   document.getElementById("triggerPollPanel").classList.remove("hidden");
@@ -397,6 +426,7 @@ function clearSession(message) {
   sessionToken = null;
   localStorage.removeItem(SESSION_STORAGE_KEY);
   document.getElementById("loginPanel").classList.remove("hidden");
+  document.getElementById("analyticsLinkPanel").classList.add("hidden");
   document.getElementById("testEmailPanel").classList.add("hidden");
   document.getElementById("correctionPanel").classList.add("hidden");
   document.getElementById("triggerPollPanel").classList.add("hidden");

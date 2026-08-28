@@ -380,6 +380,19 @@ async function computeStandings(throughWeek, env) {
   TEAMS.forEach(t => titleCount[t] = 0);
   let leadCount = {};
   TEAMS.forEach(t => leadCount[t] = 0);
+  // Unique Hits + 10-Win Weeks, added 2026-08-28 per Yeti -- extends the
+  // same real, incremental-per-poll computation preseason already got
+  // (see computePreseasonSnapshot() below) to the actual regular season.
+  // Both are cumulative running totals through each week, same shape as
+  // weeklyTitles/weeksLeading above -- computed fresh every call from
+  // week 1 through throughWeek, so there's no persisted counter that could
+  // ever double-count across polls.
+  let uniqueHitsCum = {}, uniqueOppsCum = {};
+  TEAMS.forEach(t => { uniqueHitsCum[t] = 0; uniqueOppsCum[t] = 0; });
+  let tenWinWeeksCum = {};
+  TEAMS.forEach(t => tenWinWeeksCum[t] = 0);
+  const uniqueHits = {}, tenWinWeeks = {};
+  TEAMS.forEach(t => { uniqueHits[t] = {}; tenWinWeeks[t] = {}; });
   // Each team's best single-week record so far -- {correct, total, pct, week}
   // or null until they've played a scorable week. Only replaced when
   // strictly beaten (higher pct, or same pct with more correct picks as a
@@ -410,9 +423,15 @@ async function computeStandings(throughWeek, env) {
     }
 
     const correctThisWeek = {};
+    // Kept per-team this week (not discarded after computing `correct`)
+    // specifically for the Unique Hits pass below, which needs to compare
+    // every team's pick on the same game side-by-side -- a per-team-only
+    // loop can't answer "did anyone else pick this."
+    const picksThisWeek = {};
     for (const team of TEAMS) {
       const picksRaw = await env.PFPI_KV.get(`picks:${week}:${team}`);
       const picks = picksRaw ? JSON.parse(picksRaw) : {};
+      picksThisWeek[team] = picks;
       let correct = 0;
       for (const game of scorableGames) {
         if (game.winner && picks[game.id] === game.winner) correct++;
@@ -424,6 +443,42 @@ async function computeStandings(throughWeek, env) {
         ? cumulative[team] / gamesPlayedCumulative
         : 0;
     }
+
+    // Unique Hits: a pick is "unique" for a game if, among the TEAMS that
+    // actually picked that game, exactly one team chose that side -- a
+    // "hit" if that side also won. Definition confirmed against the
+    // original framework doc and Yeti's own real preseason test case
+    // before this was ever written (see BUILD_LOG.md, 2026-08-28). Updates
+    // as games go final within a week, same as everything else here --
+    // scorableGames only ever contains games KV already has a final result
+    // for.
+    scorableGames.forEach(game => {
+      const pickCounts = {};
+      TEAMS.forEach(team => {
+        const pick = picksThisWeek[team][game.id];
+        if (pick) pickCounts[pick] = (pickCounts[pick] || 0) + 1;
+      });
+      TEAMS.forEach(team => {
+        const pick = picksThisWeek[team][game.id];
+        if (pick && pickCounts[pick] === 1) {
+          uniqueOppsCum[team]++;
+          if (game.winner && pick === game.winner) uniqueHitsCum[team]++;
+        }
+      });
+    });
+    TEAMS.forEach(t => {
+      uniqueHits[t][String(week)] = { hits: uniqueHitsCum[t], opps: uniqueOppsCum[t] };
+    });
+
+    // 10-Win Weeks: a week counts the moment a team's running correct
+    // count for THAT week reaches 10, even before the week is fully
+    // decided (per Yeti: "as soon as someone wins their 10th game in that
+    // week, it should reflect right away") -- correctThisWeek[team] is
+    // already whatever's true as of this poll's KV data, partial or not.
+    TEAMS.forEach(t => {
+      if (correctThisWeek[t] >= 10) tenWinWeeksCum[t]++;
+      tenWinWeeks[t][String(week)] = tenWinWeeksCum[t];
+    });
 
     // Weekly Titles: best single-week record this week, split on ties.
     // Skipped (no title awarded) for weeks with no scored games yet -- a
@@ -471,7 +526,7 @@ async function computeStandings(throughWeek, env) {
 
   return {
     standings, standingsPct, tieNotes, weeklyTitles, weeksLeading, bestWeek,
-    weeklyTitlesCount, weeksLeadingCount, gamesPlayed,
+    weeklyTitlesCount, weeksLeadingCount, gamesPlayed, uniqueHits, tenWinWeeks,
   };
 }
 
@@ -574,11 +629,17 @@ function computePreseasonSnapshot(finalResults, picksByTeam, weekLabel) {
   // compares real-roster TEAMS against each other (not FAMILY_MEMBERS --
   // this is a competitive-roster stat, matching every other category
   // here), and only counts games that were actually decided
-  // (scorableGames, same tie-exclusion as every other stat above). This is
-  // NOT extended to real regular-season weeks (computeStandings() above is
-  // untouched) -- that would need persisted cumulative state across 18
-  // weeks, a materially bigger change than this single-unified-week
-  // computation, and wasn't asked for.
+  // (scorableGames, same tie-exclusion as every other stat above).
+  //
+  // UPDATE 2026-08-28: this same definition is now ALSO computed for real
+  // regular-season weeks in computeStandings() above, per Yeti ("Unique
+  // Hits must extend through the regular season, updating after every
+  // game"). The two computations are separate code (this function is
+  // still single-unified-week-only, computeStandings() is still the
+  // cumulative-across-18-weeks one) -- kept that way deliberately, same
+  // isolation-by-construction principle as every other preseason stat
+  // here, not a shared helper the two could ever drift apart from
+  // silently.
   const uniqueHits = {}, uniqueOpportunities = {};
   TEAMS.forEach(team => { uniqueHits[team] = 0; uniqueOpportunities[team] = 0; });
   scorableGames.forEach(game => {
@@ -600,9 +661,20 @@ function computePreseasonSnapshot(finalResults, picksByTeam, weekLabel) {
     uniqueHitsStat[team] = { [weekLabel]: { hits: uniqueHits[team], opps: uniqueOpportunities[team] } };
   });
 
+  // 10-Win Weeks, added 2026-08-28 alongside the regular-season version in
+  // computeStandings() -- for consistency, since preseason is meant as a
+  // full dress rehearsal of every category, not just some of them. Only
+  // one "week" exists here, so this is just 1 or 0 per team (10+ correct
+  // in the unified preseason week, or not) rather than a running count
+  // across weeks.
+  const tenWinWeeksStat = {};
+  TEAMS.forEach(team => {
+    tenWinWeeksStat[team] = { [weekLabel]: correctThisTeam[team] >= 10 ? 1 : 0 };
+  });
+
   return {
     standings, standingsPct, weeklyTitles, weeklyTitlesCount, weeksLeading, weeksLeadingCount, bestWeek, gamesPlayed,
-    uniqueHits: uniqueHitsStat,
+    uniqueHits: uniqueHitsStat, tenWinWeeks: tenWinWeeksStat,
   };
 }
 
@@ -825,7 +897,7 @@ async function pollAndPublish(env) {
 
     const {
       standings, standingsPct, tieNotes, weeklyTitles, weeksLeading, bestWeek,
-      weeklyTitlesCount, weeksLeadingCount, gamesPlayed,
+      weeklyTitlesCount, weeksLeadingCount, gamesPlayed, uniqueHits, tenWinWeeks,
     } = await computeStandings(currentWeek, env);
 
     for (const [week, games] of Object.entries(weekFiles)) {
@@ -841,7 +913,7 @@ async function pollAndPublish(env) {
       "data/standings.json",
       {
         standings, standingsPct, tieNotes, weeklyTitles, weeksLeading, bestWeek,
-        weeklyTitlesCount, weeksLeadingCount, gamesPlayed,
+        weeklyTitlesCount, weeksLeadingCount, gamesPlayed, uniqueHits, tenWinWeeks,
         throughWeek: currentWeek, updatedAt: new Date().toISOString(),
       },
       `Update standings through Week ${currentWeek} [automated]`,

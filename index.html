@@ -347,6 +347,10 @@ async function initRealData() {
       REAL.weeklyTitles = st.weeklyTitles || null;
       REAL.weeksLeading = st.weeksLeading || null;
       REAL.bestWeek = st.bestWeek || null;
+      // uniqueHits/tenWinWeeks added 2026-08-28 (worker.js) -- same stale-
+      // cache guard as above.
+      REAL.uniqueHits = st.uniqueHits || null;
+      REAL.tenWinWeeks = st.tenWinWeeks || null;
     }
   }
   await render();
@@ -438,13 +442,17 @@ const CATEGORIES = {
     label: "10-Win Weeks",
     title: "10-win weeks",
     desc: "Count of weeks with 10+ correct picks, through the selected week.",
-    getData: w => null, unit: "wks", key: w => w
+    // Real as of 2026-08-28 (worker.js's computeStandings()/
+    // computePreseasonSnapshot()) -- updates the moment a team's running
+    // correct count for a week reaches 10, not just once the week ends.
+    getData: w => hasRealDataForWeek(realDataFor("tenWinWeeks", w), w) ? realDataFor("tenWinWeeks", w) : null, unit: "wks", key: w => w
   },
   uniqueHits: {
     label: "Unique Hits",
     title: "Unique hits",
     desc: "Hits-to-opportunities on picks nobody else made, through the selected week.",
-    // Real for preseason only (added 2026-08-27, per Yeti -- see
+    // Real for both preseason and regular season now (extended to the
+    // real season 2026-08-28, per Yeti -- see
     // computePreseasonSnapshot()'s own note in worker.js for why this one
     // category's "permanently out of scope" status changed and 10-Win
     // Weeks' didn't). realDataFor() itself already returns REAL.uniqueHits
@@ -688,7 +696,11 @@ async function render(){
   // earlier coon-skin-hat icon to this raccoon face per Yeti (2026-08-26,
   // "let's swap those out for a raccoon... maybe a grey raccoon").
   const topValue = Math.max(...TEAMS.map(t => values[t]));
-  const leaderTeams = TEAMS.filter(t => values[t] === topValue);
+  // No crown/raccoon for anyone while a category is still an honest
+  // all-zero state (per Yeti, 2026-08-28) -- a real leader hasn't emerged
+  // yet, so nobody should look like one. Once at least one team has a real
+  // nonzero value, the existing tie-sharing rule below is unchanged.
+  const leaderTeams = topValue > 0 ? TEAMS.filter(t => values[t] === topValue) : [];
   const isRaccoon = currentCat === "uniqueHits";
   const leaderIconHtml = isRaccoon
     ? `<div class="raccoon-icon"><svg viewBox="0 0 28 24" width="24" height="21" xmlns="http://www.w3.org/2000/svg">

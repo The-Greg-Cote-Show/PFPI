@@ -28,15 +28,18 @@ button:hover{opacity:.9;}
 .hidden{display:none;}
 .footer-copyright{text-align:center;font-size:.7rem;color:var(--muted);margin-top:2rem;}
 
-/* Top-level tab bar (added 2026-08-28, per Yeti) -- Admin Portal is its own
-   row, the three Commissioner tabs sit in a second row under an "Acting
-   Commissioner" label, matching Yeti's own description ("a header above
-   those tabs"). Both rows stay visible together at all times once logged
-   in -- this isn't a drill-down, every tab is always one click away. */
+/* Top-level tab bar (2026-08-28, per Yeti, revised same day into a real
+   two-level structure): "Admin Portal" and "Acting Commissioner" are two
+   stacked full-width buttons, same style -- clicking one is a real
+   section switch, hiding the other section's content entirely (not both
+   staying visible together as the first version of this did). Acting
+   Commissioner's own row of 3 sub-tabs (Missing Picks/Weekly Digest/
+   Commissioner's Report) only appears underneath it once it's the active
+   section. */
 .top-tabs{display:flex;gap:6px;margin-top:1.5rem;}
+.top-tabs-stacked{margin-top:6px;}
 .top-tab-btn{flex:1;background:var(--panel2);border:1px solid var(--border2);color:var(--muted);font-size:.78rem;font-weight:700;padding:.6rem .5rem;border-radius:8px;cursor:pointer;}
 .top-tab-btn.active{background:var(--gold);color:#1a1305;border-color:var(--gold);}
-.acting-commissioner-header{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-top:1.25rem;margin-bottom:.5rem;}
 
 /* Everything below is ported from brief.html's Commissioner Portal (Missing
    Picks / Weekly Digest / Commissioner's Report), 2026-08-28, per Yeti --
@@ -124,11 +127,19 @@ button:hover{opacity:.9;}
     <div class="status" id="resetStatus"></div>
   </div>
 
-  <div class="top-tabs hidden" id="topTabsRow1">
-    <button class="top-tab-btn active" data-tab="admin" type="button">Admin Portal</button>
+  <!-- Two-level tab structure (2026-08-28, per Yeti): "Admin Portal" and
+       "Acting Commissioner" are now both real buttons, same style, stacked
+       -- clicking one shows only that section's content and, for Acting
+       Commissioner, reveals its own row of 3 sub-tabs underneath. Only one
+       section is ever visible at a time now (previously both showed
+       together permanently). -->
+  <div class="top-tabs hidden" id="mainSectionTabs1">
+    <button class="top-tab-btn active" id="mainTabAdmin" data-section="admin" type="button">Admin Portal</button>
   </div>
-  <div class="acting-commissioner-header hidden" id="actingCommissionerHeader">Acting Commissioner</div>
-  <div class="top-tabs hidden" id="topTabsRow2">
+  <div class="top-tabs top-tabs-stacked hidden" id="mainSectionTabs2">
+    <button class="top-tab-btn" id="mainTabCommissioner" data-section="commissioner" type="button">Acting Commissioner</button>
+  </div>
+  <div class="top-tabs hidden" id="commissionerSubTabs">
     <button class="top-tab-btn" data-tab="missing" type="button">Missing Picks</button>
     <button class="top-tab-btn" data-tab="digest" type="button">Weekly Digest</button>
     <button class="top-tab-btn" data-tab="publish" type="button">Commissioner's Report</button>
@@ -358,10 +369,9 @@ function showLoggedIn() {
   document.getElementById("correctionPanel").classList.remove("hidden");
   document.getElementById("triggerPollPanel").classList.remove("hidden");
   document.getElementById("clearPicksPanel").classList.remove("hidden");
-  document.getElementById("topTabsRow1").classList.remove("hidden");
-  document.getElementById("actingCommissionerHeader").classList.remove("hidden");
-  document.getElementById("topTabsRow2").classList.remove("hidden");
-  switchTopTab("admin");
+  document.getElementById("mainSectionTabs1").classList.remove("hidden");
+  document.getElementById("mainSectionTabs2").classList.remove("hidden");
+  switchMainSection("admin");
   populateCorrectionWeeks();
   populateMissingPicksWeeks();
   populateWeeks();
@@ -380,9 +390,9 @@ function clearSession(message) {
   document.getElementById("correctionPanel").classList.add("hidden");
   document.getElementById("triggerPollPanel").classList.add("hidden");
   document.getElementById("clearPicksPanel").classList.add("hidden");
-  document.getElementById("topTabsRow1").classList.add("hidden");
-  document.getElementById("actingCommissionerHeader").classList.add("hidden");
-  document.getElementById("topTabsRow2").classList.add("hidden");
+  document.getElementById("mainSectionTabs1").classList.add("hidden");
+  document.getElementById("mainSectionTabs2").classList.add("hidden");
+  document.getElementById("commissionerSubTabs").classList.add("hidden");
   document.getElementById("missingPicksTab").classList.add("hidden");
   document.getElementById("digestTab").classList.add("hidden");
   document.getElementById("publishTab").classList.add("hidden");
@@ -511,25 +521,56 @@ document.getElementById("resetForm").onsubmit = async (e) => {
 };
 
 // ============================================================
-// TOP TAB SWITCHER (added 2026-08-28) -- Admin Portal vs the three ported
-// Commissioner tabs. Digest is lazily initialized on first visit (same
-// pattern brief.html itself already used), since it does real fetches the
-// other two tabs don't need on login.
+// TWO-LEVEL TAB SWITCHER (2026-08-28, per Yeti) -- "Admin Portal" and
+// "Acting Commissioner" are the top level (mutually exclusive sections,
+// same button style, stacked); Acting Commissioner's own row of 3
+// sub-tabs (Missing Picks/Weekly Digest/Commissioner's Report) only shows
+// once it's the active section. Digest is lazily initialized on first
+// visit (same pattern brief.html itself already used), since it does real
+// fetches the other two sub-tabs don't need on login.
 // ============================================================
 
+let activeMainSection = "admin"; // "admin" | "commissioner"
+let activeSubTab = "missing"; // "missing" | "digest" | "publish" -- remembered across section switches
+
+function switchMainSection(section) {
+  activeMainSection = section;
+  document.getElementById("mainTabAdmin").classList.toggle("active", section === "admin");
+  document.getElementById("mainTabCommissioner").classList.toggle("active", section === "commissioner");
+  document.getElementById("adminPortalTab").classList.toggle("hidden", section !== "admin");
+  document.getElementById("commissionerSubTabs").classList.toggle("hidden", section !== "commissioner");
+  updateSubTabVisibility();
+}
+
+// Also used as the click handler for the 3 sub-tab buttons themselves, and
+// by digestInsertBtn below to jump straight to Publish from Digest --
+// either way, selecting a sub-tab always implies (and switches to) the
+// Acting Commissioner section.
 function switchTopTab(tab) {
-  document.querySelectorAll(".top-tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
-  document.getElementById("adminPortalTab").classList.toggle("hidden", tab !== "admin");
-  document.getElementById("missingPicksTab").classList.toggle("hidden", tab !== "missing");
-  document.getElementById("digestTab").classList.toggle("hidden", tab !== "digest");
-  document.getElementById("publishTab").classList.toggle("hidden", tab !== "publish");
-  if (tab === "digest" && !digestInitialized) {
+  activeSubTab = tab;
+  activeMainSection = "commissioner";
+  document.getElementById("mainTabAdmin").classList.remove("active");
+  document.getElementById("mainTabCommissioner").classList.add("active");
+  document.getElementById("adminPortalTab").classList.add("hidden");
+  document.getElementById("commissionerSubTabs").classList.remove("hidden");
+  updateSubTabVisibility();
+}
+
+function updateSubTabVisibility() {
+  document.querySelectorAll("#commissionerSubTabs .top-tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === activeSubTab));
+  const showSub = activeMainSection === "commissioner";
+  document.getElementById("missingPicksTab").classList.toggle("hidden", !(showSub && activeSubTab === "missing"));
+  document.getElementById("digestTab").classList.toggle("hidden", !(showSub && activeSubTab === "digest"));
+  document.getElementById("publishTab").classList.toggle("hidden", !(showSub && activeSubTab === "publish"));
+  if (showSub && activeSubTab === "digest" && !digestInitialized) {
     digestInitialized = true;
     populateDigestWeeks();
   }
 }
 
-document.querySelectorAll(".top-tab-btn").forEach(btn => {
+document.getElementById("mainTabAdmin").addEventListener("click", () => switchMainSection("admin"));
+document.getElementById("mainTabCommissioner").addEventListener("click", () => switchMainSection("commissioner"));
+document.querySelectorAll("#commissionerSubTabs .top-tab-btn").forEach(btn => {
   btn.addEventListener("click", () => switchTopTab(btn.dataset.tab));
 });
 

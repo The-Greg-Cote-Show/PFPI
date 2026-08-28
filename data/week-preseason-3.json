@@ -128,24 +128,6 @@
       "clockReport": null
     },
     {
-      "id": "hl-566555",
-      "home": "NYJ",
-      "away": "NYG",
-      "homeScore": null,
-      "awayScore": null,
-      "status": "scheduled",
-      "kickoffISO": "2026-08-28T23:30:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "NYG",
-        "Critters": "NYG",
-        "Giraffes": "NYG"
-      },
-      "clockReport": null
-    },
-    {
       "id": "hl-566558",
       "home": "JAX",
       "away": "TB",
@@ -164,11 +146,29 @@
       "clockReport": null
     },
     {
+      "id": "hl-566555",
+      "home": "NYJ",
+      "away": "NYG",
+      "homeScore": null,
+      "awayScore": null,
+      "status": "scheduled",
+      "kickoffISO": "2026-08-28T23:30:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "NYG",
+        "Critters": "NYG",
+        "Giraffes": "NYG"
+      },
+      "clockReport": null
+    },
+    {
       "id": "hl-566556",
       "home": "MIA",
       "away": "ATL",
-      "homeScore": null,
-      "awayScore": null,
+      "homeScore": 0,
+      "awayScore": 7,
       "status": "in_progress",
       "kickoffISO": "2026-08-28T23:00:00.000Z",
       "winner": null,
@@ -179,7 +179,7 @@
         "Critters": "MIA",
         "Giraffes": "MIA"
       },
-      "clockReport": "8:55 - 1st Quarter"
+      "clockReport": "8:43 - 1st Quarter"
     },
     {
       "id": "hl-566559",
@@ -197,7 +197,7 @@
         "Critters": "HOU",
         "Giraffes": "CAR"
       },
-      "clockReport": "9:52 - 1st Quarter"
+      "clockReport": "6:38 - 1st Quarter"
     },
     {
       "id": "hl-566554",
@@ -214,7 +214,7 @@
         "Lobos": "BAL",
         "Giraffes": "WSH"
       },
-      "clockReport": "3:46 - 2nd Quarter"
+      "clockReport": "2:00 - 2nd Quarter"
     },
     {
       "id": "hl-566531",
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-28T23:20:23.506Z"
+  "updatedAt": "2026-08-28T23:25:23.439Z"
 }

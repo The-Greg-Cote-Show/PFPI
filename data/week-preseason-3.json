@@ -179,7 +179,7 @@
         "Critters": "MIA",
         "Giraffes": "MIA"
       },
-      "clockReport": "12:53 - 1st Quarter"
+      "clockReport": "8:55 - 1st Quarter"
     },
     {
       "id": "hl-566559",
@@ -197,13 +197,13 @@
         "Critters": "HOU",
         "Giraffes": "CAR"
       },
-      "clockReport": "11:49 - 1st Quarter"
+      "clockReport": "9:52 - 1st Quarter"
     },
     {
       "id": "hl-566554",
       "home": "BAL",
       "away": "WSH",
-      "homeScore": 17,
+      "homeScore": 24,
       "awayScore": 0,
       "status": "in_progress",
       "kickoffISO": "2026-08-28T22:00:00.000Z",
@@ -214,7 +214,7 @@
         "Lobos": "BAL",
         "Giraffes": "WSH"
       },
-      "clockReport": "3:52 - 2nd Quarter"
+      "clockReport": "3:46 - 2nd Quarter"
     },
     {
       "id": "hl-566531",
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-28T23:15:29.557Z"
+  "updatedAt": "2026-08-28T23:20:23.506Z"
 }

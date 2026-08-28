@@ -297,12 +297,16 @@ function shouldPollHighlightlyThisTick(now) {
   return false;
 }
 
-async function fetchHighlightlyPreseasonWeek3(env) {
+async function fetchHighlightlyPreseasonWeek3(env, force) {
   if (!env.HIGHLIGHTLY_API_KEY) {
     console.error("Skipping Highlightly preseason Week 3 fetch: HIGHLIGHTLY_API_KEY not set.");
     return null;
   }
-  if (!shouldPollHighlightlyThisTick(new Date())) {
+  // `force` (added 2026-08-28 for the admin manual-poll-trigger button)
+  // bypasses the window/cadence throttle entirely -- an explicit manual
+  // click is a deliberate, informed use of one API call, not the
+  // automatic cron that the 100/day budget is actually protecting.
+  if (!force && !shouldPollHighlightlyThisTick(new Date())) {
     return null;
   }
 
@@ -857,7 +861,12 @@ async function checkPendingBriefConfirmations(env) {
 // MAIN POLL CYCLE
 // ============================================================
 
-async function pollAndPublish(env) {
+// `force` (added 2026-08-28, only ever set true by the admin manual-poll-
+// trigger endpoint below) bypasses every throttle gate in this function --
+// Big Balls' window check, Highlightly's window check, and the 5-minute
+// merge/publish gate -- so a manual click always does something real
+// immediately, rather than silently no-op'ing outside the normal cadence.
+async function pollAndPublish(env, force = false) {
   await checkPendingBriefConfirmations(env);
 
   const currentWeek = computeCurrentWeekFromDate();
@@ -865,7 +874,7 @@ async function pollAndPublish(env) {
 
   if (!env.BIG_BALLS_API_KEY) {
     console.error("Skipping Big Balls poll: BIG_BALLS_API_KEY not set. No regular-season score/schedule data fetched or published this tick.");
-  } else if (!shouldPollBigBallsThisTick(new Date())) {
+  } else if (!force && !shouldPollBigBallsThisTick(new Date())) {
     // Throttled: outside a live window and not a 15-min mark this tick.
   } else {
     await preloadFullSeasonScheduleIfNeeded(env);
@@ -958,14 +967,14 @@ async function pollAndPublish(env) {
   // and re-merge+republish picks on their own 5-minute cadence -- cheap
   // (KV reads only, no external API call) and no longer dependent on a
   // live score fetch to "unlock" a picks update.
-  const freshPreseasonGames = await fetchHighlightlyPreseasonWeek3(env);
+  const freshPreseasonGames = await fetchHighlightlyPreseasonWeek3(env, force);
   if (freshPreseasonGames) {
     // Schedule cache stays picks-free, matching schedule:week:N's existing
     // shape (kickoff-math only, not for public reading).
     await env.PFPI_KV.put("schedule:week:preseason-3", JSON.stringify(freshPreseasonGames));
   }
 
-  if (new Date().getUTCMinutes() % 5 === 0) {
+  if (force || new Date().getUTCMinutes() % 5 === 0) {
     let preseasonGames = freshPreseasonGames;
     if (!preseasonGames) {
       const cachedRaw = await env.PFPI_KV.get("schedule:week:preseason-3");
@@ -1020,14 +1029,65 @@ async function pollAndPublish(env) {
 }
 
 // ============================================================
+// ADMIN MANUAL POLL TRIGGER (added 2026-08-28, per Yeti)
+// ============================================================
+// This Worker never had its own auth system or session store -- rather
+// than build a second one, this reads the SAME `admin-session:{token}` KV
+// key picks-worker.js's login flow already writes (both Workers share the
+// one PFPI_KV namespace/id, see wrangler-scores.toml vs wrangler.toml).
+// admin.html sends the exact session token it already holds from logging
+// into pfpi-picks-worker; no new secret, no cross-Worker call needed.
+const ALLOWED_ORIGINS = [
+  "https://pfpi.thegregcoteshow.com",
+  "https://the-greg-cote-show.github.io",
+];
+
+function corsHeaders(request) {
+  const origin = request.headers.get("Origin");
+  const allowOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, X-Admin-Token",
+    "Vary": "Origin",
+  };
+}
+
+function jsonResponse(body, status, request) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json", ...corsHeaders(request) },
+  });
+}
+
+async function verifyAdminSession(token, env) {
+  if (!token) return false;
+  return (await env.PFPI_KV.get(`admin-session:${token}`)) === "valid";
+}
+
+async function handleTriggerPoll(request, env) {
+  const token = request.headers.get("X-Admin-Token");
+  if (!(await verifyAdminSession(token, env))) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+  await pollAndPublish(env, true);
+  return jsonResponse({ triggered: true }, 200, request);
+}
+
+// ============================================================
 // WORKER ENTRY POINTS
 // ============================================================
 
 export default {
-  async fetch(request) {
-    return new Response(JSON.stringify({ ok: true, worker: "pfpi-scores-worker" }), {
-      headers: { "Content-Type": "application/json" },
-    });
+  async fetch(request, env) {
+    if (request.method === "OPTIONS") {
+      return new Response(null, { headers: corsHeaders(request) });
+    }
+    const url = new URL(request.url);
+    if (url.pathname === "/admin/trigger-poll" && request.method === "POST") {
+      return handleTriggerPoll(request, env);
+    }
+    return jsonResponse({ ok: true, worker: "pfpi-scores-worker" }, 200, request);
   },
 
   async scheduled(event, env, ctx) {

@@ -3324,3 +3324,55 @@ Week 1 data by default. Clicked back to Admin Portal -> sub-tab row and
 its content hidden again, Admin panels restored. Also re-confirmed the
 pre-login page (real unauthenticated state, not simulated) shows only the
 login form -- no stray tab bars, closing out the bug found above.
+
+## Weekly Digest table alignment: monospace font fix (2026-08-28)
+
+Yeti's task: the digest's Standings table (space-padded plain text, not a
+real HTML table -- a real table was explicitly deferred, per Yeti, until
+Greg's reaction to this simpler fix says it's needed) only lines up in a
+monospace font. It looked right in the digest preview panel but broke
+once inserted into the brief-editing textarea, and would have broken the
+same way on the final published page. CSS-only fix, no change to the
+text-generation logic itself, per the task's explicit scope.
+
+**Checked all three locations before touching anything, not assumed**:
+- `#digestOutput`/`.digest-output` (brief.html and admin.html's ported
+  copy) already had `font-family:"SF Mono",Consolas,"Courier New",
+  monospace` explicitly set -- confirmed genuine, not coincidental, this
+  one needed no change.
+- `#briefText` (the brief-editing textarea, both files) had no font-family
+  of its own, inheriting `.field textarea{font-family:inherit;}` -- the
+  page's proportional sans-serif. This was the real break point.
+- `.brief-body` (index.html's published brief display) also had no
+  font-family override, same inherited sans-serif.
+
+**Fix**: added `font-family:"SF Mono",Consolas,"Courier New",monospace`
+directly to `#briefText` (brief.html, admin.html) and `.brief-body`
+(index.html) -- the exact same font stack as `.digest-output`, so
+alignment is guaranteed pixel-identical across preview, editor, and
+published page, not just "some monospace font" that might render
+characters at slightly different relative widths.
+
+**Real constraint worth flagging plainly, not glossing over**: a
+`<textarea>` can't mix fonts within itself, and plain published text has
+no markup boundary to target just an inserted-digest portion -- so both
+fixes apply to the WHOLE element, not just digest content. Any of Greg's
+own free-typed prose in a brief now renders in monospace too, in the
+editor and on the published page. Confirmed this live and it IS visually
+distinct from the surrounding page's proportional font -- flagging per
+the task's own instruction, this is exactly the kind of thing Yeti wants
+Greg's real reaction on before treating it as final.
+
+**Verified live, real publish, not just inspection**: used the Weekly
+Digest tab's real "Insert into brief text" action (admin.html, real
+authenticated session) and confirmed the textarea showed the Standings
+table with Team/Season/GB columns genuinely aligned -- screenshotted,
+columns line up cleanly (`Chris' Critters  3-1  .750  --` / `Greg's Lobos
+2-2  .500  1` / etc., every column starting at the same horizontal
+position). Published it for real to the Preseason brief via
+`/admin/publish-brief`, confirmed via a direct API read that the exact
+table text landed in `data/brief-week-preseason-3.json`, then loaded the
+real public index.html page (forced a fresh render to route around
+`loadRealBrief()`'s own pre-existing lack of cache-busting, unrelated to
+this task) and confirmed the Commissioner's Report panel shows the same
+table with the same clean alignment, in a visibly monospace font.

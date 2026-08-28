@@ -32,6 +32,22 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   color:var(--text);font-size:.95rem;padding:.7rem .85rem;font-family:inherit;
 }
 .field textarea{min-height:220px;resize:vertical;line-height:1.5;}
+/* Monospace fix (2026-08-28, per Yeti) -- the digest's Standings table
+   (and similar sections) is manually space-padded to line up columns,
+   which only lines up correctly in a monospace font. #digestOutput
+   already used one (see .digest-output below); this textarea didn't,
+   inheriting the page's proportional sans-serif instead, so pasting the
+   digest in via "Insert into brief text" looked aligned in the preview
+   but broke the moment it landed here. Same exact font stack as
+   .digest-output so the alignment is guaranteed pixel-identical between
+   preview and editor, not just "some monospace font." Deliberately
+   applies to the whole textarea, not just an inserted digest block -- a
+   <textarea> can't mix fonts within itself, and a real HTML table was
+   explicitly deferred (see BUILD_LOG.md) in favor of this simpler,
+   whole-element fix. Means Greg's own free-typed prose in this box now
+   renders monospace too, not just pasted digest tables -- flagged as a
+   real visual tradeoff worth his reaction, not hidden.  */
+#briefText{font-family:"SF Mono",Consolas,"Courier New",monospace;}
 .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--blue);}
 .field input[readonly]{opacity:.6;cursor:default;}
 
@@ -84,6 +100,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   width:100%;min-height:22rem;max-height:32rem;overflow:auto;box-sizing:border-box;
   background:var(--panel2);border:1px solid var(--border2);border-radius:8px;
   color:var(--text);font-size:.78rem;line-height:1.5;padding:.85rem;
+  /* Confirmed explicit, not coincidental (checked 2026-08-28, per Yeti) --
+     this is the one location that was already correct; #briefText and
+     index.html's .brief-body were not, see the #briefText comment above. */
   font-family:"SF Mono",Consolas,"Courier New",monospace;white-space:pre-wrap;
   margin-bottom:.85rem;
 }

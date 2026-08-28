@@ -119,7 +119,19 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .brief-label{font-size:1.05rem;font-weight:800;}
 .brief-subtitle{font-size:.78rem;color:var(--muted);margin-top:2px;}
 .brief-week-tag{font-size:.65rem;color:var(--muted);background:var(--panel2);border:1px solid var(--border2);border-radius:6px;padding:3px 9px;}
-.brief-body{font-size:.86rem;line-height:1.65;color:var(--text);white-space:pre-wrap;}
+/* Monospace fix (2026-08-28, per Yeti) -- the digest's Standings table
+   (and similar space-padded sections) only lines up in a monospace font;
+   this is the third of three locations fixed together (see BUILD_LOG.md
+   and brief.html's #briefText comment) -- same exact font stack as
+   brief.html/admin.html's #briefText and .digest-output so alignment is
+   guaranteed identical end-to-end from digest preview through to this
+   published page, not just "some monospace font." Applies to the whole
+   published brief, not just an inserted-digest portion -- this is plain
+   text with no markup boundary to target just that part, and a real HTML
+   table was explicitly deferred in favor of this simpler fix. Means any
+   of Greg's own free-typed prose in a brief now publishes in monospace
+   too -- a real visual tradeoff to get his reaction on, not hidden. */
+.brief-body{font-size:.86rem;line-height:1.65;color:var(--text);white-space:pre-wrap;font-family:"SF Mono",Consolas,"Courier New",monospace;}
 .brief-body.empty{color:var(--muted);font-style:italic;}
 
 .games-panel{display:none;}

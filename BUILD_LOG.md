@@ -3272,3 +3272,55 @@ real Week 1 games are underway, Sept 9). The `TESTING_ALLOW_ALL_WEEKS`
 flag in both brief.html and admin.html's Commissioner's Report tab is
 still `true` (pre-existing, not touched this round) -- still needs
 reverting to `false` before real weekly use, per its own comment.
+
+## Admin Portal tab bar: Acting Commissioner made a real toggle button (2026-08-28)
+
+Yeti asked for "Acting Commissioner" (previously a plain text label sitting
+above the 3 Commissioner sub-tabs, all shown together permanently once
+logged in) to become a real button matching "Admin Portal"'s own style,
+stacked underneath it -- clicking either one shows only that section,
+hiding the other entirely (Admin Portal hides the 3 sub-tabs; Acting
+Commissioner hides all the Admin tools and reveals the 3 sub-tabs).
+
+**Implementation**: replaced the single-level tab bar with a real two-
+level structure -- `activeMainSection` ("admin" | "commissioner") and
+`activeSubTab` ("missing" | "digest" | "publish", remembered across
+section switches so returning to Acting Commissioner lands back where you
+left it). `switchMainSection()` toggles the two top buttons and the
+Admin Portal panel vs. the sub-tab row; `switchTopTab()` (still used by
+the 3 sub-tab buttons and by `digestInsertBtn`'s Digest->Publish jump)
+always implies switching into the commissioner section first. Removed the
+old plain-text `.acting-commissioner-header` div entirely -- the button
+itself now carries that label.
+
+**Real bug found and fixed while verifying, not something that would have
+been caught by code review alone**: right after deploying, a screenshot
+showed the 3 sub-tab buttons visibly rendered even while "Admin Portal"
+was the active (highlighted) section -- looked like the hide logic wasn't
+firing. Checked the live DOM directly rather than trust the screenshot a
+second time (screenshots taken at exactly the wrong instant had already
+produced two false alarms earlier this session): `commissionerSubTabs`
+genuinely HAD the `hidden` class, but `getComputedStyle(el).display` was
+still `"flex"`. Root cause: `.hidden{display:none;}` was declared at line
+28, `.top-tabs{display:flex;...}` at line 39 -- equal specificity (both
+single-class selectors), so the LATER rule in the stylesheet wins
+regardless of which classes are actually present on the element or their
+order in the `class` attribute. This meant the tab bars would have
+rendered visible even on the un-authenticated LOGIN screen, before this
+round ever added a second `.top-tabs` row to trigger it -- confirmed by
+temporarily clearing the real saved session token from this browser's
+localStorage, reloading, and screenshotting the genuinely-unauthenticated
+page (then restoring the real token afterward, unchanged). Fixed with
+`.hidden{display:none !important;}`, matching the exact convention
+brief.html's own `.hidden` already used for this identical reason --
+re-verified the cleared-session screenshot showed a clean login-only
+page with zero tab bar bleed-through afterward.
+
+**Verified live, both directions, real authenticated session**: Admin
+Portal active -> Send Test Email/Correction/Trigger Poll/Clear Picks
+panels visible, sub-tab row hidden. Clicked Acting Commissioner -> all
+Admin panels hidden, sub-tab row appears with Missing Picks showing real
+Week 1 data by default. Clicked back to Admin Portal -> sub-tab row and
+its content hidden again, Admin panels restored. Also re-confirmed the
+pre-login page (real unauthenticated state, not simulated) shows only the
+login form -- no stray tab bars, closing out the bug found above.

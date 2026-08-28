@@ -560,7 +560,50 @@ function computePreseasonSnapshot(finalResults, picksByTeam, weekLabel) {
   // cumulative total, since there's only ever one preseason "week."
   const gamesPlayed = { [weekLabel]: weekTotal };
 
-  return { standings, standingsPct, weeklyTitles, weeklyTitlesCount, weeksLeading, weeksLeadingCount, bestWeek, gamesPlayed };
+  // Unique Hits, added 2026-08-27 per Yeti -- previously "permanently out
+  // of scope" (no real data source existed, see BUILD_LOG.md's many
+  // earlier entries), reversed specifically for preseason once real picks
+  // + real results made it genuinely computable, and confirmed against
+  // Yeti's own deliberately-set-up test case before writing any of this
+  // (Giraffes picked CLE over NE, alone, and CLE won -- expected exactly
+  // one hit; verified by hand against real KV picks data first). Per the
+  // original framework doc's own definition (archive/pfpi_mockup_v3.html):
+  // "Hits-to-opportunities on picks nobody else made." A pick is "unique"
+  // for a game if, among the TEAMS that actually picked that game, exactly
+  // one team chose that side -- it's a "hit" if that side also won. Only
+  // compares real-roster TEAMS against each other (not FAMILY_MEMBERS --
+  // this is a competitive-roster stat, matching every other category
+  // here), and only counts games that were actually decided
+  // (scorableGames, same tie-exclusion as every other stat above). This is
+  // NOT extended to real regular-season weeks (computeStandings() above is
+  // untouched) -- that would need persisted cumulative state across 18
+  // weeks, a materially bigger change than this single-unified-week
+  // computation, and wasn't asked for.
+  const uniqueHits = {}, uniqueOpportunities = {};
+  TEAMS.forEach(team => { uniqueHits[team] = 0; uniqueOpportunities[team] = 0; });
+  scorableGames.forEach(game => {
+    const pickCounts = {};
+    TEAMS.forEach(team => {
+      const pick = (picksByTeam[team] || {})[game.id];
+      if (pick) pickCounts[pick] = (pickCounts[pick] || 0) + 1;
+    });
+    TEAMS.forEach(team => {
+      const pick = (picksByTeam[team] || {})[game.id];
+      if (pick && pickCounts[pick] === 1) {
+        uniqueOpportunities[team]++;
+        if (game.winner && pick === game.winner) uniqueHits[team]++;
+      }
+    });
+  });
+  const uniqueHitsStat = {};
+  TEAMS.forEach(team => {
+    uniqueHitsStat[team] = { [weekLabel]: { hits: uniqueHits[team], opps: uniqueOpportunities[team] } };
+  });
+
+  return {
+    standings, standingsPct, weeklyTitles, weeklyTitlesCount, weeksLeading, weeksLeadingCount, bestWeek, gamesPlayed,
+    uniqueHits: uniqueHitsStat,
+  };
 }
 
 // ============================================================

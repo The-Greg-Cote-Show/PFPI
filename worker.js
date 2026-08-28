@@ -1174,21 +1174,24 @@ async function incrKV(env, key, ttlSeconds) {
 // statically; a write-only tracking beacon a visitor's own browser fires
 // (and never waits on, given the instant response) doesn't conflict with
 // it.
-async function handleTrack(request, env) {
-  const url = new URL(request.url);
-  let body;
-  try {
-    body = await request.json();
-  } catch (e) {
-    return; // malformed body -- nothing to log, fail silent (this is a beacon, not a user-facing action)
-  }
-  if (body.notrack === true || url.searchParams.get("notrack") === "1") return;
+// REAL BUG FOUND AND FIXED 2026-08-28, live during verification: this
+// used to take (request, env) and call `await request.json()` /
+// `request.headers.get(...)` from inside the function that ctx.waitUntil()
+// runs -- Cloudflare Workers actively forbids reading a request's BODY
+// STREAM after its response has already been sent (confirmed via a
+// temporary diagnostic log: "TypeError: Can't read from request stream
+// after response has been sent"), which is exactly what a 204-first,
+// log-after pattern does. Fixed by extracting everything needed (ip, ua,
+// page, referrer, notrack) from the real request SYNCHRONOUSLY in the
+// fetch() handler below, before the response goes out, and passing only
+// those plain values in here -- this function never touches the
+// `request`/`env` request object at all now, only plain strings and the
+// KV binding, so nothing here can ever hit that constraint again.
+async function handleTrack(env, { ip, ua, page: rawPage, referrer: rawReferrer, notrack }) {
+  if (notrack === true) return;
 
-  const page = ANALYTICS_ALL_PAGES.has(body.page) ? body.page : "other";
-  const referrer = typeof body.referrer === "string" ? body.referrer : "";
-
-  const ip = request.headers.get("CF-Connecting-IP") || "0.0.0.0";
-  const ua = request.headers.get("User-Agent") || "unknown";
+  const page = ANALYTICS_ALL_PAGES.has(rawPage) ? rawPage : "other";
+  const referrer = typeof rawReferrer === "string" ? rawReferrer : "";
 
   const parts = getEasternDateParts(new Date());
   const today = `${parts.year}-${parts.month}-${parts.day}`;
@@ -1404,9 +1407,22 @@ export default {
       return handleTriggerPoll(request, env);
     }
     if (url.pathname === "/track" && request.method === "POST") {
-      // Instant empty response -- every KV write happens in the
-      // background afterward, the visitor never waits on any of it.
-      ctx.waitUntil(handleTrack(request, env));
+      // Everything handleTrack needs is read from the real request HERE,
+      // synchronously, before the response goes out -- see handleTrack's
+      // own comment for why (a real bug found live: reading the request
+      // body inside ctx.waitUntil(), after the response, throws). Instant
+      // empty response either way -- the visitor never waits on any KV
+      // write, and a malformed body just means nothing gets logged.
+      let trackBody = {};
+      try { trackBody = await request.json(); } catch (e) { trackBody = {}; }
+      const trackParams = {
+        ip: request.headers.get("CF-Connecting-IP") || "0.0.0.0",
+        ua: request.headers.get("User-Agent") || "unknown",
+        page: trackBody.page,
+        referrer: trackBody.referrer,
+        notrack: trackBody.notrack === true || url.searchParams.get("notrack") === "1",
+      };
+      ctx.waitUntil(handleTrack(env, trackParams));
       return new Response(null, { status: 204, headers: corsHeaders(request) });
     }
     if (url.pathname === "/admin/analytics-data" && request.method === "GET") {

@@ -239,7 +239,7 @@
         "Critters": "SF",
         "Giraffes": "LV"
       },
-      "clockReport": "9:57 - 2nd Quarter"
+      "clockReport": "6:34 - 2nd Quarter"
     },
     {
       "id": "hl-566530",
@@ -257,7 +257,7 @@
         "Critters": "NE",
         "Giraffes": "CLE"
       },
-      "clockReport": "9:16 - 2nd Quarter"
+      "clockReport": "6:58 - 2nd Quarter"
     },
     {
       "id": "hl-566529",
@@ -274,7 +274,7 @@
         "Lobos": "BUF",
         "Critters": "BUF"
       },
-      "clockReport": "4:49 - 3rd Quarter"
+      "clockReport": "3:52 - 3rd Quarter"
     }
   ],
   "stats": {
@@ -504,5 +504,5 @@
       "preseason-3": 0
     }
   },
-  "updatedAt": "2026-08-28T01:00:32.630Z"
+  "updatedAt": "2026-08-28T01:05:27.511Z"
 }

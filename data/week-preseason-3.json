@@ -56,9 +56,9 @@
       "clockReport": null
     },
     {
-      "id": "hl-566561",
-      "home": "DAL",
-      "away": "NO",
+      "id": "hl-566562",
+      "home": "GB",
+      "away": "ARI",
       "homeScore": null,
       "awayScore": null,
       "status": "scheduled",
@@ -67,9 +67,9 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "DAL",
-        "Critters": "DAL",
-        "Giraffes": "NO"
+        "Lobos": "GB",
+        "Critters": "ARI",
+        "Giraffes": "GB"
       },
       "clockReport": null
     },
@@ -92,6 +92,24 @@
       "clockReport": null
     },
     {
+      "id": "hl-566561",
+      "home": "DAL",
+      "away": "NO",
+      "homeScore": null,
+      "awayScore": null,
+      "status": "scheduled",
+      "kickoffISO": "2026-08-29T00:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "DAL",
+        "Critters": "DAL",
+        "Giraffes": "NO"
+      },
+      "clockReport": null
+    },
+    {
       "id": "hl-566557",
       "home": "KC",
       "away": "SEA",
@@ -106,42 +124,6 @@
         "Lobos": "SEA",
         "Critters": "KC",
         "Giraffes": "SEA"
-      },
-      "clockReport": null
-    },
-    {
-      "id": "hl-566562",
-      "home": "GB",
-      "away": "ARI",
-      "homeScore": null,
-      "awayScore": null,
-      "status": "scheduled",
-      "kickoffISO": "2026-08-29T00:00:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "GB",
-        "Critters": "ARI",
-        "Giraffes": "GB"
-      },
-      "clockReport": null
-    },
-    {
-      "id": "hl-566558",
-      "home": "JAX",
-      "away": "TB",
-      "homeScore": null,
-      "awayScore": null,
-      "status": "scheduled",
-      "kickoffISO": "2026-08-28T23:30:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "JAX",
-        "Critters": "JAX",
-        "Giraffes": "TB"
       },
       "clockReport": null
     },
@@ -164,20 +146,20 @@
       "clockReport": null
     },
     {
-      "id": "hl-566556",
-      "home": "MIA",
-      "away": "ATL",
+      "id": "hl-566558",
+      "home": "JAX",
+      "away": "TB",
       "homeScore": null,
       "awayScore": null,
       "status": "scheduled",
-      "kickoffISO": "2026-08-28T23:00:00.000Z",
+      "kickoffISO": "2026-08-28T23:30:00.000Z",
       "winner": null,
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "MIA",
-        "Critters": "MIA",
-        "Giraffes": "MIA"
+        "Lobos": "JAX",
+        "Critters": "JAX",
+        "Giraffes": "TB"
       },
       "clockReport": null
     },
@@ -196,6 +178,24 @@
         "Lobos": "HOU",
         "Critters": "HOU",
         "Giraffes": "CAR"
+      },
+      "clockReport": null
+    },
+    {
+      "id": "hl-566556",
+      "home": "MIA",
+      "away": "ATL",
+      "homeScore": null,
+      "awayScore": null,
+      "status": "scheduled",
+      "kickoffISO": "2026-08-28T23:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "MIA",
+        "Critters": "MIA",
+        "Giraffes": "MIA"
       },
       "clockReport": null
     },
@@ -235,24 +235,6 @@
       "clockReport": null
     },
     {
-      "id": "hl-566532",
-      "home": "LV",
-      "away": "SF",
-      "homeScore": 12,
-      "awayScore": 18,
-      "status": "final",
-      "kickoffISO": "2026-08-28T00:00:00.000Z",
-      "winner": "SF",
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "SF",
-        "Critters": "SF",
-        "Giraffes": "LV"
-      },
-      "clockReport": null
-    },
-    {
       "id": "hl-566530",
       "home": "CLE",
       "away": "NE",
@@ -267,6 +249,24 @@
         "Lobos": "NE",
         "Critters": "NE",
         "Giraffes": "CLE"
+      },
+      "clockReport": null
+    },
+    {
+      "id": "hl-566532",
+      "home": "LV",
+      "away": "SF",
+      "homeScore": 12,
+      "awayScore": 18,
+      "status": "final",
+      "kickoffISO": "2026-08-28T00:00:00.000Z",
+      "winner": "SF",
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "SF",
+        "Critters": "SF",
+        "Giraffes": "LV"
       },
       "clockReport": null
     },
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-28T21:55:23.098Z"
+  "updatedAt": "2026-08-28T22:00:32.874Z"
 }

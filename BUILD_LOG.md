@@ -2970,3 +2970,78 @@ fixes are shared CSS/JS used by every bar-chart category (Standings,
 Weeks Leading, Weekly Titles, Best Week) and the shared tab bar, not
 Standings-specific, so this covers all of them, not just the one Yeti
 happened to screenshot mentally.
+
+## 10pm check-back: found and fixed a REAL bug, not just measuring latency (2026-08-27)
+
+Yeti's explicit ask was to verify with real evidence whether
+`data/week-preseason-3.json` moved within ~5 minutes of PIT@BUF (hl-566529)
+going final, and to flag it plainly if it didn't -- not let a good result
+on paper hide a real problem. It did not hold, and the reason is more
+serious than late polling: **the site's status classification could never
+detect ANY preseason game as final, at all, permanently, for any game,
+until this check caught and fixed it live tonight.**
+
+**Real evidence, exact commit timestamps** (`data/week-preseason-3.json`
+history, all times ET):
+- `690682b` @ 10:00:32 PM -- game still in progress, 0:44 left in the 4th, 27-28.
+- `a9d069c` @ 10:05:28 PM -- Highlightly's own `state.report` field flips to
+  "Final" (the real game ended sometime in this 5-minute window -- normal
+  polling cadence, working exactly as designed). But the site's own
+  `status` field stayed `"in_progress"`.
+- Watched it live through `d0ac7f4` (10:10), `adb0286` (10:15) -- `status`
+  never moved, `clockReport` stuck showing "Final" forever, unable to ever
+  self-correct.
+
+**Root cause, found by direct diagnostic (temporarily logged one game's
+raw `state` object live, same technique used earlier today for the
+game-clock feature, removed immediately after capturing it), not guessed**:
+Highlightly's real completed-game `state.description` is the literal
+string `"Finished"` -- NOT `"Final"`. `normalizeHighlightlyGame()`'s status
+check was `desc.includes("final")`, and `"finished"` does not contain the
+substring `"final"` (f-i-n-i-s-h-e-d vs f-i-n-a-l). Confirmed via the raw
+capture: `{"period":4,"report":"Final","description":"Finished"}` --
+`state.report` said "Final" (which is why `clockReport` looked right) but
+`state.description` (what status actually checked) said "Finished," so
+the classifier fell through to "in_progress" every single time, with no
+mechanism to ever recover on its own. This wasn't specific to tonight's
+game -- it would have silently broken final-detection for all 16
+preseason games, permanently, and by extension every real regular-season
+week too, since `normalizeGame()` doesn't share this exact bug (Big Balls
+has no description field to match against at all) but the underlying
+"Weekly Digest waits for the week to be final" gate added earlier today
+would have been just as permanently blocked for preseason.
+
+**Fix**: `desc.includes("final") || desc.includes("finished")` -- checking
+for both rather than replacing one with the other, since it's unconfirmed
+whether Highlightly ever uses the literal word "final" in some other
+response shape. Deployed to `pfpi-scores-worker` (version `2cd5314f-
+2c41-4efc-a7c7-28f6959b1299`) at ~10:17 PM ET, pushed to `main`.
+
+**Verified the fix actually worked, live, same night**: watched the very
+next poll tick after deploying -- `7116cfe` @ 10:20:27 PM ET, `status`
+correctly flipped to `"final"`, `clockReport` correctly went back to
+`null` (no longer in_progress), score preserved (27-28). This landed
+exactly on the normal 5-minute cadence, the first tick after the fix was
+live -- confirming the polling/publishing pipeline's own timing was never
+the problem, only this one classification bug.
+
+**Stats sanity-checked, not just the status flag**: `stats.standings`
+still shows every team at 0 after this fix -- confirmed this is the
+CORRECT real answer, not stale data: the only two teams with a saved pick
+on this game (Lobos, Critters) both picked BUF, which lost (PIT won
+28-27, confirmed via `winner` logic against homeScore/awayScore), so 0/1
+correct is right for them, and every other team has no pick on this game
+at all (undefined !== "PIT"), so 0 is right for them too. `computePreseasonSnapshot()`
+genuinely recomputed from the real newly-final result -- it just happens
+that nobody who picked this game guessed right yet.
+
+**Honest total latency accounting**: from true game-end signal (10:05:28
+PM, Highlightly's own report field) to the site correctly reflecting
+`status:"final"` (10:20:27 PM) was ~15 minutes -- but that entire gap is
+attributable to the bug above (which would have been infinite/permanent
+without intervention), not to the polling design, which is confirmed
+working exactly on its intended 5-minute cadence once the actual blocker
+was removed. The ~5-minute bound Yeti asked about holds true going
+forward for every future game this week and into the real regular
+season -- tonight's specific delay was a one-time bug catch, not a
+recurring latency problem.

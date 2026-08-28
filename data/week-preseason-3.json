@@ -239,7 +239,7 @@
         "Critters": "SF",
         "Giraffes": "LV"
       },
-      "clockReport": "1:15 - 1st Quarter"
+      "clockReport": "0:56 - 1st Quarter"
     },
     {
       "id": "hl-566530",
@@ -257,7 +257,7 @@
         "Critters": "NE",
         "Giraffes": "CLE"
       },
-      "clockReport": "4:17 - 1st Quarter"
+      "clockReport": "3:14 - 1st Quarter"
     },
     {
       "id": "hl-566529",
@@ -504,5 +504,5 @@
       "preseason-3": 0
     }
   },
-  "updatedAt": "2026-08-28T00:35:29.009Z"
+  "updatedAt": "2026-08-28T00:40:27.602Z"
 }

@@ -3045,3 +3045,72 @@ was removed. The ~5-minute bound Yeti asked about holds true going
 forward for every future game this week and into the real regular
 season -- tonight's specific delay was a one-time bug catch, not a
 recurring latency problem.
+
+## Second real bug found the same night: Highlightly score order reversed (2026-08-27, ~11pm ET)
+
+Right after the status-detection fix above, Yeti reported the PFPI stats
+tabs still looked untouched after 3 of 4 games finished, AND that every
+live/final score was showing the wrong team as the winner -- specifically,
+BUF should have beaten PIT 28-27, but the site showed PIT winning. Both
+turned out to be the SAME root cause, not two separate problems.
+
+**Real evidence**: the published game already had `homeScore(BUF): 27,
+awayScore(PIT): 28, winner: "PIT"` -- the two numbers 27/28 were both
+present and correct, just assigned to the wrong team. This is exactly the
+"UNCONFIRMED order" the code had honestly flagged from the start:
+`normalizeHighlightlyGame()` guessed `state.score.current` was formatted
+"away - home" and split it `[awayScore, homeScore] = parts` accordingly.
+Yeti's real-world correction proved the guess wrong -- it's actually
+"home - away".
+
+**Why this also explained "the stats aren't calculating"**: it wasn't that
+`computePreseasonSnapshot()` had stopped running (it hadn't -- confirmed
+it was recomputing every 5 minutes as designed) -- it was computing the
+WRONG winner for every finished game, so anyone who picked the actual
+winner was being scored as wrong. The two teams who'd picked BUF (Lobos,
+Critters) were showing 0 correct when they should have shown 1 for this
+game alone -- indistinguishable on the charts from "nothing computed yet"
+since both look like a flat 0. A second, independent bug wearing the
+same disguise as the first one.
+
+**Fix**: `[homeScore, awayScore] = parts` instead of `[awayScore,
+homeScore] = parts` -- one line, isolated entirely in
+`normalizeHighlightlyGame()` exactly as the original gap notice predicted
+("a one-function fix once any of these games actually finishes"). Updated
+that gap notice and added a note at the fix site with the real evidence,
+so this doesn't get re-guessed the same wrong way later. Deployed to
+`pfpi-scores-worker` (version `e710f85d-38ec-4f88-b2c7-3c2b3944c654`).
+
+**Also fixed, same round**: Yeti separately asked for the Games tab
+display order to be Away-left/Home-right (index.html previously showed
+Home-left/Away-right) -- matches the away@home convention already used
+everywhere else on the site (admin.html's correction-game dropdown,
+picks.html, brief.html's Missing Picks tab all already read "AWAY @
+HOME"; index.html's Games tab was the one outlier). Pure display reorder,
+no data change.
+
+**Verified live, both fixes, real data, not assumption**: watched the
+very next Highlightly poll tick after deploying (11:20:27 PM ET) and
+confirmed `data/week-preseason-3.json` now shows PIT@BUF as `homeScore
+(BUF): 28, awayScore (PIT): 27, winner: "BUF"` -- exactly matching Yeti's
+stated real-world result. Confirmed the other two already-final games
+(SF@LV: SF 18-12 win; NE@CLE: CLE 37-13 win) also now have internally
+consistent winner-vs-score logic. `stats.standings` in that same commit
+now shows Critters and Lobos tied at 2 correct (they'd picked correctly
+on 2 of the 3 finished games), Giraffes at 1, everyone else still at 0 --
+real, differentiated, non-zero data for the first time tonight. Then
+opened the actual Games tab in a browser: PIT @ BUF now reads left-to-
+right with BUF (28, gold "winner" styling) on the right and PIT (27) on
+the left, and the Standings tab shows a real bar chart -- Critters and
+Lobos tied for the lead with crowns, Giraffes third, everyone else at
+zero -- not the flat all-zero state from before either bug was fixed.
+
+**One false alarm during this check, worth recording honestly**: partway
+through verifying, a status check landed 1 second before an expected
+5-minute tick's commit had gone through, briefly looking like the entire
+polling pipeline had silently stopped. Immediately re-checked and found
+the commit had simply landed a few seconds later than the check -- the
+pipeline was never actually stuck. Noting this so a future reader doesn't
+mistake "I checked at exactly the wrong instant" for a real outage if
+something in this log ever seems to describe a stall that self-resolved
+in seconds.

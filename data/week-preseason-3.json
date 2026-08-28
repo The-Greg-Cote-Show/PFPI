@@ -221,13 +221,13 @@
         "Critters": "LAR",
         "Giraffes": "LAR"
       },
-      "clockReport": "15:00 - 2nd Quarter"
+      "clockReport": "12:55 - 2nd Quarter"
     },
     {
       "id": "hl-566532",
       "home": "LV",
       "away": "SF",
-      "homeScore": 12,
+      "homeScore": 15,
       "awayScore": 12,
       "status": "in_progress",
       "kickoffISO": "2026-08-28T00:00:00.000Z",
@@ -239,7 +239,7 @@
         "Critters": "SF",
         "Giraffes": "LV"
       },
-      "clockReport": "2:00 - 4th Quarter"
+      "clockReport": "1:51 - 4th Quarter"
     },
     {
       "id": "hl-566530",
@@ -257,7 +257,7 @@
         "Critters": "NE",
         "Giraffes": "CLE"
       },
-      "clockReport": "2:00 - 4th Quarter"
+      "clockReport": "0:55 - 4th Quarter"
     },
     {
       "id": "hl-566529",
@@ -504,5 +504,5 @@
       "preseason-3": 1
     }
   },
-  "updatedAt": "2026-08-28T02:45:27.447Z"
+  "updatedAt": "2026-08-28T02:50:27.653Z"
 }

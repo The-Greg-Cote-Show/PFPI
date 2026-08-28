@@ -203,7 +203,7 @@
       "id": "hl-566554",
       "home": "BAL",
       "away": "WSH",
-      "homeScore": 14,
+      "homeScore": 17,
       "awayScore": 0,
       "status": "in_progress",
       "kickoffISO": "2026-08-28T22:00:00.000Z",
@@ -214,7 +214,7 @@
         "Lobos": "BAL",
         "Giraffes": "WSH"
       },
-      "clockReport": "12:59 - 2nd Quarter"
+      "clockReport": "10:36 - 2nd Quarter"
     },
     {
       "id": "hl-566531",
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-28T22:55:23.451Z"
+  "updatedAt": "2026-08-28T23:00:34.860Z"
 }

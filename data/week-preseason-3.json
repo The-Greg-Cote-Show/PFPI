@@ -239,7 +239,7 @@
         "Critters": "SF",
         "Giraffes": "LV"
       },
-      "clockReport": "7:02 - 3rd Quarter"
+      "clockReport": "5:32 - 3rd Quarter"
     },
     {
       "id": "hl-566530",
@@ -257,14 +257,14 @@
         "Critters": "NE",
         "Giraffes": "CLE"
       },
-      "clockReport": "13:51 - 3rd Quarter"
+      "clockReport": "11:45 - 3rd Quarter"
     },
     {
       "id": "hl-566529",
       "home": "BUF",
       "away": "PIT",
       "homeScore": 27,
-      "awayScore": 20,
+      "awayScore": 28,
       "status": "in_progress",
       "kickoffISO": "2026-08-27T23:00:00.000Z",
       "winner": null,
@@ -274,7 +274,7 @@
         "Lobos": "BUF",
         "Critters": "BUF"
       },
-      "clockReport": "2:00 - 4th Quarter"
+      "clockReport": "1:06 - 4th Quarter"
     }
   ],
   "stats": {
@@ -504,5 +504,5 @@
       "preseason-3": 0
     }
   },
-  "updatedAt": "2026-08-28T01:50:27.246Z"
+  "updatedAt": "2026-08-28T01:55:27.329Z"
 }

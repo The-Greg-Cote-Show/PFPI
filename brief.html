@@ -1112,13 +1112,23 @@ document.getElementById("digestCopyBtn").addEventListener("click", async () => {
 });
 
 document.getElementById("digestInsertBtn").addEventListener("click", () => {
-  showBriefEditView(currentDigestPlainText);
+  // A few blank lines ahead of the stats block (per Yeti, 2026-08-28) --
+  // leaves room for Greg's own personality-driven headline and column
+  // above the numbers, rather than dropping the table right at the very
+  // top where he'd have to make space himself every single week.
+  showBriefEditView("\n\n\n\n" + currentDigestPlainText);
   document.getElementById("briefCancelEditBtn").classList.remove("hidden");
   document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(b => b.classList.remove("active"));
   document.getElementById("dashTabPublish").classList.add("active");
   document.getElementById("missingPicksScreen").style.display = "none";
   document.getElementById("digestScreen").style.display = "none";
   document.getElementById("publishScreen").style.display = "block";
+  // Cursor starts at the very top of that blank space, not at the end of
+  // the pasted text, so Greg can just start typing immediately.
+  const textarea = document.getElementById("briefText");
+  textarea.focus();
+  textarea.setSelectionRange(0, 0);
+  textarea.scrollTop = 0;
 });
 
 let digestInitialized = false;

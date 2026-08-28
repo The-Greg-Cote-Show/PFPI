@@ -3114,3 +3114,53 @@ pipeline was never actually stuck. Noting this so a future reader doesn't
 mistake "I checked at exactly the wrong instant" for a real outage if
 something in this log ever seems to describe a stall that self-resolved
 in seconds.
+
+## Unique Hits: real computation added for preseason, reversing a long-standing "permanently out of scope" call (2026-08-28)
+
+Yeti asked for Unique Hits to actually calculate, saying he'd deliberately
+picked a game a certain way tonight specifically to test it. This is a
+real, deliberate reversal of a decision repeated across many earlier
+rounds ("10-Win Weeks and Unique Hits have no real data source... per
+Yeti's explicit decision") -- worth recording plainly as a genuine change
+of direction, not a contradiction of earlier work: earlier there was no
+real picks/results data at all to compute it from; now there is, at least
+for preseason.
+
+**Checked the real definition and the real data before writing anything,
+not just implementing off memory**: the original framework doc
+(archive/pfpi_mockup_v3.html) defines it as "Hits-to-opportunities on
+picks nobody else made." Pulled all 8 real teams' actual saved preseason
+picks straight from KV (`wrangler kv key get picks:preseason-3:{team}`)
+and cross-referenced against tonight's three real final results. By hand:
+Giraffes picked CLE (alone -- Lobos and Critters both had NE) and CLE
+won -- exactly the "1" Yeti said he expected. Giraffes also alone-picked
+LV in the SF@LV game, which lost -- a second opportunity, no hit. Wrote a
+standalone Node script with this exact real data and the exact candidate
+algorithm and confirmed `Giraffes: 1-2`, everyone else `0-0`, BEFORE
+touching worker.js -- the algorithm was verified against Yeti's own real
+test case first, not assumed correct because it seemed reasonable.
+
+**Scope, deliberately narrow**: added only to `computePreseasonSnapshot()`
+(worker.js) -- `computeStandings()` (real regular season) is untouched.
+Extending this to real weeks would need persisted cumulative hit/
+opportunity counts across 18 weeks, a materially bigger change than this
+single-unified-preseason-week computation, and wasn't asked for. 10-Win
+Weeks stays exactly as out-of-scope as before -- only Unique Hits was
+raised. Real-roster TEAMS only (not FAMILY_MEMBERS' sandboxed accounts),
+matching every other competitive stat. index.html's `uniqueHits.getData`
+now routes through `realDataFor`/`hasRealDataForWeek` exactly like
+`weeksLeading`/`weeklyTitles` already did -- real weeks stay null
+automatically since `computeStandings()` never gained a `uniqueHits` key,
+no special-casing needed.
+
+Deployed to `pfpi-scores-worker` (version `80118628-990d-414f-a574-
+5e3647ee8f19`).
+
+**Verified live, real data, not assumption**: watched the next poll tick
+-- `data/week-preseason-3.json`'s `stats.uniqueHits.Giraffes` came back
+exactly `{"hits":1,"opps":2}`, matching both the hand math and the offline
+Node test precisely. Opened the actual Unique Hits tab in a browser:
+Gracelin's Giraffes shows "1-2" with the raccoon leader icon (Ruth's
+Raccoons), the only team above zero; every other team correctly shows
+"0-0" -- not a flat empty state, a real bar chart with real
+differentiation, rendering exactly as designed.

@@ -42,7 +42,7 @@
       "home": "DEN",
       "away": "MIN",
       "homeScore": 10,
-      "awayScore": 0,
+      "awayScore": 3,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T01:00:00.000Z",
       "winner": null,
@@ -53,14 +53,32 @@
         "Critters": "DEN",
         "Giraffes": "MIN"
       },
-      "clockReport": "10:37 - 2nd Quarter"
+      "clockReport": "9:14 - 2nd Quarter"
+    },
+    {
+      "id": "hl-566561",
+      "home": "DAL",
+      "away": "NO",
+      "homeScore": 9,
+      "awayScore": 24,
+      "status": "in_progress",
+      "kickoffISO": "2026-08-29T00:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "DAL",
+        "Critters": "DAL",
+        "Giraffes": "NO"
+      },
+      "clockReport": "9:41 - 3rd Quarter"
     },
     {
       "id": "hl-566553",
       "home": "PHI",
       "away": "CIN",
       "homeScore": 6,
-      "awayScore": 9,
+      "awayScore": 16,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T00:00:00.000Z",
       "winner": null,
@@ -71,14 +89,14 @@
         "Critters": "CIN",
         "Giraffes": "PHI"
       },
-      "clockReport": "9:29 - 3rd Quarter"
+      "clockReport": "8:40 - 3rd Quarter"
     },
     {
       "id": "hl-566562",
       "home": "GB",
       "away": "ARI",
       "homeScore": 24,
-      "awayScore": 20,
+      "awayScore": 23,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T00:00:00.000Z",
       "winner": null,
@@ -89,7 +107,7 @@
         "Critters": "ARI",
         "Giraffes": "GB"
       },
-      "clockReport": "11:45 - 3rd Quarter"
+      "clockReport": "9:30 - 3rd Quarter"
     },
     {
       "id": "hl-566557",
@@ -107,43 +125,7 @@
         "Critters": "KC",
         "Giraffes": "SEA"
       },
-      "clockReport": "10:35 - 3rd Quarter"
-    },
-    {
-      "id": "hl-566561",
-      "home": "DAL",
-      "away": "NO",
-      "homeScore": 9,
-      "awayScore": 17,
-      "status": "in_progress",
-      "kickoffISO": "2026-08-29T00:00:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "DAL",
-        "Critters": "DAL",
-        "Giraffes": "NO"
-      },
-      "clockReport": "10:14 - 3rd Quarter"
-    },
-    {
-      "id": "hl-566555",
-      "home": "NYJ",
-      "away": "NYG",
-      "homeScore": 6,
-      "awayScore": 13,
-      "status": "in_progress",
-      "kickoffISO": "2026-08-28T23:30:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "NYG",
-        "Critters": "NYG",
-        "Giraffes": "NYG"
-      },
-      "clockReport": "End of 3rd Quarter"
+      "clockReport": "10:22 - 3rd Quarter"
     },
     {
       "id": "hl-566558",
@@ -161,25 +143,25 @@
         "Critters": "JAX",
         "Giraffes": "TB"
       },
-      "clockReport": "11:45 - 4th Quarter"
+      "clockReport": "9:37 - 4th Quarter"
     },
     {
-      "id": "hl-566559",
-      "home": "CAR",
-      "away": "HOU",
-      "homeScore": 16,
-      "awayScore": 13,
+      "id": "hl-566555",
+      "home": "NYJ",
+      "away": "NYG",
+      "homeScore": 6,
+      "awayScore": 16,
       "status": "in_progress",
-      "kickoffISO": "2026-08-28T23:00:00.000Z",
+      "kickoffISO": "2026-08-28T23:30:00.000Z",
       "winner": null,
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "HOU",
-        "Critters": "HOU",
-        "Giraffes": "CAR"
+        "Lobos": "NYG",
+        "Critters": "NYG",
+        "Giraffes": "NYG"
       },
-      "clockReport": "2:38 - 4th Quarter"
+      "clockReport": "14:56 - 4th Quarter"
     },
     {
       "id": "hl-566556",
@@ -197,7 +179,25 @@
         "Critters": "MIA",
         "Giraffes": "MIA"
       },
-      "clockReport": "3:52 - 4th Quarter"
+      "clockReport": "2:00 - 4th Quarter"
+    },
+    {
+      "id": "hl-566559",
+      "home": "CAR",
+      "away": "HOU",
+      "homeScore": 16,
+      "awayScore": 13,
+      "status": "in_progress",
+      "kickoffISO": "2026-08-28T23:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "HOU",
+        "Critters": "HOU",
+        "Giraffes": "CAR"
+      },
+      "clockReport": "2:00 - 4th Quarter"
     },
     {
       "id": "hl-566554",
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T01:55:23.383Z"
+  "updatedAt": "2026-08-29T02:00:33.887Z"
 }

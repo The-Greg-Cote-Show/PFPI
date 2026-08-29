@@ -3896,7 +3896,23 @@ that's an accepted gap at this pricing tier, not a bug to chase further.
 wrangler-scores.toml`, live at version
 `7eade449-8a73-4c5a-b3ee-92b4d0808ed7` (deployed BEFORE the verification
 above, so everything in step 2-4 tested the real live version). Frontend:
-`admin.html`, `analytics.html` (rewritten), and the new
-`analytics-shared.js` need a separate `git push` per this project's usual
-two-part deploy split -- see the commit immediately following this log
-entry.
+committed as `8a2a4b3` (rebased cleanly onto a batch of unrelated
+automated data-only commits that landed on `main` mid-session --
+`data/current.json`/`standings.json`/`week-preseason-3.json`, no overlap
+with anything touched here) and pushed to `main`. Confirmed live on
+GitHub Pages after the usual propagation delay: `analytics-shared.js`
+returns a real `200`, and both `admin.html` (new `id="mainTabAnalytics"`
+tab button present) and `analytics.html` reference it. Both halves of
+this project's usual two-part deploy split are done.
+
+**Not yet verified, flagged plainly rather than glossed over:** a real
+human login (Yeti's own admin password) into the live `admin.html`
+Analytics tab and the live `analytics.html` page has NOT been done this
+session -- the task's own hard rules forbid requesting that credential,
+and the auto-mode classifier separately blocked the temporary-test-
+session-token workaround (see step 5 above). Everything short of that
+final human-login click has real, live evidence behind it: the backend
+pipeline end-to-end on real production KV, and the exact same unmodified
+rendering code end-to-end against that same real captured data via a
+local harness. Recommend Yeti just open the Analytics tab once when he's
+back to confirm the last mile.

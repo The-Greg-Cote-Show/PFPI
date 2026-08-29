@@ -56,66 +56,12 @@
       "clockReport": null
     },
     {
-      "id": "hl-566561",
-      "home": "DAL",
-      "away": "NO",
-      "homeScore": null,
-      "awayScore": null,
-      "status": "scheduled",
-      "kickoffISO": "2026-08-29T00:00:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "DAL",
-        "Critters": "DAL",
-        "Giraffes": "NO"
-      },
-      "clockReport": null
-    },
-    {
-      "id": "hl-566562",
-      "home": "GB",
-      "away": "ARI",
-      "homeScore": null,
-      "awayScore": null,
-      "status": "scheduled",
-      "kickoffISO": "2026-08-29T00:00:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "GB",
-        "Critters": "ARI",
-        "Giraffes": "GB"
-      },
-      "clockReport": null
-    },
-    {
-      "id": "hl-566557",
-      "home": "KC",
-      "away": "SEA",
-      "homeScore": null,
-      "awayScore": null,
-      "status": "scheduled",
-      "kickoffISO": "2026-08-29T00:00:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "SEA",
-        "Critters": "KC",
-        "Giraffes": "SEA"
-      },
-      "clockReport": null
-    },
-    {
       "id": "hl-566553",
       "home": "PHI",
       "away": "CIN",
       "homeScore": null,
       "awayScore": null,
-      "status": "scheduled",
+      "status": "in_progress",
       "kickoffISO": "2026-08-29T00:00:00.000Z",
       "winner": null,
       "tie": false,
@@ -125,7 +71,61 @@
         "Critters": "CIN",
         "Giraffes": "PHI"
       },
-      "clockReport": null
+      "clockReport": "12:50 - 1st Quarter"
+    },
+    {
+      "id": "hl-566561",
+      "home": "DAL",
+      "away": "NO",
+      "homeScore": null,
+      "awayScore": null,
+      "status": "in_progress",
+      "kickoffISO": "2026-08-29T00:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "DAL",
+        "Critters": "DAL",
+        "Giraffes": "NO"
+      },
+      "clockReport": "14:53 - 1st Quarter"
+    },
+    {
+      "id": "hl-566557",
+      "home": "KC",
+      "away": "SEA",
+      "homeScore": null,
+      "awayScore": null,
+      "status": "in_progress",
+      "kickoffISO": "2026-08-29T00:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "SEA",
+        "Critters": "KC",
+        "Giraffes": "SEA"
+      },
+      "clockReport": "14:25 - 1st Quarter"
+    },
+    {
+      "id": "hl-566562",
+      "home": "GB",
+      "away": "ARI",
+      "homeScore": null,
+      "awayScore": null,
+      "status": "in_progress",
+      "kickoffISO": "2026-08-29T00:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "GB",
+        "Critters": "ARI",
+        "Giraffes": "GB"
+      },
+      "clockReport": "14:29 - 1st Quarter"
     },
     {
       "id": "hl-566558",
@@ -143,7 +143,7 @@
         "Critters": "JAX",
         "Giraffes": "TB"
       },
-      "clockReport": "1:16 - 1st Quarter"
+      "clockReport": "15:00 - 2nd Quarter"
     },
     {
       "id": "hl-566555",
@@ -161,25 +161,7 @@
         "Critters": "NYG",
         "Giraffes": "NYG"
       },
-      "clockReport": "2:45 - 1st Quarter"
-    },
-    {
-      "id": "hl-566559",
-      "home": "CAR",
-      "away": "HOU",
-      "homeScore": 0,
-      "awayScore": 3,
-      "status": "in_progress",
-      "kickoffISO": "2026-08-28T23:00:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "HOU",
-        "Critters": "HOU",
-        "Giraffes": "CAR"
-      },
-      "clockReport": "8:17 - 2nd Quarter"
+      "clockReport": "1:13 - 1st Quarter"
     },
     {
       "id": "hl-566556",
@@ -197,13 +179,31 @@
         "Critters": "MIA",
         "Giraffes": "MIA"
       },
-      "clockReport": "10:16 - 2nd Quarter"
+      "clockReport": "6:55 - 2nd Quarter"
+    },
+    {
+      "id": "hl-566559",
+      "home": "CAR",
+      "away": "HOU",
+      "homeScore": 0,
+      "awayScore": 3,
+      "status": "in_progress",
+      "kickoffISO": "2026-08-28T23:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "HOU",
+        "Critters": "HOU",
+        "Giraffes": "CAR"
+      },
+      "clockReport": "5:22 - 2nd Quarter"
     },
     {
       "id": "hl-566554",
       "home": "BAL",
       "away": "WSH",
-      "homeScore": 24,
+      "homeScore": 31,
       "awayScore": 0,
       "status": "in_progress",
       "kickoffISO": "2026-08-28T22:00:00.000Z",
@@ -214,7 +214,7 @@
         "Lobos": "BAL",
         "Giraffes": "WSH"
       },
-      "clockReport": "11:10 - 3rd Quarter"
+      "clockReport": "9:41 - 3rd Quarter"
     },
     {
       "id": "hl-566531",
@@ -235,24 +235,6 @@
       "clockReport": null
     },
     {
-      "id": "hl-566530",
-      "home": "CLE",
-      "away": "NE",
-      "homeScore": 37,
-      "awayScore": 13,
-      "status": "final",
-      "kickoffISO": "2026-08-28T00:00:00.000Z",
-      "winner": "CLE",
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "NE",
-        "Critters": "NE",
-        "Giraffes": "CLE"
-      },
-      "clockReport": null
-    },
-    {
       "id": "hl-566532",
       "home": "LV",
       "away": "SF",
@@ -267,6 +249,24 @@
         "Lobos": "SF",
         "Critters": "SF",
         "Giraffes": "LV"
+      },
+      "clockReport": null
+    },
+    {
+      "id": "hl-566530",
+      "home": "CLE",
+      "away": "NE",
+      "homeScore": 37,
+      "awayScore": 13,
+      "status": "final",
+      "kickoffISO": "2026-08-28T00:00:00.000Z",
+      "winner": "CLE",
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "NE",
+        "Critters": "NE",
+        "Giraffes": "CLE"
       },
       "clockReport": null
     },
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T00:05:23.367Z"
+  "updatedAt": "2026-08-29T00:10:23.554Z"
 }

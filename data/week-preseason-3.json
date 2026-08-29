@@ -29,7 +29,7 @@
       "id": "hl-566640",
       "home": "IND",
       "away": "DET",
-      "homeScore": 6,
+      "homeScore": 12,
       "awayScore": 13,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T17:00:00.000Z",
@@ -46,7 +46,7 @@
         "Llamas": "IND",
         "Giraffes": "DET"
       },
-      "clockReport": "6:49 - 2nd Quarter",
+      "clockReport": "2:53 - 2nd Quarter",
       "deadline": "2026-08-29T17:00:00.000Z"
     },
     {
@@ -617,5 +617,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T18:05:55.329Z"
+  "updatedAt": "2026-08-29T18:10:55.284Z"
 }

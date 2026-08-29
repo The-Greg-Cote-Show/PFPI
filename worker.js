@@ -1145,6 +1145,69 @@ function classifyReferrer(referrer) {
   return "other:" + host;
 }
 
+// ============================================================
+// BOT FILTERING (2026-08-29, per Yeti) -- exclusion from the visitor
+// counters ONLY, same spirit as `notrack` above: a flagged request still
+// gets a normal page response, it just never touches the counters. This
+// is NOT an access-denial mechanism.
+//
+// REAL, CONFIRMED PLAN CONSTRAINT (do not build around a different
+// assumption): `cf.bot_management.score` (Cloudflare's granular 1-99
+// bot-confidence score) is an ENTERPRISE-ONLY field. This account is not
+// on that plan and this task does not authorize upgrading to it -- the
+// field is simply undefined here, and no code below reads it.
+//
+// What's actually free on every plan and used here instead:
+//   - `cf.client.bot` -- boolean, true only for bots Cloudflare has
+//     already verified (major search engines, etc).
+//   - `cf.verified_bot_category` -- present only alongside the above.
+//   - User-Agent string heuristics -- the real workhorse, since the two
+//     fields above only catch bots Cloudflare has already verified. This
+//     catches well-behaved, self-identifying crawlers/bots/monitors/link-
+//     preview generators. A bot that deliberately disguises its
+//     User-Agent as a normal browser is NOT caught by any of this -- a
+//     real, expected gap at this pricing tier, stated plainly on the
+//     dashboard itself (see analytics-shared.js's methodology panel),
+//     not just here in a code comment.
+// ============================================================
+const BOT_UA_PATTERN = /bot|crawler|spider|crawling|slurp|mediapartners|facebookexternalhit|whatsapp|telegrambot|discordbot|slackbot|vkshare|w3c_validator|pingdom|uptimerobot|statuscake|headlesschrome|phantomjs|curl\/|wget\/|python-requests|python-urllib|go-http-client|okhttp|java\/|libwww-perl|scrapy|ahrefsbot|semrushbot|mj12bot|dotbot|petalbot|bytespider|yandexbot|baiduspider|duckduckbot|bingpreview|applebot|googlebot|bingbot/i;
+
+function isLikelyBot(ua, cf) {
+  if (cf && cf.client && cf.client.bot === true) return true;
+  if (cf && typeof cf.verified_bot_category === "string" && cf.verified_bot_category.length > 0) return true;
+  if (typeof ua === "string" && BOT_UA_PATTERN.test(ua)) return true;
+  return false;
+}
+
+// ============================================================
+// GEO CAPTURE (2026-08-29, per Yeti) -- `request.cf.country` (ISO 3166-1
+// alpha-2, e.g. "US"), `request.cf.region` (full name, e.g. "Georgia"),
+// `request.cf.city` (e.g. "Miami") are free on every Cloudflare plan, no
+// extra API call, same fields Cote Cup's own Worker reportedly already
+// uses for this per its own project summary (referenced as a pattern
+// only -- nothing here touches Cote Cup's actual repo/Worker/KV).
+// Composite keys use "|" as the delimiter (not ":", already used
+// elsewhere in these key names) since place names never contain it, and
+// nest country first since region/city names are NOT globally unique
+// (e.g. "Georgia" is both a US state and a country).
+// Same per-day + all-time shape as the existing referrer buckets above.
+// ============================================================
+async function recordGeo(env, today, country, region, city) {
+  if (!country) return; // Cloudflare didn't supply geo for this request (e.g. local/dev) -- nothing to record.
+  await incrKV(env, `analytics:geo-country:${today}:${country}`);
+  await incrKV(env, `analytics:geo-country-alltime:${country}`);
+  if (region) {
+    const regionKey = `${country}|${region}`;
+    await incrKV(env, `analytics:geo-region:${today}:${regionKey}`);
+    await incrKV(env, `analytics:geo-region-alltime:${regionKey}`);
+    if (city) {
+      const cityKey = `${country}|${region}|${city}`;
+      await incrKV(env, `analytics:geo-city:${today}:${cityKey}`);
+      await incrKV(env, `analytics:geo-city-alltime:${cityKey}`);
+    }
+  }
+}
+
 // Monday (ET) of the week containing this ET date string, as its own
 // YYYY-MM-DD -- avoids real ISO-8601 week-number edge cases at year
 // boundaries entirely by just using an actual calendar date as the
@@ -1182,19 +1245,29 @@ async function incrKV(env, key, ttlSeconds) {
 // temporary diagnostic log: "TypeError: Can't read from request stream
 // after response has been sent"), which is exactly what a 204-first,
 // log-after pattern does. Fixed by extracting everything needed (ip, ua,
-// page, referrer, notrack) from the real request SYNCHRONOUSLY in the
+// page, referrer, notrack, bot status, geo) from the real request SYNCHRONOUSLY in the
 // fetch() handler below, before the response goes out, and passing only
 // those plain values in here -- this function never touches the
 // `request`/`env` request object at all now, only plain strings and the
 // KV binding, so nothing here can ever hit that constraint again.
-async function handleTrack(env, { ip, ua, page: rawPage, referrer: rawReferrer, notrack }) {
+async function handleTrack(env, { ip, ua, page: rawPage, referrer: rawReferrer, notrack, isBot, country, region, city }) {
+  const parts = getEasternDateParts(new Date());
+  const today = `${parts.year}-${parts.month}-${parts.day}`;
+
+  if (isBot === true) {
+    // Excluded from every counter below, including the plain pageview
+    // count -- same exclusion-not-denial treatment as `notrack`. Tracked
+    // in its own separate counter purely so the dashboard can be honest
+    // that filtering is happening at all, not folded into any
+    // visitor-facing number.
+    await incrKV(env, `analytics:bots-filtered:${today}`);
+    return;
+  }
   if (notrack === true) return;
 
   const page = ANALYTICS_ALL_PAGES.has(rawPage) ? rawPage : "other";
   const referrer = typeof rawReferrer === "string" ? rawReferrer : "";
 
-  const parts = getEasternDateParts(new Date());
-  const today = `${parts.year}-${parts.month}-${parts.day}`;
   const month = `${parts.year}-${parts.month}`;
   const monday = mondayOfWeekET(today);
 
@@ -1204,6 +1277,11 @@ async function handleTrack(env, { ip, ua, page: rawPage, referrer: rawReferrer, 
   await incrKV(env, `analytics:pageviews:${today}:${page}`);
 
   if (!ANALYTICS_PUBLIC_PAGES.has(page)) return;
+
+  // Geo is recorded for real (non-bot, non-opted-out) public-page
+  // pageloads only -- same population the unique-visitor pipeline below
+  // covers, not admin/brief internal traffic.
+  await recordGeo(env, today, country, region, city);
 
   const dailyHash = await sha256Hex(`${ip}|${ua}|${today}`);
   const stableHash = await sha256Hex(`${ip}|${ua}`);
@@ -1271,7 +1349,7 @@ async function handleAnalyticsData(request, env) {
     weeklyUniqueSum, newWeeklySum, repeatWeeklySum,
     monthlyUniqueSum, newMonthlySum, repeatMonthlySum,
     alltimeUniqueSum, newAlltimeSum, repeatAlltimeSum,
-    firstEventDate, briefViewsToday, adminViewsToday,
+    firstEventDate, briefViewsToday, adminViewsToday, botsFilteredToday,
   ] = await Promise.all([
     env.PFPI_KV.get(`analytics:daily-unique:${today}`),
     env.PFPI_KV.get(`analytics:new:${today}`),
@@ -1288,6 +1366,7 @@ async function handleAnalyticsData(request, env) {
     env.PFPI_KV.get(`analytics:first-event-date`),
     env.PFPI_KV.get(`analytics:pageviews:${today}:brief`),
     env.PFPI_KV.get(`analytics:pageviews:${today}:admin`),
+    env.PFPI_KV.get(`analytics:bots-filtered:${today}`),
   ]);
 
   // 14-day trend, individual GETs -- bounded (42 reads total), only ever
@@ -1342,9 +1421,47 @@ async function handleAnalyticsData(request, env) {
       brief: parseInt(briefViewsToday || "0", 10),
       admin: parseInt(adminViewsToday || "0", 10),
     },
+    botsFilteredToday: parseInt(botsFilteredToday || "0", 10),
     trackingSince: firstEventDate || null,
     generatedAt: new Date().toISOString(),
   }, 200, request);
+}
+
+// ============================================================
+// GEO DATA (2026-08-29, per Yeti) -- all-time country/region/city counts
+// for the Locations map. Same list()-then-get()-each pattern the
+// referrer-bucket code above already uses (realistically well under a
+// few hundred distinct buckets ever, for a hobby show site's traffic).
+// Composite region/city keys ("US|Georgia", "US|Georgia|Atlanta") are
+// returned as-is; the frontend splits on "|" to build the nested
+// country -> region -> city structure it needs for map drill-downs.
+// ============================================================
+async function handleAnalyticsGeo(request, env) {
+  const token = request.headers.get("X-Admin-Token");
+  if (!(await verifyAdminSession(token, env))) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  async function listAllCounts(prefix) {
+    const out = {};
+    let cursor;
+    do {
+      const page = await env.PFPI_KV.list({ prefix, cursor });
+      for (const key of page.keys) {
+        out[key.name.slice(prefix.length)] = parseInt((await env.PFPI_KV.get(key.name)) || "0", 10);
+      }
+      cursor = page.list_complete ? undefined : page.cursor;
+    } while (cursor);
+    return out;
+  }
+
+  const [countries, regions, cities] = await Promise.all([
+    listAllCounts("analytics:geo-country-alltime:"),
+    listAllCounts("analytics:geo-region-alltime:"),
+    listAllCounts("analytics:geo-city-alltime:"),
+  ]);
+
+  return jsonResponse({ countries, regions, cities, generatedAt: new Date().toISOString() }, 200, request);
 }
 
 // ============================================================
@@ -1415,18 +1532,27 @@ export default {
       // write, and a malformed body just means nothing gets logged.
       let trackBody = {};
       try { trackBody = await request.json(); } catch (e) { trackBody = {}; }
+      const cf = request.cf || {};
+      const ua = request.headers.get("User-Agent") || "unknown";
       const trackParams = {
         ip: request.headers.get("CF-Connecting-IP") || "0.0.0.0",
-        ua: request.headers.get("User-Agent") || "unknown",
+        ua,
         page: trackBody.page,
         referrer: trackBody.referrer,
         notrack: trackBody.notrack === true || url.searchParams.get("notrack") === "1",
+        isBot: isLikelyBot(ua, cf),
+        country: typeof cf.country === "string" ? cf.country : null,
+        region: typeof cf.region === "string" ? cf.region : null,
+        city: typeof cf.city === "string" ? cf.city : null,
       };
       ctx.waitUntil(handleTrack(env, trackParams));
       return new Response(null, { status: 204, headers: corsHeaders(request) });
     }
     if (url.pathname === "/admin/analytics-data" && request.method === "GET") {
       return handleAnalyticsData(request, env);
+    }
+    if (url.pathname === "/admin/analytics-geo" && request.method === "GET") {
+      return handleAnalyticsGeo(request, env);
     }
     return jsonResponse({ ok: true, worker: "pfpi-scores-worker" }, 200, request);
   },

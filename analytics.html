@@ -27,47 +27,11 @@ button:hover{opacity:.9;}
 .hidden{display:none !important;}
 .footer-copyright{text-align:center;font-size:.7rem;color:var(--muted);margin-top:2rem;}
 
-/* Dashboard-only styles below -- wider layout than the login form. */
+/* Dashboard-only styles below -- wider layout than the login form. The
+   dashboard's own internal styles (.pa-*) come from analytics-shared.js,
+   this page only owns the login gate + outer wrapper widths. */
 .dash-wrap{max-width:1100px;margin:0 auto;padding:1.5rem 1.5rem 3rem;}
-.dash-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1.25rem;}
-.dash-meta{font-size:.72rem;color:var(--muted);}
-.refresh-btn{margin-top:0;background:none;border:1px solid var(--border2);color:var(--muted);font-size:.72rem;padding:5px 14px;}
-.refresh-btn:hover{color:var(--text);border-color:var(--gold);opacity:1;}
-
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.25rem;}
-.stat{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:1rem 1.1rem;}
-.stat-label{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px;}
-.stat-val{font-size:1.7rem;font-weight:900;color:var(--gold);line-height:1;}
-.stat-sub{font-size:.68rem;color:var(--muted);margin-top:5px;}
-.stat-sub b{color:var(--text);}
-
-.bottom-row{display:grid;grid-template-columns:1.3fr 1fr;gap:1.25rem;margin-bottom:1.25rem;align-items:start;}
-@media(max-width:750px){.bottom-row,.stats-row{grid-template-columns:1fr 1fr;}}
-
-.dash-panel{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
-.dash-panel-hdr{padding:.75rem 1rem;border-bottom:1px solid var(--border);font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);}
-
-.trend-table{width:100%;border-collapse:collapse;font-size:.78rem;}
-.trend-table th{text-align:right;color:var(--muted);font-weight:600;font-size:.65rem;text-transform:uppercase;letter-spacing:.04em;padding:.5rem .9rem;border-bottom:1px solid var(--border);}
-.trend-table th:first-child,.trend-table td:first-child{text-align:left;}
-.trend-table td{text-align:right;padding:.45rem .9rem;border-bottom:1px solid var(--border);}
-.trend-table tr:last-child td{border-bottom:none;}
-.trend-table tr.today td{color:var(--gold);font-weight:700;}
-.trend-empty{padding:2rem 1rem;text-align:center;color:var(--muted);font-size:.82rem;}
-
-.ref-row{display:flex;align-items:center;justify-content:space-between;padding:8px 1rem;border-bottom:1px solid var(--border);font-size:.82rem;}
-.ref-row:last-child{border-bottom:none;}
-.ref-name{text-transform:capitalize;}
-.ref-bar-wrap{flex:1;margin:0 .75rem;background:rgba(255,255,255,0.05);border-radius:3px;height:5px;overflow:hidden;}
-.ref-bar{height:5px;border-radius:3px;background:var(--gold);}
-.ref-count{font-weight:700;color:var(--gold);min-width:32px;text-align:right;}
-
-.internal-row{display:flex;justify-content:space-between;padding:.5rem 1rem;font-size:.78rem;color:var(--muted);}
-.internal-row b{color:var(--text);}
-
-.methodology{font-size:.76rem;color:var(--muted);line-height:1.65;padding:1.1rem 1.25rem;}
-.methodology b{color:var(--text);}
-.methodology .tradeoff{color:var(--gold2);}
+.dash-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem;}
 </style>
 </head>
 <body>
@@ -89,91 +53,30 @@ button:hover{opacity:.9;}
 
 <div class="dash-wrap hidden" id="dashWrap">
   <div class="dash-header">
-    <div>
-      <div class="title-main" style="margin-bottom:2px;">PFPI <span>Analytics</span></div>
-      <div class="dash-meta" id="metaLine">Loading...</div>
-    </div>
-    <button class="refresh-btn" id="refreshBtn" type="button">Refresh</button>
+    <div class="title-main" style="margin-bottom:0;">PFPI <span>Analytics</span></div>
   </div>
-
-  <div class="stats-row" id="statsRow"></div>
-
-  <div class="bottom-row">
-    <div class="dash-panel">
-      <div class="dash-panel-hdr">Daily unique visitors — last 14 days</div>
-      <div style="overflow-x:auto;">
-        <table class="trend-table" id="trendTable">
-          <thead><tr><th>Date</th><th>Unique</th><th>New</th><th>Repeat</th></tr></thead>
-          <tbody id="trendBody"></tbody>
-        </table>
-      </div>
-    </div>
-    <div class="dash-panel">
-      <div class="dash-panel-hdr">Traffic sources (all-time pageviews)</div>
-      <div id="referrerList"></div>
-    </div>
-  </div>
-
-  <div class="dash-panel" style="margin-bottom:1.25rem;">
-    <div class="dash-panel-hdr">Internal tool traffic (today) — excluded from all numbers above</div>
-    <div class="internal-row"><span>Commissioner Portal (brief.html)</span><b id="briefViews">0</b></div>
-    <div class="internal-row"><span>Admin Portal (admin.html)</span><b id="adminViews">0</b></div>
-  </div>
-
-  <div class="dash-panel">
-    <div class="dash-panel-hdr">Methodology — what "unique" actually means here</div>
-    <div class="methodology">
-      <b>Daily unique visitors</b> are counted with a one-way hash of each
-      visitor's IP address + browser, combined with today's date. Because
-      the date is baked in, that exact hash can never repeat on a
-      different day — it fully resets every 24 hours, the same way
-      privacy-respecting tools like Fathom or Plausible work. Raw IP
-      addresses are never stored anywhere, only this hash.
-      <br><br>
-      <b>New vs. repeat</b> visitors need a second hash that does
-      <i>not</i> include the date, so it can actually recognize the same
-      visitor coming back on a later day. <span class="tradeoff">Honest
-      tradeoff, not hidden:</span> this second hash is coarser and
-      longer-lived than the daily one — it persists as long as a
-      visitor's IP + browser combination stays the same, realistically
-      days to weeks for most people, and changes the moment they switch
-      networks or devices. It is still fully anonymous and one-way
-      hashed; it is simply not reset every 24 hours the way the daily
-      hash is.
-      <br><br>
-      <b>Known limitation:</b> visitors are identified by device/browser,
-      not by person — the same person on their phone and then their
-      laptop the same day will show as two visitors. Every
-      privacy-respecting analytics tool has this exact limitation, Fathom
-      and Plausible included.
-      <br><br>
-      <b>Week-to-date / month-to-date / all-time totals</b> above are a
-      <i>sum of daily unique counts</i>, not a fully deduplicated count
-      across that whole range — a person who visits three separate days
-      in one week is counted three times toward that week's total, not
-      once. A true multi-day deduplicated count is a possible future
-      addition, not built yet.
-      <br><br>
-      <b>Commissioner Portal and Admin Portal traffic</b> (Greg's and
-      Yeti's own login-gated tools) is tracked separately as plain
-      pageview counts and is never included in any number above — it
-      isn't real audience.
-    </div>
-  </div>
-
+  <div id="analyticsMount"></div>
   <div class="footer-copyright">&copy;ThatKindaThing Productions, LLC</div>
 </div>
 
+<script src="analytics-shared.js"></script>
 <script>
 const WORKER_BASE = "https://pfpi-picks-worker.yeti-f3c.workers.dev";
 const SCORES_WORKER_BASE = "https://pfpi-scores-worker.yeti-f3c.workers.dev";
 const SESSION_STORAGE_KEY = "pfpi-admin-session-token";
 let sessionToken = null;
+let dashboard = null;
 
 function showLoggedIn() {
   document.getElementById("loginWrap").classList.add("hidden");
   document.getElementById("dashWrap").classList.remove("hidden");
-  loadData();
+  if (!dashboard) {
+    dashboard = PFPIAnalytics.mount(document.getElementById("analyticsMount"), {
+      scoresWorkerBase: SCORES_WORKER_BASE,
+      getToken: () => sessionToken,
+      onUnauthorized: () => clearSession("Your session expired — please log in again."),
+    });
+  }
 }
 
 function clearSession(message) {
@@ -235,105 +138,6 @@ document.getElementById("loginForm").onsubmit = async (e) => {
 };
 
 restoreSessionIfSaved();
-
-// ============================================================
-// DASHBOARD DATA
-// ============================================================
-
-function fmtDate(dateKey) {
-  const [y, m, d] = dateKey.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d, 12));
-  return new Intl.DateTimeFormat("en-US", { timeZone: "UTC", month: "short", day: "numeric" }).format(dt);
-}
-
-function todayETKey() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit",
-  }).formatToParts(new Date());
-  const get = t => parts.find(p => p.type === t).value;
-  return `${get("year")}-${get("month")}-${get("day")}`;
-}
-
-async function loadData() {
-  const metaEl = document.getElementById("metaLine");
-  metaEl.textContent = "Refreshing...";
-  try {
-    const res = await fetch(`${SCORES_WORKER_BASE}/admin/analytics-data`, {
-      headers: { "X-Admin-Token": sessionToken },
-    });
-    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Could not load analytics.");
-    render(data);
-    const since = data.trackingSince ? ` — tracking since ${fmtDate(data.trackingSince)}` : "";
-    metaEl.textContent = "Updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + since;
-  } catch (e) {
-    metaEl.textContent = "Error: " + e.message;
-  }
-}
-
-function render(data) {
-  const today = todayETKey();
-
-  document.getElementById("statsRow").innerHTML = `
-    <div class="stat">
-      <div class="stat-label">Today — Unique Visitors</div>
-      <div class="stat-val">${data.today.unique.toLocaleString()}</div>
-      <div class="stat-sub"><b>${data.today.new}</b> new &middot; <b>${data.today.repeat}</b> repeat</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Week to Date</div>
-      <div class="stat-val">${data.weekToDate.unique.toLocaleString()}</div>
-      <div class="stat-sub"><b>${data.weekToDate.new}</b> new &middot; <b>${data.weekToDate.repeat}</b> repeat</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Month to Date</div>
-      <div class="stat-val">${data.monthToDate.unique.toLocaleString()}</div>
-      <div class="stat-sub"><b>${data.monthToDate.new}</b> new &middot; <b>${data.monthToDate.repeat}</b> repeat</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">All-Time</div>
-      <div class="stat-val">${data.allTime.unique.toLocaleString()}</div>
-      <div class="stat-sub"><b>${data.allTime.new}</b> new &middot; <b>${data.allTime.repeat}</b> repeat</div>
-    </div>
-  `;
-
-  const trendDates = Object.keys(data.trend).sort();
-  const trendBody = document.getElementById("trendBody");
-  if (trendDates.length === 0) {
-    trendBody.innerHTML = `<tr><td colspan="4" class="trend-empty">No data yet.</td></tr>`;
-  } else {
-    trendBody.innerHTML = trendDates.map(d => {
-      const row = data.trend[d];
-      const isToday = d === today;
-      return `<tr class="${isToday ? "today" : ""}">
-        <td>${fmtDate(d)}${isToday ? " (today)" : ""}</td>
-        <td>${row.unique}</td>
-        <td>${row.new}</td>
-        <td>${row.repeat}</td>
-      </tr>`;
-    }).join("");
-  }
-
-  const refEntries = Object.entries(data.referrers || {}).sort((a, b) => b[1] - a[1]);
-  const refListEl = document.getElementById("referrerList");
-  if (refEntries.length === 0) {
-    refListEl.innerHTML = `<div class="trend-empty">No traffic-source data yet.</div>`;
-  } else {
-    const maxVal = refEntries[0][1] || 1;
-    refListEl.innerHTML = refEntries.map(([name, count]) => `
-      <div class="ref-row">
-        <div class="ref-name">${name.replace(/^other:/, "other: ")}</div>
-        <div class="ref-bar-wrap"><div class="ref-bar" style="width:${Math.round(count / maxVal * 100)}%"></div></div>
-        <div class="ref-count">${count}</div>
-      </div>`).join("");
-  }
-
-  document.getElementById("briefViews").textContent = data.internalPageviewsToday.brief;
-  document.getElementById("adminViews").textContent = data.internalPageviewsToday.admin;
-}
-
-document.getElementById("refreshBtn").addEventListener("click", loadData);
 </script>
 </body>
 </html>

@@ -170,6 +170,15 @@ button:hover{opacity:.9;}
   <div class="top-tabs top-tabs-stacked hidden" id="mainSectionTabs2">
     <button class="top-tab-btn" id="mainTabCommissioner" data-section="commissioner" type="button">Acting Commissioner</button>
   </div>
+  <!-- Third top-level section (2026-08-29, per Yeti): "Analytics" -- same
+       stacked-button pattern as Admin Portal / Acting Commissioner above,
+       just a third row instead of inventing a new tab mechanism. Mounts
+       analytics-shared.js's dashboard (the SAME component analytics.html
+       itself uses) lazily on first visit, reusing this page's own admin
+       session -- no separate login. -->
+  <div class="top-tabs top-tabs-stacked hidden" id="mainSectionTabs3">
+    <button class="top-tab-btn" id="mainTabAnalytics" data-section="analytics" type="button">Analytics</button>
+  </div>
   <div class="top-tabs hidden" id="commissionerSubTabs">
     <button class="top-tab-btn" data-tab="missing" type="button">Missing Picks</button>
     <button class="top-tab-btn" data-tab="digest" type="button">Weekly Digest</button>
@@ -183,10 +192,14 @@ button:hover{opacity:.9;}
     <div class="panel hidden" id="analyticsLinkPanel">
       <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Visitor analytics</div>
       <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
-        Real unique/repeat visitor counts and traffic-source breakdown --
-        in-house, not a third-party tool. Same admin login as this page.
+        Real unique/repeat visitor counts, traffic sources, and an
+        interactive location map -- in-house, not a third-party tool.
+        Now built into this page as its own "Analytics" tab above (same
+        admin login, same live data). This link still opens the original
+        full-screen standalone version too, if you'd rather have it in
+        its own tab/window.
       </div>
-      <a href="analytics.html" target="_blank" rel="noopener"><button type="button">Open Analytics Dashboard</button></a>
+      <a href="analytics.html" target="_blank" rel="noopener"><button type="button">Open standalone Analytics page</button></a>
     </div>
     <div class="panel hidden" id="testEmailPanel">
       <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Send test picks email</div>
@@ -359,14 +372,26 @@ button:hover{opacity:.9;}
     </div>
   </div>
 
+  <!-- ============================================================
+       TAB: ANALYTICS -- mounts analytics-shared.js's dashboard component
+       lazily on first visit (same lazy-init pattern as the Digest sub-tab
+       above). See BUILD_LOG.md for why this and the standalone
+       analytics.html both exist, reading the same live data.
+       ============================================================ -->
+  <div id="analyticsPortalTab" class="hidden">
+    <div id="analyticsMount"></div>
+  </div>
+
   <div class="footer-copyright">&copy;ThatKindaThing Productions, LLC</div>
 </div>
 
+<script src="analytics-shared.js"></script>
 <script>
 const WORKER_BASE = "https://pfpi-picks-worker.yeti-f3c.workers.dev";
 const SCORES_WORKER_BASE = "https://pfpi-scores-worker.yeti-f3c.workers.dev";
 const SESSION_STORAGE_KEY = "pfpi-admin-session-token";
 let sessionToken = null;
+let analyticsDashboard = null; // lazily mounted PFPIAnalytics instance, see switchMainSection("analytics")
 
 const REAL_TEAMS = ["Lobos", "Roughriders", "Maniacs", "Critters", "Chickens", "Ferraris", "Llamas", "Giraffes"];
 const TEAM_SHORT = {
@@ -411,6 +436,7 @@ function showLoggedIn() {
   document.getElementById("clearPicksPanel").classList.remove("hidden");
   document.getElementById("mainSectionTabs1").classList.remove("hidden");
   document.getElementById("mainSectionTabs2").classList.remove("hidden");
+  document.getElementById("mainSectionTabs3").classList.remove("hidden");
   switchMainSection("admin");
   populateCorrectionWeeks();
   populateMissingPicksWeeks();
@@ -433,10 +459,12 @@ function clearSession(message) {
   document.getElementById("clearPicksPanel").classList.add("hidden");
   document.getElementById("mainSectionTabs1").classList.add("hidden");
   document.getElementById("mainSectionTabs2").classList.add("hidden");
+  document.getElementById("mainSectionTabs3").classList.add("hidden");
   document.getElementById("commissionerSubTabs").classList.add("hidden");
   document.getElementById("missingPicksTab").classList.add("hidden");
   document.getElementById("digestTab").classList.add("hidden");
   document.getElementById("publishTab").classList.add("hidden");
+  document.getElementById("analyticsPortalTab").classList.add("hidden");
   if (message) {
     const statusEl = document.getElementById("loginStatus");
     statusEl.textContent = message;
@@ -571,16 +599,28 @@ document.getElementById("resetForm").onsubmit = async (e) => {
 // fetches the other two sub-tabs don't need on login.
 // ============================================================
 
-let activeMainSection = "admin"; // "admin" | "commissioner"
+let activeMainSection = "admin"; // "admin" | "commissioner" | "analytics"
 let activeSubTab = "missing"; // "missing" | "digest" | "publish" -- remembered across section switches
 
 function switchMainSection(section) {
   activeMainSection = section;
   document.getElementById("mainTabAdmin").classList.toggle("active", section === "admin");
   document.getElementById("mainTabCommissioner").classList.toggle("active", section === "commissioner");
+  document.getElementById("mainTabAnalytics").classList.toggle("active", section === "analytics");
   document.getElementById("adminPortalTab").classList.toggle("hidden", section !== "admin");
   document.getElementById("commissionerSubTabs").classList.toggle("hidden", section !== "commissioner");
+  document.getElementById("analyticsPortalTab").classList.toggle("hidden", section !== "analytics");
   updateSubTabVisibility();
+  if (section === "analytics" && !analyticsDashboard) {
+    // Lazy-mounted, same pattern as the Digest sub-tab's own
+    // digestInitialized flag below -- no point loading D3/topojson or
+    // hitting the analytics endpoints until Yeti actually opens this tab.
+    analyticsDashboard = PFPIAnalytics.mount(document.getElementById("analyticsMount"), {
+      scoresWorkerBase: SCORES_WORKER_BASE,
+      getToken: () => sessionToken,
+      onUnauthorized: () => clearSession("Your session expired — please log in again."),
+    });
+  }
 }
 
 // Also used as the click handler for the 3 sub-tab buttons themselves, and
@@ -589,12 +629,7 @@ function switchMainSection(section) {
 // Acting Commissioner section.
 function switchTopTab(tab) {
   activeSubTab = tab;
-  activeMainSection = "commissioner";
-  document.getElementById("mainTabAdmin").classList.remove("active");
-  document.getElementById("mainTabCommissioner").classList.add("active");
-  document.getElementById("adminPortalTab").classList.add("hidden");
-  document.getElementById("commissionerSubTabs").classList.remove("hidden");
-  updateSubTabVisibility();
+  switchMainSection("commissioner");
 }
 
 function updateSubTabVisibility() {
@@ -611,6 +646,7 @@ function updateSubTabVisibility() {
 
 document.getElementById("mainTabAdmin").addEventListener("click", () => switchMainSection("admin"));
 document.getElementById("mainTabCommissioner").addEventListener("click", () => switchMainSection("commissioner"));
+document.getElementById("mainTabAnalytics").addEventListener("click", () => switchMainSection("analytics"));
 document.querySelectorAll("#commissionerSubTabs .top-tab-btn").forEach(btn => {
   btn.addEventListener("click", () => switchTopTab(btn.dataset.tab));
 });

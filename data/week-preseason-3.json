@@ -46,7 +46,7 @@
         "Llamas": "IND",
         "Giraffes": "DET"
       },
-      "clockReport": "2:00 - 2nd Quarter",
+      "clockReport": "0:49 - 2nd Quarter",
       "deadline": "2026-08-29T17:00:00.000Z"
     },
     {
@@ -617,5 +617,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T18:20:55.712Z"
+  "updatedAt": "2026-08-29T18:25:55.702Z"
 }

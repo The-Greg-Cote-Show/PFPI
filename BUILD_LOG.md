@@ -4060,15 +4060,22 @@ approximation.
    directly into the DOM for the one case with no real saved brief yet,
    never written to any backend.
 
-**Known, flagged gap:** `verifyAnalyticsViewerSession()`'s greg-session
-branch is verified by code review only -- confirming it live end-to-end
-would need either a real Greg login (his actual password, not requested)
-or forging a `greg-session:{token}` KV entry (the same category of
-action the auto-mode classifier blocked earlier this session for the
-admin-session case, so not attempted here either). Low risk: it's a
-straightforward two-branch `Promise.all` mirroring the already-proven
-admin-session check exactly. Worth Greg confirming with one real login
-when convenient.
+**Gap closed same night, with real evidence:** Yeti was logged in as Greg
+in his own real browser and asked for a fresh check. Opened a new tab in
+that same real browser (same profile, so it picked up the already-stored
+real `pfpi-greg-session-token` from localStorage -- no password seen, no
+KV forging, nothing scripted) and navigated to the REAL live
+`https://the-greg-cote-show.github.io/PFPI/brief.html` -- confirmed via
+screenshot it was genuinely logged in as "PFPI Commissioner -- Greg
+Cote" with real Missing Picks data. Clicked the real Analytics tab: it
+loaded real production numbers from `pfpi-scores-worker` (2 week-to-date/
+month-to-date/all-time unique, "tracking since Aug 28," Direct: 4
+referrer pageviews) -- proving `verifyAnalyticsViewerSession()`'s
+greg-session branch actually works against a live Greg session, not just
+in code review. Also clicked Locations: the world map rendered correctly
+(empty/gray, which is correct -- no geo data has accumulated since this
+session's own earlier cleanup of its test counters). No console errors.
+Closed the tab afterward, nothing left open.
 
 **Deployed and pushed.** Both Workers deployed as noted above. Frontend
 (`admin.html`, `brief.html`, `shared.js`) committed and pushed to `main`

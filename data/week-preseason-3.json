@@ -5,8 +5,8 @@
       "id": "hl-566641",
       "home": "TEN",
       "away": "CHI",
-      "homeScore": null,
-      "awayScore": null,
+      "homeScore": 0,
+      "awayScore": 7,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T22:00:00.000Z",
       "winner": null,
@@ -22,7 +22,7 @@
         "Llamas": "TEN",
         "Giraffes": "TEN"
       },
-      "clockReport": "13:24 - 1st Quarter",
+      "clockReport": "9:56 - 1st Quarter",
       "deadline": "2026-08-29T17:00:00.000Z"
     },
     {
@@ -617,5 +617,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T22:10:55.707Z"
+  "updatedAt": "2026-08-29T22:20:55.321Z"
 }

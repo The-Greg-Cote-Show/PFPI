@@ -14,7 +14,12 @@
       "hasRealTime": true,
       "picks": {
         "Lobos": "CHI",
+        "Roughriders": "CHI",
+        "Maniacs": "CHI",
         "Critters": "TEN",
+        "Chickens": "TEN",
+        "Ferraris": "CHI",
+        "Llamas": "TEN",
         "Giraffes": "TEN"
       },
       "clockReport": null
@@ -32,7 +37,12 @@
       "hasRealTime": true,
       "picks": {
         "Lobos": "DET",
+        "Roughriders": "IND",
+        "Maniacs": "DET",
         "Critters": "DET",
+        "Chickens": "DET",
+        "Ferraris": "IND",
+        "Llamas": "IND",
         "Giraffes": "DET"
       },
       "clockReport": null
@@ -591,5 +601,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T06:15:29.832Z"
+  "updatedAt": "2026-08-29T06:20:23.117Z"
 }

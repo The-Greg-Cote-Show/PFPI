@@ -53,13 +53,13 @@
         "Critters": "DEN",
         "Giraffes": "MIN"
       },
-      "clockReport": "15:00 - 3rd Quarter"
+      "clockReport": "10:38 - 3rd Quarter"
     },
     {
       "id": "hl-566562",
       "home": "GB",
       "away": "ARI",
-      "homeScore": 27,
+      "homeScore": 35,
       "awayScore": 38,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T00:00:00.000Z",
@@ -71,7 +71,7 @@
         "Critters": "ARI",
         "Giraffes": "GB"
       },
-      "clockReport": "3:40 - 4th Quarter"
+      "clockReport": "3:19 - 4th Quarter"
     },
     {
       "id": "hl-566553",
@@ -89,7 +89,7 @@
         "Critters": "CIN",
         "Giraffes": "PHI"
       },
-      "clockReport": "4:31 - 4th Quarter"
+      "clockReport": "2:35 - 4th Quarter"
     },
     {
       "id": "hl-566557",
@@ -107,7 +107,7 @@
         "Critters": "KC",
         "Giraffes": "SEA"
       },
-      "clockReport": "6:06 - 4th Quarter"
+      "clockReport": "3:52 - 4th Quarter"
     },
     {
       "id": "hl-566561",
@@ -125,7 +125,7 @@
         "Critters": "DAL",
         "Giraffes": "NO"
       },
-      "clockReport": "1:48 - 4th Quarter"
+      "clockReport": "0:38 - 4th Quarter"
     },
     {
       "id": "hl-566558",
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T02:55:23.328Z"
+  "updatedAt": "2026-08-29T03:00:36.707Z"
 }

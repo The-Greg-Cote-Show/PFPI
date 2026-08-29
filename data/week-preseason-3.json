@@ -30,7 +30,7 @@
       "home": "IND",
       "away": "DET",
       "homeScore": 16,
-      "awayScore": 19,
+      "awayScore": 25,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T17:00:00.000Z",
       "winner": null,
@@ -46,7 +46,7 @@
         "Llamas": "IND",
         "Giraffes": "DET"
       },
-      "clockReport": "15:00 - 4th Quarter",
+      "clockReport": "7:25 - 4th Quarter",
       "deadline": "2026-08-29T17:00:00.000Z"
     },
     {
@@ -617,5 +617,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T19:25:55.650Z"
+  "updatedAt": "2026-08-29T19:35:55.303Z"
 }

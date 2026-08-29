@@ -22,7 +22,8 @@
         "Llamas": "TEN",
         "Giraffes": "TEN"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-29T17:00:00.000Z"
     },
     {
       "id": "hl-566640",
@@ -45,7 +46,8 @@
         "Llamas": "IND",
         "Giraffes": "DET"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-29T17:00:00.000Z"
     },
     {
       "id": "hl-566560",
@@ -63,7 +65,8 @@
         "Critters": "DEN",
         "Giraffes": "MIN"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-28T23:00:00.000Z"
     },
     {
       "id": "hl-566557",
@@ -81,7 +84,8 @@
         "Critters": "KC",
         "Giraffes": "SEA"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-28T22:00:00.000Z"
     },
     {
       "id": "hl-566561",
@@ -99,7 +103,8 @@
         "Critters": "DAL",
         "Giraffes": "NO"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-28T22:00:00.000Z"
     },
     {
       "id": "hl-566562",
@@ -117,7 +122,8 @@
         "Critters": "ARI",
         "Giraffes": "GB"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-28T22:00:00.000Z"
     },
     {
       "id": "hl-566553",
@@ -135,7 +141,8 @@
         "Critters": "CIN",
         "Giraffes": "PHI"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-28T22:00:00.000Z"
     },
     {
       "id": "hl-566555",
@@ -153,7 +160,8 @@
         "Critters": "NYG",
         "Giraffes": "NYG"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-28T21:30:00.000Z"
     },
     {
       "id": "hl-566558",
@@ -171,7 +179,8 @@
         "Critters": "JAX",
         "Giraffes": "TB"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-28T21:30:00.000Z"
     },
     {
       "id": "hl-566556",
@@ -189,7 +198,8 @@
         "Critters": "MIA",
         "Giraffes": "MIA"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-28T21:00:00.000Z"
     },
     {
       "id": "hl-566559",
@@ -207,7 +217,8 @@
         "Critters": "HOU",
         "Giraffes": "CAR"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-28T21:00:00.000Z"
     },
     {
       "id": "hl-566554",
@@ -224,7 +235,8 @@
         "Lobos": "BAL",
         "Giraffes": "WSH"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-28T20:00:00.000Z"
     },
     {
       "id": "hl-566531",
@@ -242,7 +254,8 @@
         "Critters": "LAR",
         "Giraffes": "LAR"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-28T00:00:00.000Z"
     },
     {
       "id": "hl-566532",
@@ -260,7 +273,8 @@
         "Critters": "SF",
         "Giraffes": "LV"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-27T22:00:00.000Z"
     },
     {
       "id": "hl-566530",
@@ -278,7 +292,8 @@
         "Critters": "NE",
         "Giraffes": "CLE"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-27T22:00:00.000Z"
     },
     {
       "id": "hl-566529",
@@ -295,7 +310,8 @@
         "Lobos": "BUF",
         "Critters": "BUF"
       },
-      "clockReport": null
+      "clockReport": null,
+      "deadline": "2026-08-27T21:00:00.000Z"
     }
   ],
   "stats": {
@@ -601,5 +617,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T15:30:24.737Z"
+  "updatedAt": "2026-08-29T15:35:55.016Z"
 }

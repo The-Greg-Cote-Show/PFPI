@@ -53,13 +53,13 @@
         "Critters": "DEN",
         "Giraffes": "MIN"
       },
-      "clockReport": "0:12 - 2nd Quarter"
+      "clockReport": "Halftime"
     },
     {
       "id": "hl-566562",
       "home": "GB",
       "away": "ARI",
-      "homeScore": 24,
+      "homeScore": 27,
       "awayScore": 31,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T00:00:00.000Z",
@@ -71,7 +71,7 @@
         "Critters": "ARI",
         "Giraffes": "GB"
       },
-      "clockReport": "12:43 - 4th Quarter"
+      "clockReport": "11:49 - 4th Quarter"
     },
     {
       "id": "hl-566553",
@@ -89,7 +89,7 @@
         "Critters": "CIN",
         "Giraffes": "PHI"
       },
-      "clockReport": "10:00 - 4th Quarter"
+      "clockReport": "7:43 - 4th Quarter"
     },
     {
       "id": "hl-566557",
@@ -107,13 +107,13 @@
         "Critters": "KC",
         "Giraffes": "SEA"
       },
-      "clockReport": "12:01 - 4th Quarter"
+      "clockReport": "10:44 - 4th Quarter"
     },
     {
       "id": "hl-566561",
       "home": "DAL",
       "away": "NO",
-      "homeScore": 16,
+      "homeScore": 22,
       "awayScore": 24,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T00:00:00.000Z",
@@ -125,7 +125,7 @@
         "Critters": "DAL",
         "Giraffes": "NO"
       },
-      "clockReport": "11:22 - 4th Quarter"
+      "clockReport": "6:11 - 4th Quarter"
     },
     {
       "id": "hl-566558",
@@ -151,9 +151,9 @@
       "away": "NYG",
       "homeScore": 6,
       "awayScore": 23,
-      "status": "in_progress",
+      "status": "final",
       "kickoffISO": "2026-08-28T23:30:00.000Z",
-      "winner": null,
+      "winner": "NYG",
       "tie": false,
       "hasRealTime": true,
       "picks": {
@@ -161,7 +161,7 @@
         "Critters": "NYG",
         "Giraffes": "NYG"
       },
-      "clockReport": "0:37 - 4th Quarter"
+      "clockReport": null
     },
     {
       "id": "hl-566559",
@@ -291,7 +291,7 @@
   "stats": {
     "standings": {
       "Lobos": {
-        "preseason-3": 4
+        "preseason-3": 5
       },
       "Roughriders": {
         "preseason-3": 0
@@ -300,7 +300,7 @@
         "preseason-3": 0
       },
       "Critters": {
-        "preseason-3": 4
+        "preseason-3": 5
       },
       "Chickens": {
         "preseason-3": 0
@@ -312,12 +312,12 @@
         "preseason-3": 0
       },
       "Giraffes": {
-        "preseason-3": 3
+        "preseason-3": 4
       }
     },
     "standingsPct": {
       "Lobos": {
-        "preseason-3": 0.5
+        "preseason-3": 0.5555555555555556
       },
       "Roughriders": {
         "preseason-3": 0
@@ -326,7 +326,7 @@
         "preseason-3": 0
       },
       "Critters": {
-        "preseason-3": 0.5
+        "preseason-3": 0.5555555555555556
       },
       "Chickens": {
         "preseason-3": 0
@@ -338,7 +338,7 @@
         "preseason-3": 0
       },
       "Giraffes": {
-        "preseason-3": 0.375
+        "preseason-3": 0.4444444444444444
       }
     },
     "weeklyTitles": {
@@ -448,16 +448,16 @@
     "bestWeek": {
       "Lobos": {
         "preseason-3": {
-          "correct": 4,
-          "total": 8,
-          "pct": 0.5,
+          "correct": 5,
+          "total": 9,
+          "pct": 0.5555555555555556,
           "week": "Preseason"
         }
       },
       "Roughriders": {
         "preseason-3": {
           "correct": 0,
-          "total": 8,
+          "total": 9,
           "pct": 0,
           "week": "Preseason"
         }
@@ -465,23 +465,23 @@
       "Maniacs": {
         "preseason-3": {
           "correct": 0,
-          "total": 8,
+          "total": 9,
           "pct": 0,
           "week": "Preseason"
         }
       },
       "Critters": {
         "preseason-3": {
-          "correct": 4,
-          "total": 8,
-          "pct": 0.5,
+          "correct": 5,
+          "total": 9,
+          "pct": 0.5555555555555556,
           "week": "Preseason"
         }
       },
       "Chickens": {
         "preseason-3": {
           "correct": 0,
-          "total": 8,
+          "total": 9,
           "pct": 0,
           "week": "Preseason"
         }
@@ -489,7 +489,7 @@
       "Ferraris": {
         "preseason-3": {
           "correct": 0,
-          "total": 8,
+          "total": 9,
           "pct": 0,
           "week": "Preseason"
         }
@@ -497,22 +497,22 @@
       "Llamas": {
         "preseason-3": {
           "correct": 0,
-          "total": 8,
+          "total": 9,
           "pct": 0,
           "week": "Preseason"
         }
       },
       "Giraffes": {
         "preseason-3": {
-          "correct": 3,
-          "total": 8,
-          "pct": 0.375,
+          "correct": 4,
+          "total": 9,
+          "pct": 0.4444444444444444,
           "week": "Preseason"
         }
       }
     },
     "gamesPlayed": {
-      "preseason-3": 8
+      "preseason-3": 9
     },
     "uniqueHits": {
       "Lobos": {
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T02:35:23.411Z"
+  "updatedAt": "2026-08-29T02:40:23.727Z"
 }

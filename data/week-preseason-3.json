@@ -46,7 +46,7 @@
         "Llamas": "IND",
         "Giraffes": "DET"
       },
-      "clockReport": "4:47 - 3rd Quarter",
+      "clockReport": "1:14 - 3rd Quarter",
       "deadline": "2026-08-29T17:00:00.000Z"
     },
     {
@@ -258,25 +258,6 @@
       "deadline": "2026-08-28T00:00:00.000Z"
     },
     {
-      "id": "hl-566530",
-      "home": "CLE",
-      "away": "NE",
-      "homeScore": 37,
-      "awayScore": 13,
-      "status": "final",
-      "kickoffISO": "2026-08-28T00:00:00.000Z",
-      "winner": "CLE",
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "NE",
-        "Critters": "NE",
-        "Giraffes": "CLE"
-      },
-      "clockReport": null,
-      "deadline": "2026-08-27T22:00:00.000Z"
-    },
-    {
       "id": "hl-566532",
       "home": "LV",
       "away": "SF",
@@ -291,6 +272,25 @@
         "Lobos": "SF",
         "Critters": "SF",
         "Giraffes": "LV"
+      },
+      "clockReport": null,
+      "deadline": "2026-08-27T22:00:00.000Z"
+    },
+    {
+      "id": "hl-566530",
+      "home": "CLE",
+      "away": "NE",
+      "homeScore": 37,
+      "awayScore": 13,
+      "status": "final",
+      "kickoffISO": "2026-08-28T00:00:00.000Z",
+      "winner": "CLE",
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "NE",
+        "Critters": "NE",
+        "Giraffes": "CLE"
       },
       "clockReport": null,
       "deadline": "2026-08-27T22:00:00.000Z"
@@ -617,5 +617,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T19:10:55.264Z"
+  "updatedAt": "2026-08-29T19:20:55.663Z"
 }

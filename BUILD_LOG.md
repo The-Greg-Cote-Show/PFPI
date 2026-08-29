@@ -4153,3 +4153,18 @@ a busy week could show many at once; still the identical paths/colors.
    data with genuinely mixed picks (e.g. `hl-566560`, MIN @ DEN: Lobos +
    Critters both picked DEN, Giraffes alone picked MIN) -- a real,
    naturally-occurring unique-pick case, not a fabricated one.
+4. Drove the REAL live `index.html` (Claude-in-Chrome, not localhost) to
+   confirm the whole thing end-to-end: opened the Games tab, selected
+   Preseason, expanded the real MIN @ DEN card -- confirmed via screenshot
+   that Gracelin's Giraffes' "MIN" pick shows the raccoon badge and
+   neither Greg's Lobos' nor Chris' Critters' "DEN" picks do (they tied at
+   2 picks each, correctly not unique). **Then verified the negative
+   case**, which no currently-real game happens to naturally exercise
+   (every not-yet-locked preseason game right now has an evenly-split or
+   non-unique pick distribution): temporarily monkey-patched
+   `window.isGameLocked` in the live page (in-memory only, no data
+   touched, restored immediately after) to force `false` against that
+   same real MIN @ DEN data and re-expanded the card -- confirmed
+   Giraffes' badge disappeared, proving the lock gate itself is what's
+   suppressing it, not some other accidental condition. Reloaded the page
+   fresh afterward to clear the patch, then closed the tab.

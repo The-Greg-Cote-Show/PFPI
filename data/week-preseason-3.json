@@ -56,9 +56,9 @@
       "clockReport": null
     },
     {
-      "id": "hl-566553",
-      "home": "PHI",
-      "away": "CIN",
+      "id": "hl-566557",
+      "home": "KC",
+      "away": "SEA",
       "homeScore": null,
       "awayScore": null,
       "status": "in_progress",
@@ -67,11 +67,29 @@
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "PHI",
-        "Critters": "CIN",
-        "Giraffes": "PHI"
+        "Lobos": "SEA",
+        "Critters": "KC",
+        "Giraffes": "SEA"
       },
-      "clockReport": "10:57 - 1st Quarter"
+      "clockReport": "9:58 - 1st Quarter"
+    },
+    {
+      "id": "hl-566562",
+      "home": "GB",
+      "away": "ARI",
+      "homeScore": 0,
+      "awayScore": 3,
+      "status": "in_progress",
+      "kickoffISO": "2026-08-29T00:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "GB",
+        "Critters": "ARI",
+        "Giraffes": "GB"
+      },
+      "clockReport": "8:00 - 1st Quarter"
     },
     {
       "id": "hl-566561",
@@ -89,43 +107,25 @@
         "Critters": "DAL",
         "Giraffes": "NO"
       },
-      "clockReport": "11:47 - 1st Quarter"
+      "clockReport": "11:28 - 1st Quarter"
     },
     {
-      "id": "hl-566557",
-      "home": "KC",
-      "away": "SEA",
-      "homeScore": null,
-      "awayScore": null,
+      "id": "hl-566553",
+      "home": "PHI",
+      "away": "CIN",
+      "homeScore": 0,
+      "awayScore": 3,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T00:00:00.000Z",
       "winner": null,
       "tie": false,
       "hasRealTime": true,
       "picks": {
-        "Lobos": "SEA",
-        "Critters": "KC",
-        "Giraffes": "SEA"
+        "Lobos": "PHI",
+        "Critters": "CIN",
+        "Giraffes": "PHI"
       },
-      "clockReport": "12:29 - 1st Quarter"
-    },
-    {
-      "id": "hl-566562",
-      "home": "GB",
-      "away": "ARI",
-      "homeScore": null,
-      "awayScore": null,
-      "status": "in_progress",
-      "kickoffISO": "2026-08-29T00:00:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "GB",
-        "Critters": "ARI",
-        "Giraffes": "GB"
-      },
-      "clockReport": "11:30 - 1st Quarter"
+      "clockReport": "7:27 - 1st Quarter"
     },
     {
       "id": "hl-566558",
@@ -143,7 +143,7 @@
         "Critters": "JAX",
         "Giraffes": "TB"
       },
-      "clockReport": "13:17 - 2nd Quarter"
+      "clockReport": "12:39 - 2nd Quarter"
     },
     {
       "id": "hl-566555",
@@ -161,25 +161,7 @@
         "Critters": "NYG",
         "Giraffes": "NYG"
       },
-      "clockReport": "0:22 - 1st Quarter"
-    },
-    {
-      "id": "hl-566556",
-      "home": "MIA",
-      "away": "ATL",
-      "homeScore": 3,
-      "awayScore": 7,
-      "status": "in_progress",
-      "kickoffISO": "2026-08-28T23:00:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "MIA",
-        "Critters": "MIA",
-        "Giraffes": "MIA"
-      },
-      "clockReport": "4:45 - 2nd Quarter"
+      "clockReport": "14:22 - 2nd Quarter"
     },
     {
       "id": "hl-566559",
@@ -197,7 +179,25 @@
         "Critters": "HOU",
         "Giraffes": "CAR"
       },
-      "clockReport": "2:00 - 2nd Quarter"
+      "clockReport": "1:46 - 2nd Quarter"
+    },
+    {
+      "id": "hl-566556",
+      "home": "MIA",
+      "away": "ATL",
+      "homeScore": 3,
+      "awayScore": 14,
+      "status": "in_progress",
+      "kickoffISO": "2026-08-28T23:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "MIA",
+        "Critters": "MIA",
+        "Giraffes": "MIA"
+      },
+      "clockReport": "3:28 - 2nd Quarter"
     },
     {
       "id": "hl-566554",
@@ -214,7 +214,7 @@
         "Lobos": "BAL",
         "Giraffes": "WSH"
       },
-      "clockReport": "7:48 - 3rd Quarter"
+      "clockReport": "7:11 - 3rd Quarter"
     },
     {
       "id": "hl-566531",
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T00:15:29.993Z"
+  "updatedAt": "2026-08-29T00:20:23.620Z"
 }

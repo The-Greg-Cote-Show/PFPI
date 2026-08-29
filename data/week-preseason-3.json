@@ -69,44 +69,6 @@
       "deadline": "2026-08-28T23:00:00.000Z"
     },
     {
-      "id": "hl-566557",
-      "home": "KC",
-      "away": "SEA",
-      "homeScore": 9,
-      "awayScore": 9,
-      "status": "final",
-      "kickoffISO": "2026-08-29T00:00:00.000Z",
-      "winner": null,
-      "tie": true,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "SEA",
-        "Critters": "KC",
-        "Giraffes": "SEA"
-      },
-      "clockReport": null,
-      "deadline": "2026-08-28T22:00:00.000Z"
-    },
-    {
-      "id": "hl-566561",
-      "home": "DAL",
-      "away": "NO",
-      "homeScore": 24,
-      "awayScore": 27,
-      "status": "final",
-      "kickoffISO": "2026-08-29T00:00:00.000Z",
-      "winner": "NO",
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "DAL",
-        "Critters": "DAL",
-        "Giraffes": "NO"
-      },
-      "clockReport": null,
-      "deadline": "2026-08-28T22:00:00.000Z"
-    },
-    {
       "id": "hl-566562",
       "home": "GB",
       "away": "ARI",
@@ -140,6 +102,44 @@
         "Lobos": "PHI",
         "Critters": "CIN",
         "Giraffes": "PHI"
+      },
+      "clockReport": null,
+      "deadline": "2026-08-28T22:00:00.000Z"
+    },
+    {
+      "id": "hl-566557",
+      "home": "KC",
+      "away": "SEA",
+      "homeScore": 9,
+      "awayScore": 9,
+      "status": "final",
+      "kickoffISO": "2026-08-29T00:00:00.000Z",
+      "winner": null,
+      "tie": true,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "SEA",
+        "Critters": "KC",
+        "Giraffes": "SEA"
+      },
+      "clockReport": null,
+      "deadline": "2026-08-28T22:00:00.000Z"
+    },
+    {
+      "id": "hl-566561",
+      "home": "DAL",
+      "away": "NO",
+      "homeScore": 24,
+      "awayScore": 27,
+      "status": "final",
+      "kickoffISO": "2026-08-29T00:00:00.000Z",
+      "winner": "NO",
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "DAL",
+        "Critters": "DAL",
+        "Giraffes": "NO"
       },
       "clockReport": null,
       "deadline": "2026-08-28T22:00:00.000Z"
@@ -617,5 +617,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T16:55:54.885Z"
+  "updatedAt": "2026-08-29T17:05:56.071Z"
 }

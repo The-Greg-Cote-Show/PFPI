@@ -41,8 +41,8 @@
       "id": "hl-566560",
       "home": "DEN",
       "away": "MIN",
-      "homeScore": null,
-      "awayScore": null,
+      "homeScore": 3,
+      "awayScore": 0,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T01:00:00.000Z",
       "winner": null,
@@ -53,7 +53,7 @@
         "Critters": "DEN",
         "Giraffes": "MIN"
       },
-      "clockReport": "15:00 - 1st Quarter"
+      "clockReport": "11:33 - 1st Quarter"
     },
     {
       "id": "hl-566562",
@@ -71,7 +71,7 @@
         "Critters": "ARI",
         "Giraffes": "GB"
       },
-      "clockReport": "7:44 - 2nd Quarter"
+      "clockReport": "5:08 - 2nd Quarter"
     },
     {
       "id": "hl-566557",
@@ -89,7 +89,7 @@
         "Critters": "KC",
         "Giraffes": "SEA"
       },
-      "clockReport": "3:43 - 2nd Quarter"
+      "clockReport": "2:00 - 2nd Quarter"
     },
     {
       "id": "hl-566561",
@@ -107,7 +107,7 @@
         "Critters": "DAL",
         "Giraffes": "NO"
       },
-      "clockReport": "5:59 - 2nd Quarter"
+      "clockReport": "4:34 - 2nd Quarter"
     },
     {
       "id": "hl-566553",
@@ -125,7 +125,7 @@
         "Critters": "CIN",
         "Giraffes": "PHI"
       },
-      "clockReport": "4:04 - 2nd Quarter"
+      "clockReport": "2:25 - 2nd Quarter"
     },
     {
       "id": "hl-566555",
@@ -143,7 +143,7 @@
         "Critters": "NYG",
         "Giraffes": "NYG"
       },
-      "clockReport": "0:10 - 2nd Quarter"
+      "clockReport": "Halftime"
     },
     {
       "id": "hl-566558",
@@ -161,7 +161,7 @@
         "Critters": "JAX",
         "Giraffes": "TB"
       },
-      "clockReport": "13:35 - 3rd Quarter"
+      "clockReport": "12:23 - 3rd Quarter"
     },
     {
       "id": "hl-566559",
@@ -179,7 +179,7 @@
         "Critters": "HOU",
         "Giraffes": "CAR"
       },
-      "clockReport": "4:34 - 3rd Quarter"
+      "clockReport": "1:27 - 3rd Quarter"
     },
     {
       "id": "hl-566556",
@@ -197,7 +197,7 @@
         "Critters": "MIA",
         "Giraffes": "MIA"
       },
-      "clockReport": "6:20 - 3rd Quarter"
+      "clockReport": "5:00 - 3rd Quarter"
     },
     {
       "id": "hl-566554",
@@ -214,7 +214,7 @@
         "Lobos": "BAL",
         "Giraffes": "WSH"
       },
-      "clockReport": "2:39 - 4th Quarter"
+      "clockReport": "0:42 - 4th Quarter"
     },
     {
       "id": "hl-566531",
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T01:10:23.448Z"
+  "updatedAt": "2026-08-29T01:15:29.328Z"
 }

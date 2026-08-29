@@ -6,7 +6,7 @@
       "home": "TEN",
       "away": "CHI",
       "homeScore": 6,
-      "awayScore": 7,
+      "awayScore": 14,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T22:00:00.000Z",
       "winner": null,
@@ -22,7 +22,7 @@
         "Llamas": "TEN",
         "Giraffes": "TEN"
       },
-      "clockReport": "11:56 - 2nd Quarter",
+      "clockReport": "4:54 - 2nd Quarter",
       "deadline": "2026-08-29T17:00:00.000Z"
     },
     {
@@ -617,5 +617,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T22:55:55.629Z"
+  "updatedAt": "2026-08-29T23:05:55.707Z"
 }

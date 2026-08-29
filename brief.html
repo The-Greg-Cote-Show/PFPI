@@ -15,6 +15,13 @@
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;font-size:15px;}
 
 .wrap{max-width:560px;margin:0 auto;padding:2.5rem 1.5rem 4rem;}
+/* Wide layout for the Analytics tab only (2026-08-29, per Yeti: "add the
+   same button/view to the Commissioner Portal so Greg can look at the
+   numbers as well") -- same width admin.html's own Analytics tab and the
+   standalone analytics.html use, deliberately wider than the rest of this
+   page's ~560px column. Lives outside `.wrap` -- see #analyticsScreen's
+   own comment near the bottom of the body. */
+.dash-wrap{max-width:1100px;margin:0 auto;padding:0 1.5rem 3rem;}
 
 .title-main{font-size:1.3rem;font-weight:800;letter-spacing:-.02em;}
 .title-main span{color:var(--gold);}
@@ -173,6 +180,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <button class="dash-tab-btn active" id="dashTabMissing" data-tab="missing">Missing Picks</button>
     <button class="dash-tab-btn" id="dashTabDigest" data-tab="digest">Weekly Digest</button>
     <button class="dash-tab-btn" id="dashTabPublish" data-tab="publish">Commissioner's Report</button>
+    <button class="dash-tab-btn" id="dashTabAnalytics" data-tab="analytics">Analytics</button>
   </div>
 
   <div class="card" id="missingPicksScreen">
@@ -216,7 +224,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
         <div class="digest-output hidden" id="briefVersionPreview" style="min-height:6rem;margin-top:.6rem;"></div>
         <button class="btn hidden" id="briefVersionLoadBtn" type="button" style="margin-top:.6rem;">Load this version into editor</button>
       </div>
-      <button class="btn" id="briefEditBtn" type="button">Edit</button>
+      <button class="btn" id="briefCopyBtn" type="button" style="background:var(--panel3);color:var(--text);">Copy for email</button>
+      <div class="status" id="briefCopyStatus"></div>
+      <button class="btn" id="briefEditBtn" type="button" style="margin-top:.6rem;">Edit</button>
     </div>
 
     <div id="briefEditView">
@@ -231,13 +241,36 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="status" id="publishStatus"></div>
   </div>
 
+  <div class="footer-copyright" id="narrowFooter">&copy;ThatKindaThing Productions, LLC</div>
+</div>
+
+<!-- ============================================================
+     TAB: ANALYTICS (2026-08-29, per Yeti: "add the same button/view to
+     the Commissioner Portal so Greg can look at the numbers as well") --
+     deliberately OUTSIDE the narrow `.wrap` above, same wide `.dash-wrap`
+     layout admin.html's own Analytics tab and the standalone
+     analytics.html use -- same shared analytics-shared.js component, same
+     live data, just a third place it can be viewed from. Mounted lazily
+     on first visit (see the dash-tab click handler below), reusing Greg's
+     own existing sessionToken -- no separate login. pfpi-scores-worker's
+     /admin/analytics-data and /admin/analytics-geo endpoints were updated
+     to accept a Greg session alongside an admin one specifically for this
+     (see worker.js's verifyAnalyticsViewerSession -- viewing analytics
+     isn't one of the admin-only override actions the admin/Greg session
+     separation otherwise protects).
+     ============================================================ -->
+<div class="dash-wrap" id="analyticsScreen" style="display:none;">
+  <div id="analyticsMount"></div>
   <div class="footer-copyright">&copy;ThatKindaThing Productions, LLC</div>
 </div>
 
+<script src="analytics-shared.js"></script>
 <script>
 const WORKER_BASE = "https://pfpi-picks-worker.yeti-f3c.workers.dev";
+const SCORES_WORKER_BASE = "https://pfpi-scores-worker.yeti-f3c.workers.dev";
 const SESSION_STORAGE_KEY = "pfpi-greg-session-token";
 let sessionToken = null;
+let analyticsDashboard = null; // lazily mounted PFPIAnalytics instance, see the dash-tab click handler below
 
 // Real 8-team roster only -- matches shared.js's TEAMS export. The 2 sandboxed
 // test teams (Yeti's Big Feet, Gentry's Neanderbrows) are never in this list,
@@ -274,6 +307,8 @@ function clearSession(message) {
   document.getElementById("missingPicksScreen").style.display = "none";
   document.getElementById("digestScreen").style.display = "none";
   document.getElementById("publishScreen").style.display = "none";
+  document.getElementById("analyticsScreen").style.display = "none";
+  document.getElementById("narrowFooter").style.display = "block";
   document.getElementById("gateScreen").style.display = "block";
   const statusEl = document.getElementById("gateStatus");
   if (message) {
@@ -653,11 +688,13 @@ async function fetchWeekGames(week) {
 
 // Per Yeti (2026-08-26): a "Preseason" entry so the whole tracker can
 // actually be tested before real family emails/roster picks exist for a
-// real week -- preseason-3 is the same cross-team sandbox worker.js
-// already merges TEAMS + FAMILY_MEMBERS picks into (see BUILD_LOG.md), so
-// this reuses that same real data rather than faking a preview.
+// real week -- preseason-3 is the same real-roster sandbox worker.js
+// publishes into (see BUILD_LOG.md), so this reuses that same real data
+// rather than faking a preview. FAMILY_MEMBERS test teams (Yeti's Big
+// Feet, Gentry's Neanderbrows) were removed 2026-08-29, per Yeti -- this
+// used to also include them here.
 const PRESEASON_MP_KEY = "preseason-3";
-const PRESEASON_MP_TEAMS = [...REAL_TEAMS, "Yeti's Big Feet", "Gentry's Neanderbrows"];
+const PRESEASON_MP_TEAMS = REAL_TEAMS;
 
 async function populateMissingPicksWeeks() {
   const currentWeek = await fetchCurrentWeek();
@@ -1031,22 +1068,53 @@ function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// The digest is plain text everywhere it's actually stored/published
-// (data/brief-week-N.json, the #briefText textarea) -- there's no rich-text
-// pipeline anywhere in this site. But per Yeti (2026-08-25), the header
-// line specifically needs bold+underline, which a plain string can't carry.
-// Resolution: keep one plain-text string (used for "Insert into brief
-// text" and as the clipboard's text/plain fallback) and derive a parallel
-// HTML string that wraps just the first line in <b><u> -- used for the
-// on-page preview and as the clipboard's text/html payload, so pasting into
-// a rich destination (Gmail, Docs, etc.) actually carries the formatting,
-// while pasting into a plain-text field (like #briefText) degrades
-// gracefully to the ALL-CAPS text with no stray markup characters.
-function buildDigestHtml(plainText) {
-  return plainText
+// The digest/brief is plain text everywhere it's actually stored/published
+// (data/brief-week-N.json, the #briefText textarea, index.html's own
+// .brief-body) -- there's no rich-text pipeline anywhere in this site.
+// This builds a SELF-CONTAINED HTML version, used for BOTH the on-page
+// preview here and the clipboard's text/html payload -- one function, so
+// what's previewed and what actually lands in a paste can never drift
+// apart.
+//
+// REAL BUG FIXED HERE (2026-08-29, per Yeti -- "when I copy it and paste
+// it into an email, it's losing the structure... going out of
+// alignment... I want it to look exactly like it does when it publishes
+// to the site"): the old version only wrapped the header line in <b><u>,
+// relying entirely on the PAGE'S OWN #digestOutput CSS class (monospace
+// font + white-space:pre-wrap) to make the rest look right on-page -- but
+// a copied HTML fragment carries only its OWN inline styles/tags with it,
+// never an external stylesheet rule from the source page. Pasted into
+// Gmail/Outlook/Apple Mail/Docs (none of which have PFPI's CSS), the
+// monospace font was silently lost (falls back to the destination's own
+// default proportional font, which breaks column alignment even if every
+// space survives -- a proportional font gives different characters
+// different widths) AND bare `\n` characters don't render as line breaks
+// at all outside a browser context honoring `white-space:pre` (many email
+// clients ignore that CSS on paste, Outlook's Word-based rendering engine
+// especially). Fixed by making the HTML fully self-contained: an inline
+// font-family/white-space style on the wrapping element (covers a
+// destination that DOES honor pasted CSS), PLUS a real `<br>` tag for
+// every line break and `&nbsp;` for every run of 2+ alignment spaces
+// (covers a destination that strips all CSS, since these are real
+// characters/tags, not style-dependent). Single spaces between ordinary
+// words are left as real spaces so normal prose still wraps naturally
+// instead of becoming one unbreakable line.
+//
+// `boldFirstLine` (default true) keeps the raw digest's own all-caps
+// header bolded+underlined, per Yeti's original 2026-08-25 request --
+// passed `false` for the full saved/published brief (see briefCopyBtn
+// below), where the "first line" is Greg's own free-form text (often
+// blank, per the padding "Insert into brief text" adds), not a fixed
+// header that should always be styled.
+function buildRichDigestHtml(plainText, opts) {
+  const boldFirstLine = !opts || opts.boldFirstLine !== false;
+  const htmlLines = escapeHtml(plainText)
     .split("\n")
-    .map((line, i) => (i === 0 ? `<b><u>${escapeHtml(line)}</u></b>` : escapeHtml(line)))
-    .join("\n");
+    .map((line, i) => {
+      const withNbsp = line.replace(/ {2,}/g, spaces => "&nbsp;".repeat(spaces.length));
+      return i === 0 && boldFirstLine ? `<b><u>${withNbsp}</u></b>` : withNbsp;
+    });
+  return `<div style="font-family:'SF Mono',Consolas,'Courier New',monospace;white-space:pre-wrap;">${htmlLines.join("<br>")}</div>`;
 }
 
 let currentDigestPlainText = "";
@@ -1090,7 +1158,7 @@ async function renderDigest() {
     buildBestWeekBlock(st, week),
   ];
   currentDigestPlainText = parts.join("\n\n");
-  outputEl.innerHTML = buildDigestHtml(currentDigestPlainText);
+  outputEl.innerHTML = buildRichDigestHtml(currentDigestPlainText);
 }
 
 document.getElementById("digestWeekSelect").addEventListener("change", renderDigest);
@@ -1131,6 +1199,44 @@ document.getElementById("digestCopyBtn").addEventListener("click", async () => {
   }
 });
 
+// Copies the ACTUAL saved/published brief (the exact same text
+// index.html's .brief-body shows live) -- not the raw digest -- for
+// pasting into an email. Per Yeti (2026-08-29): "I want it to paste in an
+// email and look exactly like it does when it publishes to the site."
+// Reuses buildRichDigestHtml (see its own comment above for the real bug
+// this fixes) with boldFirstLine:false, since the first line here is
+// Greg's own free-form text, not a fixed header that should always be
+// bold+underlined the way the raw digest's header is.
+document.getElementById("briefCopyBtn").addEventListener("click", async () => {
+  const statusEl = document.getElementById("briefCopyStatus");
+  const plainText = document.getElementById("briefSavedText").textContent;
+  const html = buildRichDigestHtml(plainText, { boldFirstLine: false });
+  try {
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        "text/plain": new Blob([plainText], { type: "text/plain" }),
+        "text/html": new Blob([html], { type: "text/html" }),
+      }),
+    ]);
+    statusEl.textContent = "Copied -- paste into your email.";
+    statusEl.className = "status ok show";
+  } catch (e) {
+    try {
+      await navigator.clipboard.writeText(plainText);
+      statusEl.textContent = "Copied to clipboard (plain text).";
+      statusEl.className = "status ok show";
+    } catch (e2) {
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById("briefSavedText"));
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      statusEl.textContent = "Couldn't copy automatically -- text is selected, press Ctrl/Cmd+C.";
+      statusEl.className = "status warn show";
+    }
+  }
+});
+
 document.getElementById("digestInsertBtn").addEventListener("click", () => {
   // A few blank lines ahead of the stats block (per Yeti, 2026-08-28) --
   // leaves room for Greg's own personality-driven headline and column
@@ -1161,9 +1267,24 @@ document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(btn => {
     document.getElementById("missingPicksScreen").style.display = tab === "missing" ? "block" : "none";
     document.getElementById("digestScreen").style.display = tab === "digest" ? "block" : "none";
     document.getElementById("publishScreen").style.display = tab === "publish" ? "block" : "none";
+    document.getElementById("analyticsScreen").style.display = tab === "analytics" ? "block" : "none";
+    // The narrow wrap's own footer sits directly above the wide analytics
+    // div in DOM order (that div lives outside `.wrap`) -- hide it while
+    // Analytics is active so its own wide footer is the only one showing.
+    document.getElementById("narrowFooter").style.display = tab === "analytics" ? "none" : "block";
     if (tab === "digest" && !digestInitialized) {
       digestInitialized = true;
       populateDigestWeeks();
+    }
+    if (tab === "analytics" && !analyticsDashboard) {
+      // Lazy-mounted, same pattern as the Digest tab's own digestInitialized
+      // flag above -- no point loading D3/topojson or hitting the analytics
+      // endpoints until Greg actually opens this tab.
+      analyticsDashboard = PFPIAnalytics.mount(document.getElementById("analyticsMount"), {
+        scoresWorkerBase: SCORES_WORKER_BASE,
+        getToken: () => sessionToken,
+        onUnauthorized: () => clearSession("Your session expired — please log in again."),
+      });
     }
   });
 });

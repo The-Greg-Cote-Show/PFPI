@@ -19,23 +19,23 @@ export const TEAM_SHORT = {
   Chickens: "Mike's Chickens", Ferraris: "Christie's Ferraris", Llamas: "Tati's Llamas", Giraffes: "Gracelin's Giraffes",
 };
 
-// FAMILY_MEMBERS' `.team` values are already full display names on their
-// own ("Yeti's Big Feet") -- this only maps the bare mascot keys above,
-// falling back to the input unchanged for anything else (sandboxed test
-// teams, or any already-full name passed in by mistake).
+// FAMILY_MEMBERS' `.team` values (when any exist) are already full display
+// names on their own -- this only maps the bare mascot keys above, falling
+// back to the input unchanged for anything else (a FAMILY_MEMBERS entry, or
+// any already-full name passed in by mistake).
 export function fullTeamName(team) {
   return TEAM_SHORT[team] || team;
 }
 
-// Test data only, per Yeti (Aug 2026 sessions) — NOT the real 8-team
-// roster above. Real family emails are still pending from Greg; do not
-// invent them here. Moved here from picks-worker.js (2026-08-25) so
-// worker.js can also merge these teams' picks into published preseason
-// data — a single source of truth instead of two copies that could drift.
-export const FAMILY_MEMBERS = [
-  { team: "Yeti's Big Feet", name: "Yeti (test)", email: "yetiblancmusic@gmail.com" },
-  { team: "Gentry's Neanderbrows", name: "Yeti (test, 2nd account)", email: "ggentry@gmail.com" },
-];
+// Sandboxed test teams ("Yeti's Big Feet", "Gentry's Neanderbrows") were
+// removed 2026-08-29, per Yeti -- no longer needed. Left as an empty array
+// (not deleted outright) since worker.js and picks-worker.js both spread
+// this into their real-roster team lists (`[...TEAMS, ...FAMILY_MEMBERS.
+// map(m => m.team)]`) rather than hardcoding the two test teams by name --
+// emptying this array here was the single-source-of-truth removal, no
+// other code changes were needed to fully retire them from every code path
+// (preseason picks merging, test-email team lists, missing-picks tracking).
+export const FAMILY_MEMBERS = [];
 
 // Re-verified for the 2026 season (see BUILD_LOG.md). Week 1 runs from
 // kickoff through the following Tuesday morning, when the next week's picks

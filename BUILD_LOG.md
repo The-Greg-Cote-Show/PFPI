@@ -3916,3 +3916,163 @@ pipeline end-to-end on real production KV, and the exact same unmodified
 rendering code end-to-end against that same real captured data via a
 local harness. Recommend Yeti just open the Analytics tab once when he's
 back to confirm the last mile.
+
+## Remove fake teams, full-width Analytics everywhere, real "Copy for email" (2026-08-29, overnight)
+
+Yeti's follow-up round: (1) remove the two sandboxed test teams entirely,
+(2) make the Analytics tab in `admin.html` actually look like the
+standalone `analytics.html` page (full width, no "open in a new tab"
+link), and add the same Analytics access to Greg's real Commissioner
+Portal (`brief.html`), (3) fix the Weekly Digest/brief "Copy" losing
+alignment when pasted into an email.
+
+**1. Sandboxed test teams removed.** `shared.js`'s `FAMILY_MEMBERS`
+(single source of truth this whole codebase already spreads into every
+team list rather than hardcoding the two names anywhere else -- confirmed
+by grep before touching anything) is now `[]`. Removed the two
+`<optgroup>` blocks and their `<option>`s from `admin.html`'s
+`testEmailTeam`/`correctionTeam` selects, simplified `PRESEASON_MP_TEAMS`
+in both `admin.html` and `brief.html` from `[...REAL_TEAMS, "Yeti's Big
+Feet", "Gentry's Neanderbrows"]` down to just `REAL_TEAMS`, and updated
+the handful of comments describing the old 10-team sandbox. No historical
+KV picks data for these teams was touched or deleted (out of scope --
+"won't be needed anymore" read as going forward, not purge-on-sight).
+Verified live in the browser: `#testEmailTeam`/`#correctionTeam` options
+are exactly the 8 real teams, nothing else.
+
+**2. Analytics tab now genuinely full-width, no new-tab link; same tab
+added to brief.html for Greg.**
+- `admin.html`: moved `#analyticsPortalTab` OUTSIDE the page's narrow
+  560px `.wrap` entirely, into its own `.dash-wrap` sibling div (same
+  1100px width analytics.html itself uses) with its own footer; the
+  narrow wrap's own footer hides while Analytics is active
+  (`#narrowFooter`) so there's never two footers stacked. Removed the
+  `#analyticsLinkPanel` panel and its "Open standalone Analytics page"
+  new-tab link entirely -- the Analytics tab IS the full dashboard now,
+  nothing left pointing away from it.
+- `brief.html`: added a 4th `.dash-tab-btn` ("Analytics") alongside
+  Missing Picks/Weekly Digest/Commissioner's Report, with the identical
+  `.dash-wrap` full-width pattern (same CSS class/width as admin.html's),
+  lazily mounting the same `analytics-shared.js` component on first
+  visit, reusing Greg's own existing `sessionToken` -- no new login.
+- **Backend change required and made:** Greg's session token is stored
+  under a DIFFERENT KV prefix than admin's (`greg-session:{token}` vs
+  `admin-session:{token}` -- confirmed in picks-worker.js's `AUTH_CONFIG`,
+  a deliberate separation for admin-only override actions like
+  `/admin/override-pick`). `pfpi-scores-worker`'s `/admin/analytics-data`
+  and `/admin/analytics-geo` only ever checked the admin prefix, so
+  Greg's own login would have been rejected (403) on this tab without a
+  fix. Added `verifyAnalyticsViewerSession()` (worker.js) which accepts
+  EITHER prefix -- viewing analytics isn't one of the admin-only actions
+  that separation protects, per Yeti's explicit ask that Greg get the
+  same view. `/admin/trigger-poll` and everything else stayed
+  admin-only, untouched.
+- Standalone `analytics.html` is unchanged and still exists (Yeti didn't
+  ask to remove it, only to stop being sent to it from the portal
+  buttons).
+
+**3. Weekly Digest / brief "Copy" now actually portable, real bug found
+and fixed, not just a tweak.** The existing clipboard-write code
+(`buildDigestHtml`, both files) only wrapped the header line in `<b><u>`
+and relied entirely on the PAGE'S OWN `#digestOutput` CSS class
+(monospace font + `white-space:pre-wrap`) to look right -- but a copied
+HTML fragment (`outputEl.innerHTML`) carries only its own inline
+styles/tags, never an external stylesheet rule from the source page.
+Pasted into Gmail/Outlook/Apple Mail/Docs (none of which have PFPI's
+CSS), the monospace font was silently lost (falls back to the
+destination's own default proportional font -- breaks column alignment
+even if every space survives, since a proportional font gives different
+characters different widths) AND bare `\n` characters don't render as
+line breaks outside a browser context honoring `white-space:pre` (many
+email clients ignore that CSS on paste, Outlook's Word-based engine
+especially).
+
+Replaced with `buildRichDigestHtml(plainText, opts)` in both `admin.html`
+and `brief.html` (identical, ported): wraps everything in a `<div>` with
+an INLINE `font-family`/`white-space:pre-wrap` style (covers a
+destination that honors pasted CSS), converts every line break to a real
+`<br>` tag, and every run of 2+ alignment spaces to an equal-length run
+of `&nbsp;` (covers a destination that strips CSS entirely, since these
+are real characters/tags, not style-dependent). Single spaces between
+ordinary words are left alone so normal prose still wraps naturally.
+`boldFirstLine` option (default true) keeps the raw digest's all-caps
+header bolded+underlined per the original 2026-08-25 request, passed
+`false` for the new "Copy for email" button below since a free-form
+brief's first line isn't a fixed header.
+
+Also added a NEW "Copy for email" button (`briefCopyBtn`) to the
+saved/published brief view (`#briefSavedView`) in both files -- there was
+previously NO copy action at all for the actual final published brief,
+only for the raw pre-brief digest. Copies `#briefSavedText`'s exact text
+(the same string `index.html`'s `.brief-body` shows live) through the
+same `buildRichDigestHtml` fix, so what gets pasted into an email is
+guaranteed to match what's actually published, not a separately-typed
+approximation.
+
+**Real verification performed, not just code review:**
+1. Deployed both Workers before testing anything:
+   `pfpi-scores-worker` (`wrangler deploy --config wrangler-scores.toml`,
+   version `ed85a1e6-e9a3-4c91-8705-8b56e3e01d76`) and
+   `pfpi-picks-worker` (`wrangler deploy --config wrangler.toml`, version
+   `24445d39-9bc0-4a8a-bc84-66cea585bc71`). **Both confirmed live via
+   `wrangler deployments list`** after a session interruption raised a
+   real question of whether the picks-worker deploy had actually finished
+   -- it had, at 100%, timestamped before the interruption.
+2. Served the real repo locally and drove real Chrome (Claude-in-Chrome)
+   against it, exactly like earlier in this session:
+   - Confirmed `#testEmailTeam`/`#correctionTeam` show only the 8 real
+     teams, nothing else.
+   - Clicked the real "Analytics" tab in `admin.html` (mocking only the
+     two analytics fetch calls, everything else real) -- confirmed the
+     dashboard renders at full page width matching the standalone page's
+     look, confirmed switching back to "Admin Portal" correctly restores
+     the narrow layout and its footer, confirmed no stacked/duplicate
+     footers either way.
+   - Same for `brief.html`'s new 4th "Analytics" tab -- confirmed it
+     renders full-width alongside the other 3 real dash-tabs, confirmed
+     switching back to "Missing Picks" restores the narrow layout.
+   - Loaded a REAL Weekly Digest (`preseason-3`, real production
+     standings data, real multi-space-aligned Team/Season/GB table) and
+     clicked the REAL "Copy to clipboard" button (a real user click, not
+     a scripted `.click()`, so the Clipboard API's user-activation
+     requirement was genuinely satisfied) -- confirmed via the status
+     message ("Copied to clipboard.", not the plain-text fallback
+     message) that the rich write path succeeded.
+   - **The actual "paste somewhere real" test the fix was for:** injected
+     a bare `contenteditable` div with generic Arial/sans-serif styling
+     and zero PFPI CSS (deliberately simulating a real email compose
+     box's default look) and pasted into it with a real `Ctrl+V`.
+     Screenshot evidence: the Team/Season/GB standings table's columns
+     line up perfectly and the header line is bold+underlined, despite
+     the destination box having no monospace font of its own -- proving
+     the fix, not just the code.
+   - Repeated the identical real-paste test for the NEW "Copy for email"
+     button against a seeded sample brief (prose + an inserted stats
+     table, matching Greg's real workflow shape) -- same result: prose
+     renders as normal prose (not bolded, confirming `boldFirstLine:
+     false` took effect), table columns stay perfectly aligned in the
+     unstyled destination.
+3. Cleaned up every test artifact: closed the browser tab, killed the
+   local test server process, deleted the throwaway `_test-server.js`
+   (confirmed via `git status` it was never staged/committed). No KV
+   writes of any kind were needed for this round's testing -- the digest/
+   brief data used was either real public production data or seeded
+   directly into the DOM for the one case with no real saved brief yet,
+   never written to any backend.
+
+**Known, flagged gap:** `verifyAnalyticsViewerSession()`'s greg-session
+branch is verified by code review only -- confirming it live end-to-end
+would need either a real Greg login (his actual password, not requested)
+or forging a `greg-session:{token}` KV entry (the same category of
+action the auto-mode classifier blocked earlier this session for the
+admin-session case, so not attempted here either). Low risk: it's a
+straightforward two-branch `Promise.all` mirroring the already-proven
+admin-session check exactly. Worth Greg confirming with one real login
+when convenient.
+
+**Deployed and pushed.** Both Workers deployed as noted above. Frontend
+(`admin.html`, `brief.html`, `shared.js`) committed and pushed to `main`
+-- see the commit immediately following this entry. `worker.js`'s
+frontend-adjacent changes (the new `verifyAnalyticsViewerSession`
+function) ship with the Worker deploy above, not a separate git-only
+change.

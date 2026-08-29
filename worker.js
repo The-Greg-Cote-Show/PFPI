@@ -1334,7 +1334,7 @@ async function handleTrack(env, { ip, ua, page: rawPage, referrer: rawReferrer, 
 
 async function handleAnalyticsData(request, env) {
   const token = request.headers.get("X-Admin-Token");
-  if (!(await verifyAdminSession(token, env))) {
+  if (!(await verifyAnalyticsViewerSession(token, env))) {
     return jsonResponse({ error: "Not authorized." }, 403, request);
   }
 
@@ -1438,7 +1438,7 @@ async function handleAnalyticsData(request, env) {
 // ============================================================
 async function handleAnalyticsGeo(request, env) {
   const token = request.headers.get("X-Admin-Token");
-  if (!(await verifyAdminSession(token, env))) {
+  if (!(await verifyAnalyticsViewerSession(token, env))) {
     return jsonResponse({ error: "Not authorized." }, 403, request);
   }
 
@@ -1499,6 +1499,25 @@ function jsonResponse(body, status, request) {
 async function verifyAdminSession(token, env) {
   if (!token) return false;
   return (await env.PFPI_KV.get(`admin-session:${token}`)) === "valid";
+}
+
+// Analytics viewing (2026-08-29, per Yeti: "add the same button/view to
+// the Commissioner Portal so Greg can look at the numbers as well") is
+// read-only and not one of the admin-only override actions the strict
+// admin/Greg session separation exists to protect (see picks-worker.js's
+// AUTH_CONFIG comment -- that separation matters for things like
+// /admin/override-pick, not for viewing a visitor-count dashboard).
+// Accepts EITHER session namespace; still rejects anything else. Both
+// `admin-session:{token}` and `greg-session:{token}` live in this same
+// PFPI_KV namespace (picks-worker.js's login writes them, this Worker
+// only ever reads them).
+async function verifyAnalyticsViewerSession(token, env) {
+  if (!token) return false;
+  const [adminValid, gregValid] = await Promise.all([
+    env.PFPI_KV.get(`admin-session:${token}`),
+    env.PFPI_KV.get(`greg-session:${token}`),
+  ]);
+  return adminValid === "valid" || gregValid === "valid";
 }
 
 async function handleTriggerPoll(request, env) {

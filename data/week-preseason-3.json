@@ -31,7 +31,7 @@
       "away": "DET",
       "homeScore": null,
       "awayScore": null,
-      "status": "scheduled",
+      "status": "in_progress",
       "kickoffISO": "2026-08-29T17:00:00.000Z",
       "winner": null,
       "tie": false,
@@ -46,7 +46,7 @@
         "Llamas": "IND",
         "Giraffes": "DET"
       },
-      "clockReport": null,
+      "clockReport": "15:00 - 1st Quarter",
       "deadline": "2026-08-29T17:00:00.000Z"
     },
     {
@@ -617,5 +617,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T17:05:56.071Z"
+  "updatedAt": "2026-08-29T17:10:55.400Z"
 }

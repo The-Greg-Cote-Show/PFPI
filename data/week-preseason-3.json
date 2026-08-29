@@ -31,9 +31,9 @@
       "away": "DET",
       "homeScore": 16,
       "awayScore": 25,
-      "status": "in_progress",
+      "status": "final",
       "kickoffISO": "2026-08-29T17:00:00.000Z",
-      "winner": null,
+      "winner": "DET",
       "tie": false,
       "hasRealTime": true,
       "picks": {
@@ -46,7 +46,7 @@
         "Llamas": "IND",
         "Giraffes": "DET"
       },
-      "clockReport": "2:00 - 4th Quarter",
+      "clockReport": null,
       "deadline": "2026-08-29T17:00:00.000Z"
     },
     {
@@ -317,19 +317,19 @@
   "stats": {
     "standings": {
       "Lobos": {
-        "preseason-3": 7
+        "preseason-3": 8
       },
       "Roughriders": {
         "preseason-3": 0
       },
       "Maniacs": {
-        "preseason-3": 0
+        "preseason-3": 1
       },
       "Critters": {
-        "preseason-3": 7
+        "preseason-3": 8
       },
       "Chickens": {
-        "preseason-3": 0
+        "preseason-3": 1
       },
       "Ferraris": {
         "preseason-3": 0
@@ -338,24 +338,24 @@
         "preseason-3": 0
       },
       "Giraffes": {
-        "preseason-3": 6
+        "preseason-3": 7
       }
     },
     "standingsPct": {
       "Lobos": {
-        "preseason-3": 0.5384615384615384
+        "preseason-3": 0.5714285714285714
       },
       "Roughriders": {
         "preseason-3": 0
       },
       "Maniacs": {
-        "preseason-3": 0
+        "preseason-3": 0.07142857142857142
       },
       "Critters": {
-        "preseason-3": 0.5384615384615384
+        "preseason-3": 0.5714285714285714
       },
       "Chickens": {
-        "preseason-3": 0
+        "preseason-3": 0.07142857142857142
       },
       "Ferraris": {
         "preseason-3": 0
@@ -364,7 +364,7 @@
         "preseason-3": 0
       },
       "Giraffes": {
-        "preseason-3": 0.46153846153846156
+        "preseason-3": 0.5
       }
     },
     "weeklyTitles": {
@@ -474,48 +474,48 @@
     "bestWeek": {
       "Lobos": {
         "preseason-3": {
-          "correct": 7,
-          "total": 13,
-          "pct": 0.5384615384615384,
+          "correct": 8,
+          "total": 14,
+          "pct": 0.5714285714285714,
           "week": "Preseason"
         }
       },
       "Roughriders": {
         "preseason-3": {
           "correct": 0,
-          "total": 13,
+          "total": 14,
           "pct": 0,
           "week": "Preseason"
         }
       },
       "Maniacs": {
         "preseason-3": {
-          "correct": 0,
-          "total": 13,
-          "pct": 0,
+          "correct": 1,
+          "total": 14,
+          "pct": 0.07142857142857142,
           "week": "Preseason"
         }
       },
       "Critters": {
         "preseason-3": {
-          "correct": 7,
-          "total": 13,
-          "pct": 0.5384615384615384,
+          "correct": 8,
+          "total": 14,
+          "pct": 0.5714285714285714,
           "week": "Preseason"
         }
       },
       "Chickens": {
         "preseason-3": {
-          "correct": 0,
-          "total": 13,
-          "pct": 0,
+          "correct": 1,
+          "total": 14,
+          "pct": 0.07142857142857142,
           "week": "Preseason"
         }
       },
       "Ferraris": {
         "preseason-3": {
           "correct": 0,
-          "total": 13,
+          "total": 14,
           "pct": 0,
           "week": "Preseason"
         }
@@ -523,22 +523,22 @@
       "Llamas": {
         "preseason-3": {
           "correct": 0,
-          "total": 13,
+          "total": 14,
           "pct": 0,
           "week": "Preseason"
         }
       },
       "Giraffes": {
         "preseason-3": {
-          "correct": 6,
-          "total": 13,
-          "pct": 0.46153846153846156,
+          "correct": 7,
+          "total": 14,
+          "pct": 0.5,
           "week": "Preseason"
         }
       }
     },
     "gamesPlayed": {
-      "preseason-3": 13
+      "preseason-3": 14
     },
     "uniqueHits": {
       "Lobos": {
@@ -617,5 +617,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T19:50:55.410Z"
+  "updatedAt": "2026-08-29T19:55:55.631Z"
 }

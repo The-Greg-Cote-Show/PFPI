@@ -46,7 +46,7 @@
         "Llamas": "IND",
         "Giraffes": "DET"
       },
-      "clockReport": "Halftime",
+      "clockReport": "13:40 - 3rd Quarter",
       "deadline": "2026-08-29T17:00:00.000Z"
     },
     {
@@ -617,5 +617,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T18:40:55.378Z"
+  "updatedAt": "2026-08-29T18:50:55.834Z"
 }

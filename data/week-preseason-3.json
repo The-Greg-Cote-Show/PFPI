@@ -71,14 +71,14 @@
         "Critters": "ARI",
         "Giraffes": "GB"
       },
-      "clockReport": "11:49 - 4th Quarter"
+      "clockReport": "8:01 - 4th Quarter"
     },
     {
       "id": "hl-566553",
       "home": "PHI",
       "away": "CIN",
       "homeScore": 13,
-      "awayScore": 16,
+      "awayScore": 23,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T00:00:00.000Z",
       "winner": null,
@@ -89,7 +89,7 @@
         "Critters": "CIN",
         "Giraffes": "PHI"
       },
-      "clockReport": "7:43 - 4th Quarter"
+      "clockReport": "5:59 - 4th Quarter"
     },
     {
       "id": "hl-566557",
@@ -107,13 +107,13 @@
         "Critters": "KC",
         "Giraffes": "SEA"
       },
-      "clockReport": "10:44 - 4th Quarter"
+      "clockReport": "9:43 - 4th Quarter"
     },
     {
       "id": "hl-566561",
       "home": "DAL",
       "away": "NO",
-      "homeScore": 22,
+      "homeScore": 24,
       "awayScore": 24,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T00:00:00.000Z",
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T02:40:23.727Z"
+  "updatedAt": "2026-08-29T02:45:28.723Z"
 }

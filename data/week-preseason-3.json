@@ -41,7 +41,7 @@
       "id": "hl-566560",
       "home": "DEN",
       "away": "MIN",
-      "homeScore": 33,
+      "homeScore": 34,
       "awayScore": 6,
       "status": "in_progress",
       "kickoffISO": "2026-08-29T01:00:00.000Z",
@@ -53,7 +53,7 @@
         "Critters": "DEN",
         "Giraffes": "MIN"
       },
-      "clockReport": "8:08 - 4th Quarter"
+      "clockReport": "7:33 - 4th Quarter"
     },
     {
       "id": "hl-566562",
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-29T03:45:29.095Z"
+  "updatedAt": "2026-08-29T03:50:23.285Z"
 }

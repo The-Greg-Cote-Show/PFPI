@@ -161,9 +161,18 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .pick-avatar{width:20px;height:20px;border-radius:50%;background:var(--panel);border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.52rem;flex-shrink:0;}
 .pick-info{min-width:0;}
 .pick-team-name{font-size:.6rem;color:var(--muted);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pick-choice-row{display:flex;align-items:center;gap:4px;}
 .pick-choice{font-size:.68rem;font-weight:700;line-height:1.2;}
 .pick-choice.correct-text{color:var(--green);}
 .pick-choice.incorrect-text{color:var(--red);}
+/* Unique-pick badge (2026-08-29, per Yeti): same raccoon artwork as the
+   Unique Hits leaderboard icon (see raccoonSvg() -- one shared function,
+   never a second copy), just smaller and static (no float animation --
+   many chips could show this at once on a busy week, unlike the
+   leaderboard's single per-category icon). Only ever rendered once a
+   game is locked -- see renderGames()'s own comment for why revealing
+   this pre-lock would be a real problem, not just an aesthetic one. */
+.pick-raccoon-icon{width:16px;height:14px;flex-shrink:0;filter:drop-shadow(0 0 3px rgba(150,150,160,.5));}
 
 @media(max-width:650px){
   .wrap{padding:1rem;}
@@ -565,6 +574,26 @@ function renderWeekRow(){
   }
 }
 
+// Shared raccoon SVG markup (2026-08-29, per Yeti) -- extracted so the
+// Unique Hits leaderboard icon (below) and the Games tab's "unique pick"
+// badge (renderGames(), further down) are guaranteed to always be the
+// exact same artwork, not two copies that could silently drift apart.
+// `size` is the rendered width in px; height is derived from the SVG's
+// own 28:24(ish) viewBox aspect ratio the original icon already used.
+function raccoonSvg(size) {
+  const height = Math.round(size * 21 / 24);
+  return `<svg viewBox="0 0 28 24" width="${size}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="6" cy="6" r="4" fill="#9096a0"/>
+    <circle cx="22" cy="6" r="4" fill="#9096a0"/>
+    <ellipse cx="14" cy="13" rx="11" ry="9" fill="#aaafb8"/>
+    <ellipse cx="14" cy="17" rx="6" ry="4.5" fill="#eceef0"/>
+    <path d="M4 11 Q14 6.5 24 11 Q14 15.5 4 11 Z" fill="#33363b"/>
+    <circle cx="10" cy="11" r="1.3" fill="#fff"/>
+    <circle cx="18" cy="11" r="1.3" fill="#fff"/>
+    <ellipse cx="14" cy="17.5" rx="1.4" ry="1" fill="#222427"/>
+  </svg>`;
+}
+
 async function render(){
   renderTabs(); renderWeekRow();
 
@@ -753,16 +782,7 @@ async function render(){
   const leaderTeams = topValue > 0 ? TEAMS.filter(t => values[t] === topValue) : [];
   const isRaccoon = currentCat === "uniqueHits";
   const leaderIconHtml = isRaccoon
-    ? `<div class="raccoon-icon"><svg viewBox="0 0 28 24" width="24" height="21" xmlns="http://www.w3.org/2000/svg">
-         <circle cx="6" cy="6" r="4" fill="#9096a0"/>
-         <circle cx="22" cy="6" r="4" fill="#9096a0"/>
-         <ellipse cx="14" cy="13" rx="11" ry="9" fill="#aaafb8"/>
-         <ellipse cx="14" cy="17" rx="6" ry="4.5" fill="#eceef0"/>
-         <path d="M4 11 Q14 6.5 24 11 Q14 15.5 4 11 Z" fill="#33363b"/>
-         <circle cx="10" cy="11" r="1.3" fill="#fff"/>
-         <circle cx="18" cy="11" r="1.3" fill="#fff"/>
-         <ellipse cx="14" cy="17.5" rx="1.4" ry="1" fill="#222427"/>
-       </svg></div>`
+    ? `<div class="raccoon-icon">${raccoonSvg(24)}</div>`
     : '<div class="crown">&#128081;</div>';
 
   // Dynamic bar sorting (item 8, reverses the earlier locked "fixed order"
@@ -872,6 +892,18 @@ function formatKickoff(g) {
   return new Intl.DateTimeFormat("en-US", opts).format(d) + (g.hasRealTime ? " ET" : "");
 }
 
+// Same "locked" definition as shared.js's isGameLocked() (this plain page
+// has no module import, so it's inlined rather than sharing that file) --
+// `g.deadline` is worker.js's own computeGameDeadline() result, already
+// published on every game object (regular-season via buildWeekPublicJSON,
+// preseason via its own merge step in pollAndPublish -- both paths added
+// it, 2026-08-29, specifically so this check works uniformly everywhere).
+// Missing deadline defaults to NOT locked -- safer to under-reveal a
+// unique pick than to guess a game is locked when it might not be.
+function isGameLocked(g) {
+  return !!g.deadline && Date.now() > new Date(g.deadline).getTime();
+}
+
 // Only ever called with real, non-empty game data (render() shows the empty
 // state itself otherwise) — see BUILD_LOG.md for the 2025-sim archival that
 // removed the simulated-schedule fallback this used to have.
@@ -931,6 +963,41 @@ function renderGames(realGames){
       breakdown.className = "picks-breakdown";
       const grid = document.createElement("div");
       grid.className = "picks-grid";
+
+      // Unique-pick badge (2026-08-29, per Yeti): "a raccoon head beside
+      // any pick that is a unique pick," same raccoon as the Unique Hits
+      // leaderboard, once the game is locked -- NOT before. Same
+      // definition worker.js's own Unique Hits computation already uses
+      // ("among the TEAMS that actually picked that game, exactly one
+      // team chose that side"), computed fresh here from this game's own
+      // real picks rather than duplicating worker.js's per-week aggregate
+      // (that's a cumulative hits/opps count, not a per-game flag -- a
+      // different shape, not reusable directly).
+      //
+      // Deliberately gated on isGameLocked(g), NOT on isFinal: the raw
+      // pick values are already publicly visible before a game locks (see
+      // buildWeekPublicJSON, worker.js -- an existing, unrelated design
+      // this doesn't change), but flagging ONE of those visible picks as
+      // "the only one who picked this side" is a genuine spoiler while
+      // other teams can still submit or change their own pick for this
+      // same game -- it would hand later-deciding teams free strategic
+      // information. Once locked, every team's pick for THIS SPECIFIC
+      // game is frozen (this system's deadlines are per-game, not
+      // per-week -- a locked game's picks can never change regardless of
+      // whether other games that week are still open), so revealing
+      // uniqueness at that point is safe. Not tied to the game being
+      // final/decided -- the whole point, per Yeti, is to draw fans into
+      // watching a game they might otherwise skip, which only works
+      // before it's already over.
+      const locked = isGameLocked(g);
+      const pickCounts = {};
+      if (locked && g.picks) {
+        TEAMS.forEach(team => {
+          const p = g.picks[team];
+          if (p) pickCounts[p] = (pickCounts[p] || 0) + 1;
+        });
+      }
+
       TEAMS.forEach(team => {
         // Preseason games (Highlightly) have no picks object at all -- no
         // PFPI picks are ever made against them -- unlike regular-season
@@ -938,6 +1005,7 @@ function renderGames(realGames){
         // buildWeekPublicJSON(). Guard rather than assume it exists.
         const pick = (g.picks && g.picks[team]) || null;
         const correct = (pick && isFinal) ? pick === g.winner : null;
+        const isUnique = locked && pick && pickCounts[pick] === 1;
         const color = TEAM_COLORS[team];
         const chip = document.createElement("div");
         chip.className = "pick-chip " + (correct === null ? "" : correct ? "correct" : "incorrect");
@@ -945,7 +1013,10 @@ function renderGames(realGames){
           <div class="pick-avatar" style="border-color:${color};color:${color}">${initials(TEAM_SHORT[team])}</div>
           <div class="pick-info">
             <div class="pick-team-name">${TEAM_SHORT[team]}</div>
-            <div class="pick-choice ${correct === null ? "" : correct ? "correct-text" : "incorrect-text"}">${pick || "No pick yet"}</div>
+            <div class="pick-choice-row">
+              <div class="pick-choice ${correct === null ? "" : correct ? "correct-text" : "incorrect-text"}">${pick || "No pick yet"}</div>
+              ${isUnique ? `<div class="pick-raccoon-icon" title="Unique pick">${raccoonSvg(16)}</div>` : ""}
+            </div>
           </div>
         `;
         grid.appendChild(chip);

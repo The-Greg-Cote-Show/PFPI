@@ -1002,7 +1002,14 @@ async function pollAndPublish(env, force = false) {
         for (const team of preseasonPicksTeams) {
           if (picksByTeam[team][g.id]) picks[team] = picksByTeam[team][g.id];
         }
-        return { ...g, picks };
+        // Added 2026-08-29, per Yeti's "unique pick" raccoon-badge request
+        // (index.html) -- buildWeekPublicJSON() (regular season, above)
+        // always included this via the same computeGameDeadline() call;
+        // preseason skipped it entirely since nothing previously needed a
+        // per-game deadline on this path. Same function, same shape, so
+        // index.html's isGameLocked() works identically on both week types
+        // without needing to special-case preseason.
+        return { ...g, picks, deadline: computeGameDeadline(g.kickoffISO) };
       });
 
       // Real Standings/Weekly Titles/Weeks Leading/Best Week for preseason

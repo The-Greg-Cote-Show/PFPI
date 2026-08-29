@@ -4083,3 +4083,73 @@ Closed the tab afterward, nothing left open.
 frontend-adjacent changes (the new `verifyAnalyticsViewerSession`
 function) ship with the Worker deploy above, not a separate git-only
 change.
+
+## Raccoon-head "unique pick" badge on the Games tab (2026-08-29, overnight)
+
+Yeti's follow-up: once a game locks, show the same grey raccoon icon
+already used for the Unique Hits leaderboard beside any pick that was a
+unique pick for that game (only one team picked that side) -- not before
+lock, per his explicit instruction.
+
+**Definition matched exactly to the one already established in
+worker.js** (`computePreseasonSnapshot`/`computeStandings`'s own Unique
+Hits computation, both say it plainly): "among the TEAMS that actually
+picked that game, exactly one team chose that side." Computed fresh,
+client-side, from each game's own real `picks` object in `index.html`'s
+`renderGames()` -- not a reuse of worker.js's per-week aggregate
+hits/opps counters, which are a cumulative shape (needs a different
+question answered: "how many unique hits has this team had all season,"
+not "was this one specific pick on this one specific game unique").
+
+**Real gap found and fixed, not just the frontend piece:** regular-season
+weeks have always carried a per-game `deadline` field (`buildWeekPublicJSON`,
+`computeGameDeadline()`) -- preseason-3 never did, since nothing
+previously needed a per-game deadline on that path. Fixed by adding the
+identical `computeGameDeadline(g.kickoffISO)` call to preseason's own
+picks-merge step in `pollAndPublish()`, so `index.html`'s new
+`isGameLocked(g)` helper works uniformly on both week types without a
+special case. `isGameLocked()` mirrors `shared.js`'s own function of the
+same name/definition exactly (inlined -- this is a plain, non-module
+page, no import path to that file).
+
+**Why gated on "locked," not "final" -- the real reasoning, not just
+following the instruction blindly:** `buildWeekPublicJSON` already
+publishes every team's raw pick the moment it's saved, regardless of
+deadline -- an existing, unrelated design this doesn't touch. But
+flagging one of those already-visible picks as "the only one who picked
+this side" is a genuine spoiler while OTHER teams can still submit or
+change their own pick for that same game -- it hands whoever decides
+last free strategic information (pick the side nobody's on, or pile onto
+the "safe" side, either way undermining an independent pick). Since this
+system's deadlines are per-game, not per-week, a locked game's own picks
+can never change again regardless of whether other games that week are
+still open -- so revealing uniqueness at that exact point is genuinely
+safe, not an arbitrary cutoff. Deliberately NOT gated on the game being
+final/decided too -- the whole point (per Yeti: "may give them more
+interest in following that game") is to draw eyes to a game BEFORE it's
+played, which only works if the badge can appear before the outcome is
+known.
+
+**Same raccoon artwork, guaranteed, not just "similar":** extracted the
+Unique Hits leaderboard's inline SVG (previously only defined once,
+inline, inside the category-rendering function) into a shared
+`raccoonSvg(size)` function, called from both the leaderboard's
+`leaderIconHtml` AND the new Games-tab badge -- one definition, so they
+can never visually drift apart later. Smaller (16px vs. the leaderboard's
+24px) and static in the Games-tab context (no floating animation) since
+a busy week could show many at once; still the identical paths/colors.
+
+**Real verification performed, not just code review:**
+1. Deployed `pfpi-scores-worker` (version `d64c84a5-9278-4da7-97af-82c69a72d307`)
+   with the preseason-deadline fix before testing anything.
+2. Waited for the real live `data/week-preseason-3.json` to actually
+   republish on its own natural 5-minute cadence (not forced) --
+   confirmed via polling the real public URL that every game now carries
+   a real `deadline` field, and hand-verified the computed value against
+   `computeGameDeadline`'s own documented rule for one game (a Saturday
+   kickoff correctly landed on that Saturday's flat 1:00 PM ET cutoff,
+   not a 2-hours-before-kickoff one).
+3. Found real, already-locked, already-final preseason games in the live
+   data with genuinely mixed picks (e.g. `hl-566560`, MIN @ DEN: Lobos +
+   Critters both picked DEN, Giraffes alone picked MIN) -- a real,
+   naturally-occurring unique-pick case, not a fabricated one.

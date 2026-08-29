@@ -56,24 +56,6 @@
       "clockReport": null
     },
     {
-      "id": "hl-566553",
-      "home": "PHI",
-      "away": "CIN",
-      "homeScore": null,
-      "awayScore": null,
-      "status": "scheduled",
-      "kickoffISO": "2026-08-29T00:00:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "PHI",
-        "Critters": "CIN",
-        "Giraffes": "PHI"
-      },
-      "clockReport": null
-    },
-    {
       "id": "hl-566561",
       "home": "DAL",
       "away": "NO",
@@ -88,6 +70,24 @@
         "Lobos": "DAL",
         "Critters": "DAL",
         "Giraffes": "NO"
+      },
+      "clockReport": null
+    },
+    {
+      "id": "hl-566553",
+      "home": "PHI",
+      "away": "CIN",
+      "homeScore": null,
+      "awayScore": null,
+      "status": "scheduled",
+      "kickoffISO": "2026-08-29T00:00:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "PHI",
+        "Critters": "CIN",
+        "Giraffes": "PHI"
       },
       "clockReport": null
     },
@@ -128,24 +128,6 @@
       "clockReport": null
     },
     {
-      "id": "hl-566558",
-      "home": "JAX",
-      "away": "TB",
-      "homeScore": null,
-      "awayScore": null,
-      "status": "in_progress",
-      "kickoffISO": "2026-08-28T23:30:00.000Z",
-      "winner": null,
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "JAX",
-        "Critters": "JAX",
-        "Giraffes": "TB"
-      },
-      "clockReport": "7:32 - 1st Quarter"
-    },
-    {
       "id": "hl-566555",
       "home": "NYJ",
       "away": "NYG",
@@ -161,7 +143,25 @@
         "Critters": "NYG",
         "Giraffes": "NYG"
       },
-      "clockReport": "7:07 - 1st Quarter"
+      "clockReport": "3:37 - 1st Quarter"
+    },
+    {
+      "id": "hl-566558",
+      "home": "JAX",
+      "away": "TB",
+      "homeScore": null,
+      "awayScore": null,
+      "status": "in_progress",
+      "kickoffISO": "2026-08-28T23:30:00.000Z",
+      "winner": null,
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "JAX",
+        "Critters": "JAX",
+        "Giraffes": "TB"
+      },
+      "clockReport": "2:59 - 1st Quarter"
     },
     {
       "id": "hl-566559",
@@ -179,7 +179,7 @@
         "Critters": "HOU",
         "Giraffes": "CAR"
       },
-      "clockReport": "12:25 - 2nd Quarter"
+      "clockReport": "9:56 - 2nd Quarter"
     },
     {
       "id": "hl-566556",
@@ -197,7 +197,7 @@
         "Critters": "MIA",
         "Giraffes": "MIA"
       },
-      "clockReport": "14:49 - 2nd Quarter"
+      "clockReport": "12:32 - 2nd Quarter"
     },
     {
       "id": "hl-566554",
@@ -214,7 +214,7 @@
         "Lobos": "BAL",
         "Giraffes": "WSH"
       },
-      "clockReport": "13:53 - 3rd Quarter"
+      "clockReport": "12:51 - 3rd Quarter"
     },
     {
       "id": "hl-566531",
@@ -235,24 +235,6 @@
       "clockReport": null
     },
     {
-      "id": "hl-566530",
-      "home": "CLE",
-      "away": "NE",
-      "homeScore": 37,
-      "awayScore": 13,
-      "status": "final",
-      "kickoffISO": "2026-08-28T00:00:00.000Z",
-      "winner": "CLE",
-      "tie": false,
-      "hasRealTime": true,
-      "picks": {
-        "Lobos": "NE",
-        "Critters": "NE",
-        "Giraffes": "CLE"
-      },
-      "clockReport": null
-    },
-    {
       "id": "hl-566532",
       "home": "LV",
       "away": "SF",
@@ -267,6 +249,24 @@
         "Lobos": "SF",
         "Critters": "SF",
         "Giraffes": "LV"
+      },
+      "clockReport": null
+    },
+    {
+      "id": "hl-566530",
+      "home": "CLE",
+      "away": "NE",
+      "homeScore": 37,
+      "awayScore": 13,
+      "status": "final",
+      "kickoffISO": "2026-08-28T00:00:00.000Z",
+      "winner": "CLE",
+      "tie": false,
+      "hasRealTime": true,
+      "picks": {
+        "Lobos": "NE",
+        "Critters": "NE",
+        "Giraffes": "CLE"
       },
       "clockReport": null
     },
@@ -591,5 +591,5 @@
       }
     }
   },
-  "updatedAt": "2026-08-28T23:55:23.574Z"
+  "updatedAt": "2026-08-29T00:00:40.491Z"
 }

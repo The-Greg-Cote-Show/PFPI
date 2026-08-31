@@ -1100,8 +1100,26 @@ function isWeekComplete(games) {
   return Array.isArray(games) && games.length > 0 && games.every(g => g.status === "final");
 }
 
+// Effective "current week" for the admin portal's Weekly Digest AND
+// Commissioner's Report -- deliberately the SAME value for both, computed
+// once here (2026-08-31, per Yeti after a real caught bug: these two tabs
+// used to default to different weeks -- Preseason vs. Week 1 -- with
+// nothing forcing them to agree). This is the latest week whose games are
+// ALL final, not the raw calendar-based /current-week value (which can be
+// a week, or a partial week, ahead of what's actually finished) --
+// generalized to "every game in the week," not specifically Monday Night
+// Football, so the same check works unchanged in the playoffs (which don't
+// schedule MNF) as in the regular season. Falls back to Preseason
+// (PRESEASON_MP_KEY) if not even Week 1 is complete yet.
+async function getEffectiveCurrentWeek() {
+  const calendarWeek = await fetchCurrentWeek();
+  const latestGames = await fetchWeekGames(calendarWeek);
+  const latestComplete = isWeekComplete(latestGames);
+  const maxCompleteWeek = latestComplete ? calendarWeek : calendarWeek - 1;
+  return maxCompleteWeek >= 1 ? maxCompleteWeek : PRESEASON_MP_KEY;
+}
+
 async function populateDigestWeeks() {
-  const currentWeek = await fetchCurrentWeek();
   const sel = document.getElementById("digestWeekSelect");
   const statusEl = document.getElementById("digestStatus");
   sel.innerHTML = "";
@@ -1111,9 +1129,8 @@ async function populateDigestWeeks() {
   preseasonOpt.textContent = "Preseason";
   sel.appendChild(preseasonOpt);
 
-  const latestGames = await fetchWeekGames(currentWeek);
-  const latestComplete = isWeekComplete(latestGames);
-  const maxSelectableWeek = latestComplete ? currentWeek : currentWeek - 1;
+  const effectiveWeek = await getEffectiveCurrentWeek();
+  const maxSelectableWeek = effectiveWeek === PRESEASON_MP_KEY ? 0 : effectiveWeek;
 
   for (let w = 1; w <= maxSelectableWeek; w++) {
     const opt = document.createElement("option");
@@ -1127,7 +1144,7 @@ async function populateDigestWeeks() {
     statusEl.className = "status show";
   }
 
-  sel.value = maxSelectableWeek >= 1 ? String(maxSelectableWeek) : PRESEASON_MP_KEY;
+  sel.value = String(effectiveWeek);
   await renderDigest();
 }
 
@@ -1374,6 +1391,21 @@ document.getElementById("briefCopyBtn").addEventListener("click", async () => {
 });
 
 document.getElementById("digestInsertBtn").addEventListener("click", () => {
+  // Force the Commissioner's Report's own week selector to match the
+  // digest's week (2026-08-31, real bug Yeti caught in testing): this
+  // button never touched weekSelect before, so if the Digest tab was on
+  // (say) Preseason while the Commissioner's Report tab happened to still
+  // be on Week 1, clicking Insert then Publish would silently publish the
+  // Preseason digest text under Week 1 -- a real season-integrity risk,
+  // not just a UX nit. Setting it here, at the moment of insertion, closes
+  // the gap regardless of whatever each dropdown's own default/last-touched
+  // value was.
+  const digestWeek = document.getElementById("digestWeekSelect").value;
+  const weekSelect = document.getElementById("weekSelect");
+  const weekChanged = weekSelect.value !== digestWeek;
+  if ([...weekSelect.options].some(o => o.value === digestWeek)) {
+    weekSelect.value = digestWeek;
+  }
   // A few blank lines ahead of the stats block (per Yeti, 2026-08-28) --
   // leaves room for Greg's own personality-driven headline and column
   // above the numbers, rather than dropping the table right at the very
@@ -1381,6 +1413,11 @@ document.getElementById("digestInsertBtn").addEventListener("click", () => {
   showBriefEditView("\n\n\n\n" + currentDigestPlainText);
   document.getElementById("briefCancelEditBtn").classList.remove("hidden");
   switchTopTab("publish");
+  if (weekChanged) {
+    const label = digestWeek === PRESEASON_MP_KEY ? "Preseason" : "Week " + digestWeek;
+    document.getElementById("publishStatus").textContent = `Week selector switched to ${label} to match the inserted digest.`;
+    document.getElementById("publishStatus").className = "status show";
+  }
   // Cursor starts at the very top of that blank space, not at the end of
   // the pasted text, so Greg (or Yeti, acting as commissioner) can just
   // start typing immediately.
@@ -1396,16 +1433,14 @@ document.getElementById("digestInsertBtn").addEventListener("click", () => {
 // (KV key `brief-version:{week}:{timestamp}`, see picks-worker.js).
 // ============================================================
 
-// TEMPORARY -- for Yeti's testing (matches brief.html's own flag). REVERT
-// to `false` before real weekly use begins -- the backend never enforced
-// current-week-only itself, so flipping this back is the only change
-// needed to restore normal behavior.
-const TESTING_ALLOW_ALL_WEEKS = true;
+// The "allow all 18 weeks" testing flag that used to live here has been
+// retired (2026-08-31, per Yeti -- this dropdown now caps at the same
+// getEffectiveCurrentWeek() value the Weekly Digest tab uses, see above).
 const NUM_WEEKS = 18;
 
 async function populateWeeks() {
-  const currentWeek = await fetchCurrentWeek();
-  const maxWeek = TESTING_ALLOW_ALL_WEEKS ? NUM_WEEKS : currentWeek;
+  const effectiveWeek = await getEffectiveCurrentWeek();
+  const maxWeek = effectiveWeek === PRESEASON_MP_KEY ? 0 : effectiveWeek;
   const sel = document.getElementById("weekSelect");
   sel.innerHTML = "";
   const preseasonOpt = document.createElement("option");
@@ -1418,7 +1453,7 @@ async function populateWeeks() {
     opt.textContent = "Week " + w;
     sel.appendChild(opt);
   }
-  sel.value = currentWeek;
+  sel.value = String(effectiveWeek);
 }
 
 function updateCharCount() {

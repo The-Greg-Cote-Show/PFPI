@@ -4260,3 +4260,85 @@ Analytics rather than a stray external referrer once the domain goes live.
 Deployed both Workers with this change before DNS/domain work continues, so
 the moment pfpi.me is live, its API calls to both Workers won't be
 CORS-blocked.
+
+### Sponsor-facing PDF report (PART 2) — built and verified live
+
+**Backend:** new `GET /admin/analytics-range?start=YYYY-MM-DD&end=YYYY-MM-DD`
+endpoint on `pfpi-scores-worker` (`worker.js`). Sums the same per-day KV
+counters the existing 14-day trend and all-time geo endpoints already read
+(`analytics:daily-unique:*`, `:new:*`, `:repeat:*`, `:referrer:*`,
+`:geo-country:*`, `:geo-region:*`, `:geo-city:*`, plus internal pageviews
+and bot-filtered counts) over an admin-chosen range instead of a fixed
+window. Bounded to 400 days per request so a typo'd range can't turn one
+click into an unbounded KV loop. Deployed
+(`pfpi-scores-worker` Version ID `9583ce9f-...`).
+
+**Frontend:** new "Sponsor Report" button in the shared `analytics-shared.js`
+component (same file both `analytics.html` and the Admin/Commissioner
+portal tabs already mount, per the handoff's "only needs building once").
+Opens a date-range picker (defaults to the last 30 days) and a "Generate
+PDF" button. On click: fetches the range endpoint, lazy-loads Chart.js +
+jsPDF + jspdf-autotable from cdnjs (verified all three URLs resolve before
+writing any code against them — no paid service, per the handoff's
+constraint), builds three charts (daily-unique-visitors line, new-vs-repeat
+bar, traffic-sources bar) onto offscreen canvases with a custom white-
+background Chart.js plugin (canvases are transparent by default, which
+renders wrong on a white PDF page), resolves country alpha-2 codes to full
+names by reusing the same world-atlas topojson the live Locations map
+already fetches (no second hardcoded name table), and assembles a
+multi-page PDF: title/summary, charts, country/US-state/city breakdown
+tables (`jspdf-autotable`, capped at top 30 rows per table with a "(top 30
+of N)" note if truncated), and the same honesty-first methodology copy
+already on the dashboard, condensed for the PDF. Calls `doc.save(...)`,
+which triggers a real browser download (not a sandboxed artifact context,
+so this works normally).
+
+**Real, live verification performed — not just code that should work:**
+1. Logged into the real `analytics.html` (Yeti logged in himself in the
+   browser tab; a session-token submission was intentionally left to him
+   rather than done by the automation).
+2. Hard-refreshed to pick up the newly-deployed `analytics-shared.js`
+   (confirmed the "Sponsor Report" button appeared after the refresh, not
+   before — GitHub Pages/browser caching, same category of thing as the
+   domain-caching incident, just lower stakes here).
+3. Generated a real report for the real default range (2026-08-02 to
+   2026-08-31) against real production data — status line correctly showed
+   "Report downloaded for 2026-08-02 to 2026-08-31 (30 days)", and a real
+   4.5MB PDF landed in the Downloads folder.
+4. Opened the real generated PDF (via a temporary local static file server
+   so Chrome's PDF viewer could render it — closed and stopped afterward)
+   and visually confirmed page 1: title, summary table (2 unique / 2 new /
+   0 repeat / 0 bots-filtered — matches the live dashboard's Month-to-Date
+   tile exactly), a real line chart showing the correct single spike on Aug
+   28, and the New-vs-Repeat / Traffic-Sources bar charts, all rendered
+   correctly on a white background.
+5. Extracted the real PDF's literal text content (a small Node script
+   reading the uncompressed content stream, since `pdftoppm`/poppler isn't
+   installed on this machine) to confirm, byte-for-byte, that all 7
+   methodology paragraphs made it into the PDF intact and unmodified, and
+   that the Location Breakdown page correctly showed "No location data
+   recorded for this range" for all three tables — a **real, honest**
+   result, not a bug: the account's only 2 recorded visitors (Aug 28)
+   predate geo capture being added to this system (2026-08-29), so there
+   genuinely is no location data yet for any range.
+6. Because real geo data doesn't exist yet, the country/US-state/city
+   table-population code path (as opposed to its empty-state path) hadn't
+   been exercised by step 3-5. Verified it separately, safely, and without
+   touching any real KV data: temporarily monkey-patched `window.fetch` in
+   the live page's console to intercept only the `/admin/analytics-range`
+   call and return a synthetic in-memory JSON payload (fake countries/
+   states/cities/referrers), then triggered the real, unmodified
+   `generateReport()` through the real button. Confirmed via the same
+   text-extraction technique that the resulting PDF correctly sorted
+   entries by count descending, filtered US states from the combined
+   region list, resolved alpha-2 codes to full country names for multiple
+   countries (not just US), and laid out the Cities table's City/Region/
+   Country columns correctly. This patch lived only in that tab's JS
+   memory for one page load and touched no KV keys, real or test; reloading
+   the page discarded it.
+7. Cleaned up afterward: deleted both test PDFs from the Downloads folder,
+   stopped the temporary local file server, reloaded the live page to clear
+   the in-memory fetch patch.
+
+No real KV data, admin sessions, or counters were written, forged, or
+modified anywhere in this verification.

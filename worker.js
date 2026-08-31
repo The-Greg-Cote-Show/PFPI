@@ -36,7 +36,7 @@
 // guesses exactly, including the game_id's YYYY_WW_AWAY_HOME format.
 // ============================================================
 
-import { TEAMS, computeCurrentWeekFromDate, commitJSONToGitHub, getEasternDateParts, FAMILY_MEMBERS, computeGameDeadline, sendPfpiEmail } from "./shared.js";
+import { TEAMS, TEAM_SHORT, computeCurrentWeekFromDate, commitJSONToGitHub, getEasternDateParts, FAMILY_MEMBERS, computeGameDeadline, sendPfpiEmail } from "./shared.js";
 
 const BIG_BALLS_BASE = "https://api.bigballsdata.com";
 const SEASON = 2026;
@@ -699,6 +699,237 @@ function computePreseasonSnapshot(finalResults, picksByTeam, weekLabel) {
 }
 
 // ============================================================
+// WEEKLY DIGEST -- server-side generation, persistence, and email
+// (2026-08-31, per Yeti). Ported from admin.html's/brief.html's own
+// client-side digest builder (buildStandingsBlock/buildPointBlock/etc, all
+// pure string-formatting functions with no DOM dependency) so a digest can
+// be generated automatically the moment a week's last game goes final,
+// without needing anyone to have the admin page open. This is the ONE
+// place that logic now lives -- admin.html/brief.html's Weekly Digest tab
+// no longer builds its own text, it just displays what this produces (see
+// GET /admin/digest below).
+//
+// Frozen-snapshot-by-default, per Yeti's explicit call: a digest is
+// generated once (when the week completes) and never silently changes
+// after that, even if a stat is later corrected -- what got emailed is
+// what stays in the archive. A manual "Recompute" action (POST
+// /admin/digest-recompute) exists for the real case where a correction
+// needs to be reflected; it OVERWRITES the current `digest:{week}` key but
+// also appends to `digest-version:{week}:{timestamp}` first, mirroring
+// the exact versioning convention picks-worker.js's brief-version:{week}:
+// {timestamp} already uses -- a recompute is a new, visible commissioner-
+// facing action, not a silent edit, so its own history is kept the same
+// way admin edits to Greg's brief already are.
+// ============================================================
+const SEASON_YEAR = 2026;
+const GREG_EMAIL = "yeti@yetiblanc.com"; // same placeholder as picks-worker.js's GREG_EMAIL -- change together when Greg's real address is onboarded.
+
+// Same formatting rule as index.html/admin.html/brief.html's own fmtPct
+// (duplicated intentionally -- it's a formatting helper, not scoring
+// logic, and this is a separate file with no shared frontend module).
+function fmtPct(v) {
+  const s = v.toFixed(3);
+  return s === "1.000" ? "1.000" : s.replace(/^0/, "");
+}
+
+function buildStandingsBlock(st, week, isFinal, titleOverride) {
+  const wKey = String(week);
+  const gp = (st.gamesPlayed && st.gamesPlayed[wKey]) || 0;
+  const rows = TEAMS.map(t => {
+    const wins = st.standings[t][wKey];
+    return { team: t, wins, losses: gp - wins, pct: st.standingsPct[t][wKey] };
+  });
+  rows.sort((a, b) => b.wins - a.wins);
+  const leaderWins = rows.length ? rows[0].wins : 0;
+
+  const lines = [];
+  lines.push(titleOverride || (isFinal ? `PFPI OFFICIAL FINAL ${SEASON_YEAR} STANDINGS` : `PFPI WEEK ${week} STANDINGS`));
+  lines.push(`Team`.padEnd(32) + (isFinal ? "Final Season" : "Season").padEnd(13) + "GB");
+  rows.forEach(r => {
+    const name = (TEAM_SHORT[r.team] || r.team).padEnd(32);
+    const record = `${r.wins}-${r.losses}`;
+    const pct = fmtPct(r.pct);
+    const gb = r.wins === leaderWins ? "--" : String(leaderWins - r.wins);
+    lines.push(`${name}${record}   ${pct}${gb.padStart(6)}`);
+  });
+  return lines.join("\n");
+}
+
+function buildTieNoteBlock(st, week) {
+  const wKey = String(week);
+  const ties = (st.tieNotes && st.tieNotes[wKey]) || [];
+  if (ties.length === 0) return null;
+  const n = ties.length;
+  const gameWord = n === 1 ? "game" : "games";
+  const verb = n === 1 ? "is" : "are";
+  return `${n} ${gameWord} ended in a tie and ${verb} omitted from this week's scoring (${ties.join(", ")}).`;
+}
+
+function buildPointBlock(label, dataObj, countObj, week) {
+  const wKey = String(week);
+  const entries = TEAMS.map(t => ({ team: t, value: dataObj[t][wKey], count: countObj[t][wKey] }));
+
+  entries.sort((a, b) => b.value - a.value);
+  const groups = [];
+  for (const e of entries) {
+    const last = groups[groups.length - 1];
+    if (last && last[0].value === e.value) last.push(e);
+    else groups.push([e]);
+  }
+
+  const text = groups.map(group => {
+    const tied = group.length > 1;
+    return group.map(e => {
+      const valStr = e.value.toFixed(2);
+      return tied ? `${e.team} ${valStr}` : `${e.team} ${valStr} (${e.count})`;
+    }).join(" & ");
+  }).join(", ");
+
+  return `${label}: ${text}.`;
+}
+
+function buildTenWinBlock(st, week) {
+  const wKey = String(week);
+  const entries = TEAMS.map(t => ({ team: t, value: (st.tenWinWeeks[t] && st.tenWinWeeks[t][wKey]) || 0 }));
+  entries.sort((a, b) => b.value - a.value);
+  const groups = [];
+  for (const e of entries) {
+    const last = groups[groups.length - 1];
+    if (last && last[0].value === e.value) last.push(e);
+    else groups.push([e]);
+  }
+  const text = groups.map(group => group.map(e => `${e.team} ${e.value}`).join(" & ")).join(", ");
+  return `10-Win Weeks: ${text}.`;
+}
+
+function buildUniqueHitsBlock(st, week) {
+  const wKey = String(week);
+  const entries = TEAMS.map(t => (st.uniqueHits[t] && st.uniqueHits[t][wKey]) || { hits: 0, opps: 0 });
+  const named = TEAMS.map((t, i) => ({ team: t, ...entries[i] }));
+  named.sort((a, b) => b.hits - a.hits || b.opps - a.opps);
+  const text = named.map(e => `${e.team} ${e.hits}-${e.opps}`).join(", ");
+  return `Unique Hits: ${text}.`;
+}
+
+function buildBestWeekBlock(st, week) {
+  const wKey = String(week);
+  const entries = TEAMS
+    .map(t => ({ team: t, ...st.bestWeek[t][wKey] }))
+    .filter(e => e.total > 0);
+
+  if (entries.length === 0) return "Best Week: No weeks decided yet.";
+
+  const maxPct = Math.max(...entries.map(e => e.pct));
+  const holders = entries.filter(e => e.pct === maxPct);
+  const text = holders
+    .map(e => `${e.team} ${fmtPct(e.pct)} (${e.correct}-${e.total - e.correct}/${typeof e.week === "number" ? "W" + e.week : e.week})`)
+    .join(" & ");
+  return `Best Week: ${text}.`;
+}
+
+function buildDigestText(st, week, isFinal, titleOverride) {
+  const parts = [
+    buildStandingsBlock(st, week, isFinal, titleOverride),
+    buildTieNoteBlock(st, week),
+    buildPointBlock("Weeks Leading", st.weeksLeading, st.weeksLeadingCount, week),
+    buildPointBlock("Weekly Titles", st.weeklyTitles, st.weeklyTitlesCount, week),
+    buildTenWinBlock(st, week),
+    buildUniqueHitsBlock(st, week),
+    buildBestWeekBlock(st, week),
+  ].filter(Boolean);
+  return parts.join("\n\n");
+}
+
+// Generates, persists (current + versioned history), and emails a digest.
+// Called both by the automatic completion-triggered path in
+// pollAndPublish() and by the manual recompute endpoint -- the only
+// difference between them is `source` and whatever triggered the call, the
+// storage/email behavior is identical either way.
+async function generateAndStoreDigest(env, weekKey, st, isFinal, titleOverride, source) {
+  const text = buildDigestText(st, weekKey, isFinal, titleOverride);
+  const generatedAt = new Date().toISOString();
+  const entry = { text, generatedAt, source };
+  await env.PFPI_KV.put(`digest:${weekKey}`, JSON.stringify(entry));
+  await env.PFPI_KV.put(`digest-version:${weekKey}:${Date.now()}`, JSON.stringify(entry));
+
+  const label = weekKey === "preseason-3" ? "Preseason" : `Week ${weekKey}`;
+  await sendPfpiEmail(
+    GREG_EMAIL,
+    `PFPI Weekly Digest -- ${label} Ready`,
+    `Dear PFPI Commissioner,\n\nYour Weekly Digest for ${label} has been generated and is ready for your report whenever you are ready.`,
+    env
+  );
+  return entry;
+}
+
+// Freshly recomputes the stats snapshot for a week, for the manual
+// recompute endpoint (the automatic path in pollAndPublish() already has
+// a freshly-computed snapshot in hand and doesn't need this).
+async function computeDigestStatsForWeek(week, env) {
+  if (week === "preseason-3") {
+    const cachedRaw = await env.PFPI_KV.get("schedule:week:preseason-3");
+    const preseasonGames = cachedRaw ? JSON.parse(cachedRaw) : [];
+    const preseasonPicksTeams = [...TEAMS, ...FAMILY_MEMBERS.map(m => m.team)];
+    const picksByTeam = {};
+    for (const team of preseasonPicksTeams) {
+      const picksRaw = await env.PFPI_KV.get(`picks:preseason-3:${team}`);
+      picksByTeam[team] = picksRaw ? JSON.parse(picksRaw) : {};
+    }
+    const finalResults = preseasonGames.filter(g => g.status === "final");
+    return {
+      st: computePreseasonSnapshot(finalResults, picksByTeam, "preseason-3"),
+      isFinal: false,
+      titleOverride: "PFPI PRESEASON STANDINGS (Week 3, unified)",
+    };
+  }
+  const weekNum = parseInt(week, 10);
+  const st = await computeStandings(weekNum, env);
+  return { st, isFinal: weekNum === 18, titleOverride: null };
+}
+
+async function handleDigestGet(request, env) {
+  const token = request.headers.get("X-Admin-Token");
+  if (!(await verifyAnalyticsViewerSession(token, env))) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+  const url = new URL(request.url);
+  const week = url.searchParams.get("week");
+  if (!week) return jsonResponse({ error: "Missing week." }, 400, request);
+  const raw = await env.PFPI_KV.get(`digest:${week}`);
+  return jsonResponse({ digest: raw ? JSON.parse(raw) : null }, 200, request);
+}
+
+async function handleDigestWeeks(request, env) {
+  const token = request.headers.get("X-Admin-Token");
+  if (!(await verifyAnalyticsViewerSession(token, env))) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+  const list = await env.PFPI_KV.list({ prefix: "digest:" });
+  const weeks = list.keys.map(k => k.name.slice("digest:".length));
+  return jsonResponse({ weeks }, 200, request);
+}
+
+async function handleDigestRecompute(request, env) {
+  const token = request.headers.get("X-Admin-Token");
+  if (!(await verifyAnalyticsViewerSession(token, env))) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+  let body = {};
+  try { body = await request.json(); } catch (e) {}
+  const week = body.week;
+  if (!week) return jsonResponse({ error: "Missing week." }, 400, request);
+
+  const existingRaw = await env.PFPI_KV.get(`digest:${week}`);
+  if (!existingRaw) {
+    return jsonResponse({ error: "This week has no digest yet -- it can only be recomputed after it's first auto-generated (once that week's last game goes final)." }, 400, request);
+  }
+
+  const { st, isFinal, titleOverride } = await computeDigestStatsForWeek(week, env);
+  const entry = await generateAndStoreDigest(env, week, st, isFinal, titleOverride, "recompute");
+  return jsonResponse({ digest: entry }, 200, request);
+}
+
+// ============================================================
 // PER-WEEK PUBLIC JSON (games + picks, matches mockup's SCHEDULE shape)
 // ============================================================
 
@@ -951,6 +1182,31 @@ async function pollAndPublish(env, force = false) {
       "Update current week pointer [automated]",
       env
     );
+
+    // Weekly Digest auto-generation (2026-08-31, per Yeti): once a week's
+    // games are ALL final, generate + persist + email the digest exactly
+    // once -- gated on the digest:{week} KV key so it only ever fires the
+    // first time a week crosses into "complete," never on a later tick.
+    // Only currentWeek and currentWeek-1 can plausibly have JUST
+    // transitioned into "complete" (every earlier week already crossed
+    // that line by construction of time having passed), so those are the
+    // only two checked each tick -- cheap, and correct regardless of which
+    // week's games happen to finish on a Thursday, a Sunday, or (in the
+    // playoffs, which don't schedule Monday Night Football) whatever game
+    // is actually last on that week's real schedule.
+    const st = { standings, standingsPct, weeklyTitles, weeklyTitlesCount, weeksLeading, weeksLeadingCount, bestWeek, gamesPlayed, uniqueHits, tenWinWeeks, tieNotes };
+    for (const weekToCheck of [currentWeek - 1, currentWeek]) {
+      if (weekToCheck < 1) continue;
+      const weekKey = String(weekToCheck);
+      const alreadyGenerated = await env.PFPI_KV.get(`digest:${weekKey}`);
+      if (alreadyGenerated) continue;
+      const scheduleRaw = await env.PFPI_KV.get(`schedule:week:${weekKey}`);
+      const schedule = scheduleRaw ? JSON.parse(scheduleRaw) : null;
+      const resultsRaw = await env.PFPI_KV.get(`results:week:${weekKey}`);
+      const results = resultsRaw ? JSON.parse(resultsRaw) : [];
+      if (!schedule || schedule.length === 0 || results.length < schedule.length) continue;
+      await generateAndStoreDigest(env, weekKey, st, weekToCheck === 18, null, "auto");
+    }
   }
 
   // Preseason Week 3 stopgap (Aug 27-29, 2026 only) — see scope notice above
@@ -1040,6 +1296,15 @@ async function pollAndPublish(env, force = false) {
       // is no shared storage for the two computations to ever collide in.
       const finalResults = preseasonGames.filter(g => g.status === "final");
       const preseasonStats = computePreseasonSnapshot(finalResults, picksByTeam, "preseason-3");
+
+      // Same auto-generation-once-complete rule as the real season above --
+      // "complete" here means every real game on the schedule (16, tie
+      // included -- a tie is still a decided/final game, it's just excluded
+      // from the scoring math) has reached status:"final".
+      const alreadyGeneratedPreseason = await env.PFPI_KV.get("digest:preseason-3");
+      if (!alreadyGeneratedPreseason && preseasonGames.length > 0 && finalResults.length === preseasonGames.length) {
+        await generateAndStoreDigest(env, "preseason-3", preseasonStats, false, "PFPI PRESEASON STANDINGS (Week 3, unified)", "auto");
+      }
 
       await commitJSONToGitHub(
         "data/week-preseason-3.json",
@@ -1709,6 +1974,15 @@ export default {
     }
     if (url.pathname === "/admin/analytics-range" && request.method === "GET") {
       return handleAnalyticsRange(request, env);
+    }
+    if (url.pathname === "/admin/digest" && request.method === "GET") {
+      return handleDigestGet(request, env);
+    }
+    if (url.pathname === "/admin/digest-weeks" && request.method === "GET") {
+      return handleDigestWeeks(request, env);
+    }
+    if (url.pathname === "/admin/digest-recompute" && request.method === "POST") {
+      return handleDigestRecompute(request, env);
     }
     return jsonResponse({ ok: true, worker: "pfpi-scores-worker" }, 200, request);
   },

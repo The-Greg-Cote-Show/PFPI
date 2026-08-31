@@ -4342,3 +4342,87 @@ so this works normally).
 
 No real KV data, admin sessions, or counters were written, forged, or
 modified anywhere in this verification.
+
+### pfpi.me domain — DNS added, second real snag found and fixed, custom domain now live
+
+Yeti added the four `A` records above at pfpi.me's registrar (Hover, a
+Tucows brand). First verification pass found a **second** real, live
+problem, caught before it caused any actual damage: two leftover A records
+from before the registrar change --- one host `@` and one wildcard `*` ---
+both still pointing at `216.40.34.41` (confirmed via WHOIS: owned by
+Tucows, the classic signature of a registrar's own default "parked domain"
+placeholder). With those still present alongside the 4 new GitHub records,
+resolvers would return 5 A records for the apex, meaning roughly 1-in-5
+requests to pfpi.me would have hit the parking placeholder instead of the
+real site once the custom domain went live -- a real, live-caught problem,
+not a hypothetical. Flagged to Yeti; he deleted both (confirmed the only
+remaining non-GitHub record is an unrelated MX record for email, correctly
+left alone).
+
+Verified DNS cleanliness for real from three independent resolvers (ISP,
+Google 8.8.8.8, Cloudflare 1.1.1.1) via a background Monitor polling every
+60s, rather than trusting a single check or any UI -- caught real, normal
+cache-propagation flakiness in the process (resolvers intermittently still
+served the deleted record for a few minutes after registrar deletion,
+completely expected DNS cache-TTL behavior, not a new problem). Confirmed
+clean on Google and Cloudflare; proceeded once those were consistently
+clean even though my own local ISP resolver's cache took a little longer
+to fully drop the old entry -- that residual staleness is a self-clearing
+artifact of MY OWN local cache's remaining TTL, not evidence of an actual
+problem at the authoritative/registrar level, and is not the same
+failure class as the earlier incident (a visitor hitting it would land on
+a stale parking page, not a connection failure to a domain that never
+resolves at all).
+
+**Set the custom domain via `gh api -X PUT repos/.../pages -f cname=pfpi.me`.**
+Immediately verified (no delay) via curl:
+- `https://the-greg-cote-show.github.io/PFPI/` now `301`s to `http://pfpi.me/`
+  -- expected, standard GitHub Pages behavior once a custom domain exists,
+  not a break (the URL still gets you the site, just via a redirect).
+- `http://pfpi.me/` -- real `200 OK`, real page content, correct
+  `Content-Length` matching the live site.
+- `https://pfpi.me/` -- **also** returns `200 OK`, but only when curl is
+  told to ignore certificate errors (`-k`). Checked the actual certificate
+  with `openssl s_client`: it's currently `CN=*.github.io` (GitHub's
+  generic Pages wildcard cert, issued by Let's Encrypt), **not** a
+  certificate for `pfpi.me` itself -- GitHub hasn't finished provisioning
+  the domain-specific cert yet. A real browser hitting `https://pfpi.me`
+  right now would show a certificate warning.
+
+**"Enforce HTTPS" has deliberately NOT been enabled** -- doing so now would
+force all traffic through a TLS connection whose certificate doesn't match
+the domain, which is worse than leaving HTTP available while the real
+`pfpi.me` cert finishes provisioning (GitHub's own docs: this can take up
+to 24 hours, though it's frequently much faster). A background Monitor is
+polling the live certificate's subject every 5 minutes and will report
+back the moment it actually reads `pfpi.me` instead of `*.github.io` --
+only then does Enforce HTTPS get turned on, followed by one more real
+verification pass.
+
+**Update, same session, ~15 minutes later: cert finished provisioning
+faster than expected.** The background Monitor caught it directly:
+`openssl s_client` against `pfpi.me:443` now returns `subject=CN=pfpi.me`
+(Let's Encrypt, valid Aug 31 - Nov 29 2026), confirmed independently again
+(not just trusting the monitor) with a fresh `curl https://pfpi.me/` --
+real `200 OK`, no `-k` needed, no cert errors. Enabled Enforce HTTPS
+(`gh api -X PUT .../pages -F https_enforced=true` -- note `-F` not `-f`,
+the endpoint rejects a string `"true"` for this boolean field). Full
+final verification pass, all real:
+- `http://pfpi.me/` -> `301` -> `https://pfpi.me/` (HTTP now correctly
+  upgrades to HTTPS).
+- `https://pfpi.me/` -> real `200 OK`, `Content-Length: 54134`, matches
+  the live site exactly.
+- `https://the-greg-cote-show.github.io/PFPI/` followed through its full
+  redirect chain (`curl -L`) lands on `https://pfpi.me/` with a final
+  `200` -- confirmed end-to-end, not just the first hop.
+
+**`pfpi.me` is genuinely, fully live: real DNS, real GitHub Pages custom
+domain, real trusted HTTPS certificate, HTTPS enforced, verified via
+actual requests at every step, not just via dashboard state.** `github.io`
+still resolves to the same content (via redirect, which is the expected
+end-state once a custom domain exists, not a break). **Nothing further
+needed from Yeti on the domain** -- worth a quick look at `https://pfpi.me`
+in his own regular browser whenever convenient (no urgency, no action
+item), consistent with the "verify in a real browser too" precaution
+carried over from the original incident, but every automated check here
+came back clean.

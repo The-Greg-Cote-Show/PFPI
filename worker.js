@@ -1117,7 +1117,7 @@ const ANALYTICS_ALL_PAGES = new Set(["index", "picks", "brief", "admin"]);
 // in-site navigation, not a real external discovery source, so it gets
 // its own "internal" bucket rather than being misclassified as an
 // external referral or lumped into the generic "other:" catch-all.
-const PFPI_OWN_HOSTS = new Set(["the-greg-cote-show.github.io", "pfpi.thegregcoteshow.com"]);
+const PFPI_OWN_HOSTS = new Set(["the-greg-cote-show.github.io", "pfpi.thegregcoteshow.com", "pfpi.me"]);
 
 async function sha256Hex(text) {
   const data = new TextEncoder().encode(text);
@@ -1481,6 +1481,7 @@ async function handleAnalyticsGeo(request, env) {
 // admin.html sends the exact session token it already holds from logging
 // into pfpi-picks-worker; no new secret, no cross-Worker call needed.
 const ALLOWED_ORIGINS = [
+  "https://pfpi.me",
   "https://pfpi.thegregcoteshow.com",
   "https://the-greg-cote-show.github.io",
 ];

@@ -4168,3 +4168,95 @@ a busy week could show many at once; still the identical paths/colors.
    Giraffes' badge disappeared, proving the lock gate itself is what's
    suppressing it, not some other accidental condition. Reloaded the page
    fresh afterward to clear the patch, then closed the tab.
+
+## 2026-08-31 — pfpi.me domain setup (PART 1) + sponsor PDF report (PART 2), per handoff
+
+Working from `PFPI_domain_and_pdf_report_handoff.md`. Per its "STOP COMPLETELY"
+rules: nothing here touched CoteCup's repo/Worker/KV, no paid tier was
+upgraded, and no credential beyond existing Cloudflare Secrets was requested.
+
+### Domain setup — real incident reproduced live, caught and reverted in under
+### two minutes, plan corrected as a result
+
+The handoff's own Step 1 ("add pfpi.me as the custom domain in GitHub Pages
+settings first, to generate the CNAME value, before DNS exists") turned out
+to be unsafe, and I proved this live rather than assuming either way:
+
+1. Confirmed baseline: `https://the-greg-cote-show.github.io/PFPI/` returned
+   a real `200 OK`.
+2. Ran `gh api -X PUT repos/The-Greg-Cote-Show/PFPI/pages -f cname=pfpi.me`
+   (the API equivalent of the Settings UI step the handoff describes).
+3. **Immediately** re-checked both the repo and the live URL:
+   - GitHub auto-committed a `CNAME` file to `main` on its own (commit
+     `1f8edf49 Create CNAME`) — not something I committed by hand.
+   - `https://the-greg-cote-show.github.io/PFPI/` now returned
+     `301 Moved Permanently` → `http://pfpi.me/`, which doesn't resolve to
+     anything yet. This is **exactly** the multi-hour incident described in
+     this file's own history, reproduced live, confirming the handoff's
+     "don't add a CNAME file before DNS is ready" lesson was correct — but
+     also proving the handoff's own Step 1 (do the Settings step *before*
+     DNS) contradicts that lesson, because on real, current GitHub Pages
+     behavior, **setting the custom domain in Pages settings and having a
+     `CNAME` file in the repo are the same action** — GitHub auto-manages
+     the file for you the moment you set/unset the custom domain via
+     Settings or the API. There is no way to "just get the CNAME value"
+     without the redirect going live immediately.
+4. Reverted immediately: `gh api -X PUT repos/.../pages -f cname=''`.
+   GitHub auto-committed `3314f0f7 Delete CNAME` in response. Confirmed
+   `https://the-greg-cote-show.github.io/PFPI/` back to a real `200 OK`,
+   no redirect.
+
+**Real-world exposure:** under two minutes, and only from my own verification
+requests — no evidence of real visitor traffic hitting the broken redirect
+in that window (this was caught by my own immediate re-check, not reported
+by anyone).
+
+**Corrected plan (the actual safe order, reversing the handoff's Step
+1/Step 2 relative order):**
+1. DNS must go live **first**, entirely on Yeti's side at pfpi.me's
+   registrar — see the exact record below. This does not touch GitHub at
+   all and carries zero risk to the live site.
+2. Once Yeti confirms the record is added, DNS resolution gets verified for
+   real (a real lookup, not trusting any UI) before anything touches
+   GitHub Pages settings.
+3. **Only then** does the custom domain get set in GitHub Pages settings —
+   at that point the auto-managed `CNAME` file + github.io→pfpi.me redirect
+   is safe, because pfpi.me will already resolve correctly when the
+   redirect fires.
+4. HTTPS enforcement gets enabled after GitHub shows the domain as secured
+   (auto-provisioned cert, can take some time after DNS propagates).
+5. Final live verification of both URLs, flagged for Yeti to also check in
+   his own regular browser given the Chrome-caching precedent.
+
+**Exact DNS record for Yeti to add at pfpi.me's registrar** (apex/root
+domain, not `www`) — four `A` records, all pointing at GitHub Pages:
+
+```
+Type: A   Host: @ (or blank/apex)   Value: 185.199.108.153
+Type: A   Host: @ (or blank/apex)   Value: 185.199.109.153
+Type: A   Host: @ (or blank/apex)   Value: 185.199.110.153
+Type: A   Host: @ (or blank/apex)   Value: 185.199.111.153
+```
+
+(Optionally `AAAA` records for IPv6 exist too, but the four `A` records
+above are the standard, universally-supported setup and are sufficient on
+their own.) `www.pfpi.me` was not requested by the handoff (apex-only:
+`pfpi.me`) and was not set up — a separate, later decision if Yeti wants it.
+
+**Status as of this entry: DNS not yet added, custom domain NOT set in
+GitHub Pages (deliberately, per the corrected order above), `CNAME` file
+NOT in the repo, github.io URL fully functional, exactly as before this
+task started.** Next step is on Yeti: add the four `A` records above, then
+say so — DNS resolution gets verified before anything else changes.
+
+**CORS/allowlist prep done ahead of time** (safe, additive, no dependency on
+DNS timing): added `https://pfpi.me` to `ALLOWED_ORIGINS` in both
+`worker.js` and `picks-worker.js` (previously only
+`https://pfpi.thegregcoteshow.com` — the dead domain from the original
+incident, left in place, unused — and the github.io origin were allowed),
+and added `pfpi.me` to `worker.js`'s `PFPI_OWN_HOSTS` set so in-site
+navigation from the new domain classifies as "internal" traffic in
+Analytics rather than a stray external referrer once the domain goes live.
+Deployed both Workers with this change before DNS/domain work continues, so
+the moment pfpi.me is live, its API calls to both Workers won't be
+CORS-blocked.

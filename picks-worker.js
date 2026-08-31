@@ -35,6 +35,7 @@ const GREG_EMAIL = "yeti@yetiblanc.com";
 // Allowed frontend origins for CORS. Update once the real custom domain is
 // live; workers.dev origin kept for local/interim testing.
 const ALLOWED_ORIGINS = [
+  "https://pfpi.me",
   "https://pfpi.thegregcoteshow.com",
   "https://the-greg-cote-show.github.io",
 ];

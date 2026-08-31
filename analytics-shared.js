@@ -32,6 +32,12 @@
     const get = t => parts.find(p => p.type === t).value;
     return `${get("year")}-${get("month")}-${get("day")}`;
   }
+  function addDaysToKey(dateKey, delta) {
+    const [y, m, d] = dateKey.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() + delta);
+    return dt.toISOString().slice(0, 10);
+  }
 
   // ----- ISO 3166-1 alpha-2 -> numeric-3 (world-atlas topojson feature ids) -----
   // Best-effort, hand-maintained static table (ISO 3166-1 is a stable
@@ -97,6 +103,333 @@
     return libsPromise;
   }
 
+  // ----- sponsor PDF report libs (2026-08-31, per Yeti) -- lazy-loaded,
+  // same pattern as the map libs above, so nobody pays for Chart.js/jsPDF
+  // just to open the dashboard; only clicking "Sponsor Report" fetches
+  // them. No paid service involved, per the handoff's explicit constraint
+  // -- both are free, open-source, self-contained client-side libraries.
+  const CHARTJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.1/chart.umd.min.js";
+  const JSPDF_URL = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+  const JSPDF_AUTOTABLE_URL = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js";
+  let reportLibsPromise = null;
+  // Charts render into a hidden PNG for the PDF, not on-screen, so they
+  // need their own light-background styling regardless of the dashboard's
+  // own dark theme -- a sponsor-facing PDF page is white, not this app's
+  // dark panels. This plugin paints a white rect behind every chart before
+  // Chart.js draws on top of it (canvases are transparent by default,
+  // which would otherwise render as a black hole once placed on a white
+  // PDF page since destination is opaque black in PNG-without-alpha
+  // consumers).
+  const CHART_WHITE_BG_PLUGIN = {
+    id: "pfpiWhiteBg",
+    beforeDraw(chart) {
+      const ctx = chart.canvas.getContext("2d");
+      ctx.save();
+      ctx.globalCompositeOperation = "destination-over";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, chart.width, chart.height);
+      ctx.restore();
+    },
+  };
+  function ensureReportLibs() {
+    if (global.Chart && global.jspdf && global.jspdf.jsPDF) return Promise.resolve();
+    if (!reportLibsPromise) {
+      reportLibsPromise = loadScript(CHARTJS_URL)
+        .then(() => loadScript(JSPDF_URL))
+        .then(() => loadScript(JSPDF_AUTOTABLE_URL))
+        .then(() => {
+          global.Chart.register(CHART_WHITE_BG_PLUGIN);
+          global.Chart.defaults.color = "#333333";
+          global.Chart.defaults.borderColor = "#dddddd";
+        });
+    }
+    return reportLibsPromise;
+  }
+
+  let countryNamesCache = null;
+  // Same "derive names from the topojson we already fetch for the map,
+  // don't hand-maintain a second name table" approach the map code above
+  // uses -- see COUNTRY_ALPHA2_TO_NUMERIC's own comment.
+  async function ensureCountryNames() {
+    if (countryNamesCache) return countryNamesCache;
+    await ensureMapLibs();
+    const topo = await fetch(WORLD_TOPO_URL).then(r => r.json());
+    const features = global.topojson.feature(topo, topo.objects.countries).features;
+    const map = {};
+    features.forEach(f => {
+      const a2 = NUMERIC_TO_ALPHA2[String(f.id).padStart(3, "0")];
+      if (a2 && f.properties && f.properties.name) map[a2] = f.properties.name;
+    });
+    countryNamesCache = map;
+    return map;
+  }
+
+  function makeOffscreenCanvas(width, height) {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.position = "fixed";
+    canvas.style.left = "-99999px";
+    canvas.style.top = "0";
+    document.body.appendChild(canvas);
+    return canvas;
+  }
+
+  function chartToImage(canvas, chart) {
+    const url = canvas.toDataURL("image/png", 1.0);
+    chart.destroy();
+    canvas.remove();
+    return url;
+  }
+
+  function buildTrendChartImage(data) {
+    const dates = Object.keys(data.trend).sort();
+    const canvas = makeOffscreenCanvas(1000, 420);
+    const chart = new global.Chart(canvas.getContext("2d"), {
+      type: "line",
+      data: {
+        labels: dates.map(fmtDate),
+        datasets: [{
+          label: "Daily Unique Visitors",
+          data: dates.map(d => data.trend[d].unique),
+          borderColor: "#c8901f",
+          backgroundColor: "rgba(200,144,31,0.15)",
+          fill: true,
+          tension: 0.25,
+          pointRadius: dates.length > 45 ? 0 : 2,
+        }],
+      },
+      options: {
+        responsive: false,
+        animation: false,
+        plugins: { legend: { display: false }, title: { display: true, text: "Daily Unique Visitors" } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      },
+    });
+    return chartToImage(canvas, chart);
+  }
+
+  function buildNewRepeatChartImage(data) {
+    const canvas = makeOffscreenCanvas(700, 420);
+    const chart = new global.Chart(canvas.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: ["New visitors", "Repeat visitors"],
+        datasets: [{ data: [data.totals.new, data.totals.repeat], backgroundColor: ["#4a9eff", "#3ecf74"] }],
+      },
+      options: {
+        responsive: false,
+        animation: false,
+        plugins: { legend: { display: false }, title: { display: true, text: "New vs. Repeat Visitors" } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+      },
+    });
+    return chartToImage(canvas, chart);
+  }
+
+  function buildReferrerChartImage(data) {
+    const entries = Object.entries(data.referrers || {}).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const canvas = makeOffscreenCanvas(1000, 420);
+    const chart = new global.Chart(canvas.getContext("2d"), {
+      type: "bar",
+      data: {
+        labels: entries.length ? entries.map(([name]) => name.replace(/^other:/, "other: ")) : ["No data"],
+        datasets: [{ data: entries.length ? entries.map(([, c]) => c) : [0], backgroundColor: "#c8901f" }],
+      },
+      options: {
+        indexAxis: "y",
+        responsive: false,
+        animation: false,
+        plugins: { legend: { display: false }, title: { display: true, text: "Traffic Sources (pageviews)" } },
+        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+      },
+    });
+    return chartToImage(canvas, chart);
+  }
+
+  function ensureSpace(doc, y, needed, margin, pageHeight) {
+    if (y + needed > pageHeight - margin) {
+      doc.addPage();
+      return margin;
+    }
+    return y;
+  }
+
+  const METHODOLOGY_LINES = [
+    "What \"unique\" means here: daily unique visitors are counted with a one-way hash of each visitor's IP address and browser, combined with the date, reset every 24 hours -- the same approach privacy-respecting tools like Fathom or Plausible use. Raw IP addresses are never stored, only this hash.",
+    "New vs. repeat: a second, longer-lived one-way hash (IP + browser, no date) identifies a returning visitor across days -- realistically stable for days to weeks per visitor, and it changes the moment someone switches networks or devices. It is still fully anonymous.",
+    "Known limitation: visitors are identified by device/browser, not by person -- the same person on a phone and then a laptop the same day counts as two visitors. This is a limitation shared by every privacy-respecting analytics tool.",
+    "Totals over a date range are a sum of each day's unique count, not a single deduplicated count across the whole range -- a visitor active on three separate days in the range is counted three times toward that range's total, not once.",
+    "Bot filtering: requests are excluded from every number in this report when Cloudflare has already verified them as a known bot, or their User-Agent self-identifies as a bot/crawler/monitoring tool. A bot that disguises its User-Agent as a normal browser is not caught by this -- an expected gap at this pricing tier, not a bug.",
+    "Location data (country/region/city) comes directly from Cloudflare's edge network for each pageload -- approximate, network-derived locations, not GPS or precise addresses. City is the most granular field captured; it is never combined with any other identifying information.",
+    "Commissioner Portal and Admin Portal traffic (the show's own login-gated internal tools) is tracked separately as plain pageview counts and is not included in any visitor number in this report.",
+  ];
+
+  function buildReportPdf({ data, start, end, trendImg, newRepeatImg, referrerImg, countryNames }) {
+    const { jsPDF } = global.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "letter" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 40;
+    const contentWidth = pageWidth - margin * 2;
+    let y = margin;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(20);
+    doc.text("PFPI Analytics Report", margin, y);
+    y += 24;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(90);
+    doc.text(`Reporting period: ${fmtDate(start)} - ${fmtDate(end)} (${data.days} day${data.days === 1 ? "" : "s"})`, margin, y);
+    y += 16;
+    doc.text(`Generated ${new Date(data.generatedAt).toLocaleString()}`, margin, y);
+    y += 28;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(20);
+    doc.text("Summary", margin, y);
+    y += 6;
+    doc.autoTable({
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [["Metric", "Total for period"]],
+      body: [
+        ["Unique visitors (sum of daily uniques)", data.totals.unique.toLocaleString()],
+        ["New visitors", data.totals.new.toLocaleString()],
+        ["Repeat visitors", data.totals.repeat.toLocaleString()],
+        ["Bot / crawler requests filtered", data.botsFiltered.toLocaleString()],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [232, 184, 75], textColor: [20, 20, 20] },
+      styles: { fontSize: 10 },
+    });
+    y = doc.lastAutoTable.finalY + 30;
+
+    const chartH = contentWidth * (420 / 1000);
+    y = ensureSpace(doc, y, chartH + 30, margin, pageHeight);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(20);
+    doc.text("Daily Unique Visitors Trend", margin, y);
+    y += 10;
+    doc.addImage(trendImg, "PNG", margin, y, contentWidth, chartH);
+    y += chartH + 30;
+
+    const halfW = (contentWidth - 20) / 2;
+    const smallChartH = halfW * (420 / 700);
+    const wideChartH = halfW * (420 / 1000);
+    const rowH = Math.max(smallChartH, wideChartH);
+    y = ensureSpace(doc, y, rowH + 30, margin, pageHeight);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(20);
+    doc.text("New vs. Repeat", margin, y);
+    doc.text("Traffic Sources", margin + halfW + 20, y);
+    y += 10;
+    doc.addImage(newRepeatImg, "PNG", margin, y, halfW, smallChartH);
+    doc.addImage(referrerImg, "PNG", margin + halfW + 20, y, halfW, wideChartH);
+    y += rowH + 30;
+
+    // ----- location breakdown -----
+    const MAX_ROWS = 30;
+    function topEntries(obj) {
+      return Object.entries(obj || {}).sort((a, b) => b[1] - a[1]);
+    }
+    function capNote(all) {
+      return all.length > MAX_ROWS ? ` (top ${MAX_ROWS} of ${all.length})` : "";
+    }
+
+    const countryEntries = topEntries(data.geo.countries);
+    doc.addPage();
+    y = margin;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(20);
+    doc.text("Location Breakdown", margin, y);
+    y += 20;
+    doc.setFontSize(12);
+    doc.text(`Countries${capNote(countryEntries)}`, margin, y);
+    y += 6;
+    doc.autoTable({
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [["Country", "Visits"]],
+      body: countryEntries.length
+        ? countryEntries.slice(0, MAX_ROWS).map(([code, count]) => [countryNames[code] || code, count.toLocaleString()])
+        : [["No location data recorded for this range.", ""]],
+      theme: "striped",
+      headStyles: { fillColor: [232, 184, 75], textColor: [20, 20, 20] },
+      styles: { fontSize: 9 },
+    });
+    y = doc.lastAutoTable.finalY + 24;
+
+    const usStateEntries = topEntries(data.geo.regions).filter(([key]) => key.startsWith("US|"))
+      .map(([key, count]) => [key.slice(3), count]);
+    y = ensureSpace(doc, y, 60, margin, pageHeight);
+    doc.setFontSize(12);
+    doc.text(`US States${capNote(usStateEntries)}`, margin, y);
+    y += 6;
+    doc.autoTable({
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [["State", "Visits"]],
+      body: usStateEntries.length
+        ? usStateEntries.slice(0, MAX_ROWS).map(([name, count]) => [name, count.toLocaleString()])
+        : [["No US state data recorded for this range.", ""]],
+      theme: "striped",
+      headStyles: { fillColor: [232, 184, 75], textColor: [20, 20, 20] },
+      styles: { fontSize: 9 },
+    });
+    y = doc.lastAutoTable.finalY + 24;
+
+    const cityEntries = topEntries(data.geo.cities).map(([key, count]) => {
+      const parts = key.split("|");
+      const country = countryNames[parts[0]] || parts[0];
+      const region = parts[1] || "";
+      const city = parts[2] || "";
+      return [city, region, country, count];
+    });
+    y = ensureSpace(doc, y, 60, margin, pageHeight);
+    doc.setFontSize(12);
+    doc.text(`Cities${capNote(cityEntries)}`, margin, y);
+    y += 6;
+    doc.autoTable({
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [["City", "Region", "Country", "Visits"]],
+      body: cityEntries.length
+        ? cityEntries.slice(0, MAX_ROWS).map(([city, region, country, count]) => [city, region, country, count.toLocaleString()])
+        : [["No city data recorded for this range.", "", "", ""]],
+      theme: "striped",
+      headStyles: { fillColor: [232, 184, 75], textColor: [20, 20, 20] },
+      styles: { fontSize: 9 },
+    });
+
+    // ----- methodology -----
+    doc.addPage();
+    y = margin;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(20);
+    doc.text("Methodology - what these numbers mean", margin, y);
+    y += 22;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(60);
+    METHODOLOGY_LINES.forEach(line => {
+      const wrapped = doc.splitTextToSize(line, contentWidth);
+      const needed = wrapped.length * 13 + 12;
+      y = ensureSpace(doc, y, needed, margin, pageHeight);
+      doc.text(wrapped, margin, y);
+      y += needed;
+    });
+
+    doc.save(`PFPI-Analytics-Report_${start}_to_${end}.pdf`);
+  }
+
   const STYLE_ID = "pfpi-analytics-shared-style";
   const CSS = `
 .pa-root{font-size:14px;}
@@ -149,6 +482,14 @@
 .pa-map-tooltip{position:fixed;pointer-events:none;background:var(--panel3,#1a2540);border:1px solid var(--border2,rgba(255,255,255,.13));border-radius:6px;padding:6px 10px;font-size:.74rem;color:var(--text,#eef2f7);z-index:9999;display:none;white-space:nowrap;}
 .pa-drilldown-hdr{font-size:.72rem;font-weight:700;color:var(--gold,#e8b84b);text-transform:uppercase;letter-spacing:.05em;padding:.9rem 1rem .3rem;}
 .pa-drilldown-hint{font-size:.72rem;color:var(--muted,#7a8ba8);padding:0 1rem .8rem;line-height:1.5;}
+.pa-report-row{display:flex;gap:1rem;flex-wrap:wrap;align-items:flex-end;padding:1rem 1rem 0;}
+.pa-report-row label{display:block;font-size:.62rem;color:var(--muted,#7a8ba8);text-transform:uppercase;letter-spacing:.08em;margin:0 0 .3rem;}
+.pa-report-row input[type=date]{background:var(--panel2,#141d2e);border:1px solid var(--border2,rgba(255,255,255,.13));color:var(--text,#eef2f7);padding:.5rem .6rem;border-radius:8px;font-size:.82rem;font-family:inherit;}
+.pa-report-btn{margin:0;background:var(--gold,#e8b84b);color:#1a1305;border:none;padding:.6rem 1.1rem;border-radius:8px;font-weight:700;cursor:pointer;font-size:.82rem;}
+.pa-report-btn:disabled{opacity:.5;cursor:default;}
+.pa-report-status{padding:.75rem 1rem 1rem;font-size:.75rem;color:var(--muted,#7a8ba8);}
+.pa-report-status.error{color:var(--red,#e05252);}
+.pa-report-status.ok{color:var(--green,#3ecf74);}
 `;
 
   function ensureStyle() {
@@ -164,7 +505,25 @@
       <div class="pa-root">
         <div class="pa-header">
           <div class="pa-meta" id="paMetaLine">Loading...</div>
-          <button class="pa-refresh-btn" type="button" data-pa="refresh">Refresh</button>
+          <div style="display:flex;gap:8px;">
+            <button class="pa-refresh-btn" type="button" data-pa="report-toggle">Sponsor Report</button>
+            <button class="pa-refresh-btn" type="button" data-pa="refresh">Refresh</button>
+          </div>
+        </div>
+        <div class="pa-panel hidden" id="paReportPanel">
+          <div class="pa-panel-hdr">Sponsor-facing PDF report</div>
+          <div class="pa-report-row">
+            <div>
+              <label for="paReportStart">Start date</label>
+              <input type="date" id="paReportStart">
+            </div>
+            <div>
+              <label for="paReportEnd">End date</label>
+              <input type="date" id="paReportEnd">
+            </div>
+            <button class="pa-report-btn" type="button" data-pa="report-generate">Generate PDF</button>
+          </div>
+          <div class="pa-report-status" id="paReportStatus">Charts, tables, and location breakdown are built fresh from the selected date range, plus the same honesty-first methodology section shown on this dashboard.</div>
         </div>
         <div class="pa-subtabs">
           <button class="pa-subtab-btn active" type="button" data-pa="subtab" data-subtab="overview">Overview</button>
@@ -305,6 +664,9 @@
     ensureStyle();
     this.root.innerHTML = skeletonHtml();
     this._wire();
+    const todayKey = todayETKey();
+    this.root.querySelector("#paReportEnd").value = todayKey;
+    this.root.querySelector("#paReportStart").value = addDaysToKey(todayKey, -29);
     this.loadOverview();
   }
 
@@ -324,6 +686,54 @@
     this.root.querySelectorAll('[data-pa="geoview"]').forEach(btn => {
       btn.addEventListener("click", () => self.setGeoView(btn.dataset.geoview));
     });
+    this.root.querySelector('[data-pa="report-toggle"]').addEventListener("click", () => {
+      self.root.querySelector("#paReportPanel").classList.toggle("hidden");
+    });
+    this.root.querySelector('[data-pa="report-generate"]').addEventListener("click", () => self.generateReport());
+  };
+
+  // ----- SPONSOR PDF REPORT (2026-08-31, per Yeti) -----
+  PFPIAnalytics.prototype.generateReport = async function () {
+    const btn = this.root.querySelector('[data-pa="report-generate"]');
+    const statusEl = this.root.querySelector("#paReportStatus");
+    const start = this.root.querySelector("#paReportStart").value;
+    const end = this.root.querySelector("#paReportEnd").value;
+    const setStatus = (text, cls) => {
+      statusEl.textContent = text;
+      statusEl.className = "pa-report-status" + (cls ? " " + cls : "");
+    };
+    if (!start || !end || start > end) {
+      setStatus("Pick a valid start date on or before the end date.", "error");
+      return;
+    }
+    btn.disabled = true;
+    try {
+      setStatus("Fetching data for " + start + " to " + end + "...");
+      const res = await fetch(`${this.opts.scoresWorkerBase}/admin/analytics-range?start=${start}&end=${end}`, { headers: this._headers() });
+      if (res.status === 401 || res.status === 403) { this._unauthorized(); return; }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not load report data.");
+
+      setStatus("Loading report libraries...");
+      await ensureReportLibs();
+
+      setStatus("Building charts...");
+      const trendImg = buildTrendChartImage(data);
+      const newRepeatImg = buildNewRepeatChartImage(data);
+      const referrerImg = buildReferrerChartImage(data);
+
+      setStatus("Resolving country names...");
+      const countryNames = await ensureCountryNames();
+
+      setStatus("Assembling PDF...");
+      buildReportPdf({ data, start, end, trendImg, newRepeatImg, referrerImg, countryNames });
+
+      setStatus(`Report downloaded for ${start} to ${end} (${data.days} day${data.days === 1 ? "" : "s"}).`, "ok");
+    } catch (e) {
+      setStatus("Error: " + e.message, "error");
+    } finally {
+      btn.disabled = false;
+    }
   };
 
   PFPIAnalytics.prototype.showSubtab = function (tab) {

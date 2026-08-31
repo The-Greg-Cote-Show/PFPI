@@ -1472,6 +1472,116 @@ async function handleAnalyticsGeo(request, env) {
 }
 
 // ============================================================
+// ANALYTICS RANGE (2026-08-31, per Yeti's PDF-report handoff) -- same
+// per-day KV keys the 14-day trend and geo endpoints above already read,
+// just summed over an admin-chosen [start, end] range instead of a fixed
+// window. Powers the sponsor-facing PDF report's date-range picker; not
+// used by the live dashboard itself. Bounded to MAX_RANGE_DAYS so a typo'd
+// huge range can't turn one admin click into an unbounded KV read loop --
+// this only ever runs when Yeti/Greg manually generates a report, never
+// per visitor, so the per-day list()+get() cost here is the same
+// "cheap because it's rare" reasoning as the geo endpoint above.
+// ============================================================
+const DATE_KEY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_RANGE_DAYS = 400;
+
+function dateKeysInRange(startKey, endKey) {
+  const [sy, sm, sd] = startKey.split("-").map(Number);
+  const [ey, em, ed] = endKey.split("-").map(Number);
+  const endMs = Date.UTC(ey, em - 1, ed);
+  const keys = [];
+  for (let cur = Date.UTC(sy, sm - 1, sd); cur <= endMs; cur += 86400000) {
+    keys.push(new Date(cur).toISOString().slice(0, 10));
+  }
+  return keys;
+}
+
+function addCounts(target, source) {
+  for (const key of Object.keys(source)) {
+    target[key] = (target[key] || 0) + source[key];
+  }
+}
+
+async function handleAnalyticsRange(request, env) {
+  const token = request.headers.get("X-Admin-Token");
+  if (!(await verifyAnalyticsViewerSession(token, env))) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const url = new URL(request.url);
+  const start = url.searchParams.get("start") || "";
+  const end = url.searchParams.get("end") || "";
+  if (!DATE_KEY_PATTERN.test(start) || !DATE_KEY_PATTERN.test(end) || start > end) {
+    return jsonResponse({ error: "Invalid range -- start/end must be YYYY-MM-DD with start on or before end." }, 400, request);
+  }
+  const dateKeys = dateKeysInRange(start, end);
+  if (dateKeys.length > MAX_RANGE_DAYS) {
+    return jsonResponse({ error: `Range too large -- max ${MAX_RANGE_DAYS} days, requested ${dateKeys.length}.` }, 400, request);
+  }
+
+  async function listAllCounts(prefix) {
+    const out = {};
+    let cursor;
+    do {
+      const page = await env.PFPI_KV.list({ prefix, cursor });
+      for (const key of page.keys) {
+        out[key.name.slice(prefix.length)] = parseInt((await env.PFPI_KV.get(key.name)) || "0", 10);
+      }
+      cursor = page.list_complete ? undefined : page.cursor;
+    } while (cursor);
+    return out;
+  }
+
+  const trend = {};
+  const referrers = {};
+  const countries = {};
+  const regions = {};
+  const cities = {};
+  let totalUnique = 0, totalNew = 0, totalRepeat = 0;
+  let briefViews = 0, adminViews = 0, botsFiltered = 0;
+
+  for (const dateKey of dateKeys) {
+    const [uniqRaw, newRaw, repeatRaw, briefRaw, adminRaw, botsRaw, dayReferrers, dayCountries, dayRegions, dayCities] = await Promise.all([
+      env.PFPI_KV.get(`analytics:daily-unique:${dateKey}`),
+      env.PFPI_KV.get(`analytics:new:${dateKey}`),
+      env.PFPI_KV.get(`analytics:repeat:${dateKey}`),
+      env.PFPI_KV.get(`analytics:pageviews:${dateKey}:brief`),
+      env.PFPI_KV.get(`analytics:pageviews:${dateKey}:admin`),
+      env.PFPI_KV.get(`analytics:bots-filtered:${dateKey}`),
+      listAllCounts(`analytics:referrer:${dateKey}:`),
+      listAllCounts(`analytics:geo-country:${dateKey}:`),
+      listAllCounts(`analytics:geo-region:${dateKey}:`),
+      listAllCounts(`analytics:geo-city:${dateKey}:`),
+    ]);
+    const unique = parseInt(uniqRaw || "0", 10);
+    const newV = parseInt(newRaw || "0", 10);
+    const repeat = parseInt(repeatRaw || "0", 10);
+    trend[dateKey] = { unique, new: newV, repeat };
+    totalUnique += unique;
+    totalNew += newV;
+    totalRepeat += repeat;
+    briefViews += parseInt(briefRaw || "0", 10);
+    adminViews += parseInt(adminRaw || "0", 10);
+    botsFiltered += parseInt(botsRaw || "0", 10);
+    addCounts(referrers, dayReferrers);
+    addCounts(countries, dayCountries);
+    addCounts(regions, dayRegions);
+    addCounts(cities, dayCities);
+  }
+
+  return jsonResponse({
+    start, end, days: dateKeys.length,
+    totals: { unique: totalUnique, new: totalNew, repeat: totalRepeat },
+    trend,
+    referrers,
+    geo: { countries, regions, cities },
+    internalPageviews: { brief: briefViews, admin: adminViews },
+    botsFiltered,
+    generatedAt: new Date().toISOString(),
+  }, 200, request);
+}
+
+// ============================================================
 // ADMIN MANUAL POLL TRIGGER (added 2026-08-28, per Yeti)
 // ============================================================
 // This Worker never had its own auth system or session store -- rather
@@ -1580,6 +1690,9 @@ export default {
     }
     if (url.pathname === "/admin/analytics-geo" && request.method === "GET") {
       return handleAnalyticsGeo(request, env);
+    }
+    if (url.pathname === "/admin/analytics-range" && request.method === "GET") {
+      return handleAnalyticsRange(request, env);
     }
     return jsonResponse({ ok: true, worker: "pfpi-scores-worker" }, 200, request);
   },

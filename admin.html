@@ -1225,6 +1225,23 @@ function buildBestWeekBlock(st, week) {
   return `Best Week: ${text}.`;
 }
 
+// Tie note block (added 2026-08-31, per Yeti after preseason Week 3 showed
+// reduced totals with no visible explanation): same wording/data source as
+// index.html's chart-tab tie note (st.tieNotes, computed server-side by
+// computeStandings()/computePreseasonSnapshot() in worker.js) -- kept in
+// sync by reading the same field rather than a separate copy. Returns null
+// (not an empty string) when there's no tie that week, so renderDigest()'s
+// .filter(Boolean) below drops it cleanly instead of leaving a blank block.
+function buildTieNoteBlock(st, week) {
+  const wKey = String(week);
+  const ties = (st.tieNotes && st.tieNotes[wKey]) || [];
+  if (ties.length === 0) return null;
+  const n = ties.length;
+  const gameWord = n === 1 ? "game" : "games";
+  const verb = n === 1 ? "is" : "are";
+  return `${n} ${gameWord} ended in a tie and ${verb} omitted from this week's scoring (${ties.join(", ")}).`;
+}
+
 function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -1280,12 +1297,13 @@ async function renderDigest() {
   const titleOverride = isPreseason ? "PFPI PRESEASON STANDINGS (Week 3, unified)" : null;
   const parts = [
     buildStandingsBlock(st, week, isFinal, titleOverride),
+    buildTieNoteBlock(st, week),
     buildPointBlock("Weeks Leading", st.weeksLeading, st.weeksLeadingCount, week),
     buildPointBlock("Weekly Titles", st.weeklyTitles, st.weeklyTitlesCount, week),
     buildTenWinBlock(st, week),
     buildUniqueHitsBlock(st, week),
     buildBestWeekBlock(st, week),
-  ];
+  ].filter(Boolean);
   currentDigestPlainText = parts.join("\n\n");
   outputEl.innerHTML = buildRichDigestHtml(currentDigestPlainText);
 }

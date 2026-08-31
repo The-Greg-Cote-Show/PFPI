@@ -423,7 +423,7 @@ async function computeStandings(throughWeek, env) {
     gamesPlayedCumulative += weekTotal;
     gamesPlayed[String(week)] = gamesPlayedCumulative;
     if (tiedGames.length > 0) {
-      tieNotes[week] = tiedGames.map(g => `${g.away} at ${g.home}`);
+      tieNotes[week] = tiedGames.map(g => `${g.away} @ ${g.home}`);
     }
 
     const correctThisWeek = {};
@@ -562,8 +562,24 @@ async function computeStandings(throughWeek, env) {
 // no knowledge of. Two independent computations, two independent output
 // destinations -- not one function with a bypassable guard clause.
 function computePreseasonSnapshot(finalResults, picksByTeam, weekLabel) {
+  const tiedGames = finalResults.filter(g => g.tie);
   const scorableGames = finalResults.filter(g => !g.tie);
   const weekTotal = scorableGames.length;
+
+  // tieNotes, added 2026-08-31 after Yeti caught preseason Week 3 showing
+  // "X / 15" with no visible explanation of why (the 16th game, KC @ SEA,
+  // was a real 9-9 tie -- correctly excluded per the existing tie-handling
+  // rule, see normalizeGame()'s own comment, but silently so, since this
+  // function never computed tieNotes the way computeStandings() already
+  // does for real weeks). Same shape as computeStandings()'s tieNotes
+  // (`{weekKey: ["AWAY @ HOME", ...]}`) so index.html's existing
+  // `realDataFor("tieNotes", week)` routing works for preseason with no
+  // frontend special-casing beyond what standings/weeklyTitles/etc. already
+  // get.
+  const tieNotes = {};
+  if (tiedGames.length > 0) {
+    tieNotes[weekLabel] = tiedGames.map(g => `${g.away} @ ${g.home}`);
+  }
 
   const correctThisTeam = {};
   TEAMS.forEach(team => {
@@ -678,7 +694,7 @@ function computePreseasonSnapshot(finalResults, picksByTeam, weekLabel) {
 
   return {
     standings, standingsPct, weeklyTitles, weeklyTitlesCount, weeksLeading, weeksLeadingCount, bestWeek, gamesPlayed,
-    uniqueHits: uniqueHitsStat, tenWinWeeks: tenWinWeeksStat,
+    uniqueHits: uniqueHitsStat, tenWinWeeks: tenWinWeeksStat, tieNotes,
   };
 }
 

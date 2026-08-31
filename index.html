@@ -37,7 +37,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .wrap{max-width:960px;margin:0 auto;padding:1.25rem 1.5rem 3rem;}
 
 .empty-state{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:2.5rem 1.25rem;text-align:center;color:var(--muted);font-size:.85rem;font-style:italic;}
-.tie-note{background:rgba(232,184,75,.1);border:1px solid rgba(232,184,75,.3);border-radius:10px;padding:.65rem 1rem;margin-bottom:1rem;font-size:.78rem;color:var(--gold2);line-height:1.5;}
+.category-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:.5rem;}
+.tie-note{background:rgba(232,184,75,.1);border:1px solid rgba(232,184,75,.3);border-radius:8px;padding:.45rem .75rem;font-size:.7rem;color:var(--gold2);line-height:1.45;text-align:right;max-width:300px;}
 .hidden{display:none !important;}
 /* chart-panel's own padding is tuned for the bar chart's floating value
    labels above each bar — pull the empty state back up so it isn't
@@ -149,7 +150,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .game-at{color:var(--muted);font-size:.68rem;font-weight:600;}
 .game-status{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;min-width:78px;text-align:right;flex-shrink:0;line-height:1.3;}
 .game-status.final{color:var(--green);}
+.game-status.tie{color:var(--gold2);}
 .game-clock{font-size:.6rem;color:var(--muted);text-transform:none;letter-spacing:0;margin-top:.1rem;}
+.game-tie-flag{font-size:.6rem;color:var(--gold2);text-transform:none;letter-spacing:0;margin-top:.15rem;font-weight:700;}
 .game-expand-icon{color:var(--muted);font-size:.7rem;flex-shrink:0;transition:transform .15s;width:14px;text-align:center;}
 .game-card.expanded .game-expand-icon{transform:rotate(180deg);}
 
@@ -258,10 +261,11 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
       <div class="category-title" id="catTitle"></div>
       <div class="category-desc" id="catDesc"></div>
     </div>
-    <div class="week-label" id="weekLabel"></div>
+    <div class="category-header-right">
+      <div class="week-label" id="weekLabel"></div>
+      <div class="tie-note hidden" id="tieNote"></div>
+    </div>
   </div>
-
-  <div class="tie-note hidden" id="tieNote"></div>
 
   <div class="chart-panel" id="chartPanel">
     <div class="chart-area" id="chartArea">
@@ -336,10 +340,12 @@ function fmtPct2(v){
 const NUM_WEEKS = 18;
 
 // Preseason Week 3 (Aug 27-29, 2026) is a real, live-updating data source
-// (Highlightly — see worker.js/BUILD_LOG.md) but not a numbered PFPI week:
-// no picks are scored against it, it's a stress-test surface for Yeti. Its
-// own button sits to the left of Wk 1 in the week row, chronologically
-// before the season, per Yeti (2026-08-25).
+// (Highlightly — see worker.js/BUILD_LOG.md) but not a numbered PFPI week.
+// Real picks ARE scored against it (added 2026-08-27, per Yeti -- see
+// computePreseasonSnapshot() in worker.js) as a full dress-rehearsal
+// stress-test, just kept structurally isolated from the real season's
+// cumulative totals. Its own button sits to the left of Wk 1 in the week
+// row, chronologically before the season, per Yeti (2026-08-25).
 const PRESEASON_WEEK_KEY = "preseason-3";
 
 // The 2026 season is now the live site (2025-simulation.html in /archive is
@@ -612,17 +618,23 @@ async function render(){
   weekLabelEl.textContent = isPreseason ? "Preseason Week 3" : isFinal ? "Final — Week 18" : "Through Week " + currentWeek;
   weekLabelEl.className = "week-label" + (isFinal?" final":"");
 
-  // Tie-game note, per Yeti (2026-08-25): visible near the chart, not
-  // buried in a tooltip, for any week with a real nullified tie. Same
-  // "runs before the games/chart split, shown regardless of category"
-  // placement as the brief below, since a tie affects every category's
-  // numbers for that week, not just one tab. Stays hidden (not a fabricated
-  // example) until a real tie actually happens in real data.
+  // Tie-game note, per Yeti (2026-08-25, reworked 2026-08-31 after preseason
+  // Week 3 surfaced two real gaps): visible near the chart, not buried in a
+  // tooltip, for any week with a real nullified tie. Routed through
+  // realDataFor() (same as standings/weeklyTitles/etc.) so preseason gets
+  // this too -- previously only computeStandings() (real weeks) ever
+  // populated tieNotes at all, so preseason's Week 3 tie (KC @ SEA, 9-9)
+  // showed reduced totals with no visible explanation. Chart tabs only
+  // (gated on currentCat !== "games") -- the Games tab gets its own
+  // per-game note instead (see renderGames()), so this doesn't duplicate
+  // the same information twice on that tab.
   const tieNoteEl = document.getElementById("tieNote");
-  const weekTies = REAL.tieNotes[currentWeek];
+  const weekTies = currentCat !== "games" ? (realDataFor("tieNotes", currentWeek) || {})[currentWeek] : null;
   if (weekTies && weekTies.length > 0) {
-    const plural = weekTies.length > 1 ? "s" : "";
-    tieNoteEl.textContent = `Week ${currentWeek}: ${weekTies.join(", ")} ended in a tie${plural} and ${weekTies.length > 1 ? "were" : "was"} nullified for scoring purposes.`;
+    const n = weekTies.length;
+    const gameWord = n === 1 ? "game" : "games";
+    const verb = n === 1 ? "is" : "are";
+    tieNoteEl.textContent = `${n} ${gameWord} ended in a tie and ${verb} omitted from this week's scoring (${weekTies.join(", ")}).`;
     tieNoteEl.classList.remove("hidden");
   } else {
     tieNoteEl.classList.add("hidden");
@@ -667,7 +679,7 @@ async function render(){
       gamesListEl.classList.remove("hidden");
       gamesEmptyEl.classList.add("hidden");
       document.getElementById("legendNote").textContent = isPreseason
-        ? "Live preseason NFL scores. No PFPI picks are made for preseason games."
+        ? "Live preseason NFL scores and real picks -- a full dress rehearsal, scored the same way a real week is."
         : "Live NFL scores and real picks for this week.";
       renderGames(realGames);
     } else {
@@ -923,6 +935,7 @@ function renderGames(realGames){
     card.className = "game-card" + (isExpanded ? " expanded" : "");
 
     const isFinal = g.status === "final";
+    const isTie = isFinal && !!g.tie;
     const homeWon = isFinal && g.winner === g.home;
     const awayWon = isFinal && g.winner === g.away;
     const statusLabel = g.status === "final" ? "Final"
@@ -941,7 +954,7 @@ function renderGames(realGames){
         <div class="game-score">${homeDisplay}</div>
         <div class="game-team${homeWon ? " winner" : ""}">${g.home}</div>
       </div>
-      <div class="game-status${isFinal ? " final" : ""}">${statusLabel}${
+      <div class="game-status${isFinal ? " final" : ""}${isTie ? " tie" : ""}">${statusLabel}${
         // Live game clock (added 2026-08-27, per Yeti): only ever populated
         // for in_progress preseason games via Highlightly's own
         // state.report field (see normalizeHighlightlyGame, worker.js) --
@@ -949,6 +962,13 @@ function renderGames(realGames){
         // ticking clock, hence "as of" rather than implying second-by-
         // second accuracy.
         g.status === "in_progress" && g.clockReport ? `<div class="game-clock">${g.clockReport}</div>` : ""
+      }${
+        // Per-game tie flag (added 2026-08-31, per Yeti): a tied final game
+        // is nullified for pick'em purposes entirely (see worker.js's
+        // normalizeGame() comment) -- this makes that visible right on the
+        // game itself, not just as a week-level aggregate note on the chart
+        // tabs (see the separate #tieNote element above).
+        isTie ? `<div class="game-tie-flag">Tie — not counted toward PFPI scoring</div>` : ""
       }</div>
       <div class="game-expand-icon">&#9660;</div>
     `;
@@ -999,10 +1019,9 @@ function renderGames(realGames){
       }
 
       TEAMS.forEach(team => {
-        // Preseason games (Highlightly) have no picks object at all -- no
-        // PFPI picks are ever made against them -- unlike regular-season
-        // games, which always carry one (possibly empty) via
-        // buildWeekPublicJSON(). Guard rather than assume it exists.
+        // Preseason games (Highlightly) DO carry a real picks object (added
+        // 2026-08-27) -- guarded rather than assumed only because older
+        // cached preseason data (from before that date) won't have it.
         const pick = (g.picks && g.picks[team]) || null;
         const correct = (pick && isFinal) ? pick === g.winner : null;
         const isUnique = locked && pick && pickCounts[pick] === 1;

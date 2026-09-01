@@ -1020,6 +1020,34 @@ async function handleGetBriefHistory(request, env) {
   }, 200, request);
 }
 
+// GET /greg/brief-weeks -- every week that has at least one published
+// version, for the Commissioner's Report "Past Weeks" archive (2026-08-31,
+// per Yeti). Same auth as brief-history. Derives the week list straight
+// from the brief-version:{week}:{timestamp} key names already written by
+// handlePublishBrief() -- no separate index to keep in sync.
+async function handleGetBriefWeeks(request, env) {
+  const sessionToken = request.headers.get("X-Session-Token");
+  const isGreg = await verifySessionToken("greg", sessionToken, env);
+  const isAdmin = !isGreg && (await verifySessionToken("admin", sessionToken, env));
+  if (!isGreg && !isAdmin) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const weeks = new Set();
+  let cursor;
+  do {
+    const page = await env.PFPI_KV.list({ prefix: "brief-version:", cursor });
+    for (const key of page.keys) {
+      const rest = key.name.slice("brief-version:".length);
+      const week = rest.slice(0, rest.lastIndexOf(":"));
+      if (week) weeks.add(week);
+    }
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+
+  return jsonResponse({ weeks: [...weeks] }, 200, request);
+}
+
 async function handleCurrentWeek(request, env) {
   const currentWeek = await getCurrentWeek(env);
   return jsonResponse({ currentWeek }, 200, request);
@@ -1121,6 +1149,9 @@ export default {
     }
     if (url.pathname === "/greg/brief-history" && request.method === "GET") {
       return handleGetBriefHistory(request, env);
+    }
+    if (url.pathname === "/greg/brief-weeks" && request.method === "GET") {
+      return handleGetBriefWeeks(request, env);
     }
     if (url.pathname === "/greg/send-reminder" && request.method === "POST") {
       return handleSendReminderEmail(request, env);

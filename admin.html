@@ -113,6 +113,10 @@ button:hover{opacity:.9;}
 #commissionerTabs .digest-output:focus{outline:none;border-color:var(--blue);}
 #commissionerTabs .digest-actions{display:flex;gap:8px;}
 #commissionerTabs .digest-btn{width:auto;flex:1;font-size:.8rem;padding:.6rem 1rem;}
+#commissionerTabs .past-weeks-list{display:flex;flex-direction:column;gap:6px;}
+#commissionerTabs .past-week-row{display:flex;align-items:center;justify-content:space-between;background:var(--panel2);border:1px solid var(--border2);border-radius:8px;padding:.6rem .9rem;font-size:.8rem;}
+#commissionerTabs .past-week-row button{width:auto;font-size:.72rem;padding:.4rem .8rem;margin-top:0;}
+#commissionerTabs .past-week-meta{font-size:.65rem;color:var(--muted);margin-top:2px;}
 </style>
 </head>
 <body>
@@ -319,8 +323,15 @@ button:hover{opacity:.9;}
       <div class="digest-actions">
         <button class="btn digest-btn" id="digestCopyBtn" type="button">Copy to clipboard</button>
         <button class="btn digest-btn" id="digestInsertBtn" type="button">Insert into brief text</button>
+        <button class="btn digest-btn hidden" id="digestRecomputeBtn" type="button" style="background:var(--panel3);color:var(--text);">Recompute</button>
       </div>
       <div class="status" id="digestStatus"></div>
+    </div>
+
+    <div class="card hidden" id="digestPastWeeksTab">
+      <label style="display:block;margin-bottom:.6rem;">Past Weeks</label>
+      <div id="digestPastWeeksList" class="past-weeks-list"></div>
+      <div class="status" id="digestPastWeeksEmpty">No past digests yet -- one appears here automatically once a week's games all finish.</div>
     </div>
 
     <div class="card hidden" id="publishTab">
@@ -356,6 +367,12 @@ button:hover{opacity:.9;}
         <button class="btn hidden" id="briefCancelEditBtn" type="button" style="background:var(--panel3);color:var(--text);margin-top:.6rem;">Cancel</button>
       </div>
       <div class="status" id="publishStatus"></div>
+    </div>
+
+    <div class="card hidden" id="reportPastWeeksTab">
+      <label style="display:block;margin-bottom:.6rem;">Past Weeks</label>
+      <div id="reportPastWeeksList" class="past-weeks-list"></div>
+      <div class="status" id="reportPastWeeksEmpty">No past reports yet -- one appears here once you publish a week's Commissioner's Report.</div>
     </div>
   </div>
 
@@ -633,10 +650,16 @@ function updateSubTabVisibility() {
   const showSub = activeMainSection === "commissioner";
   document.getElementById("missingPicksTab").classList.toggle("hidden", !(showSub && activeSubTab === "missing"));
   document.getElementById("digestTab").classList.toggle("hidden", !(showSub && activeSubTab === "digest"));
+  document.getElementById("digestPastWeeksTab").classList.toggle("hidden", !(showSub && activeSubTab === "digest"));
   document.getElementById("publishTab").classList.toggle("hidden", !(showSub && activeSubTab === "publish"));
+  document.getElementById("reportPastWeeksTab").classList.toggle("hidden", !(showSub && activeSubTab === "publish"));
   if (showSub && activeSubTab === "digest" && !digestInitialized) {
     digestInitialized = true;
-    populateDigestWeeks();
+    populateDigestWeeks(); // ends by calling renderDigest(), which itself refreshes the Past Weeks list
+  }
+  if (showSub && activeSubTab === "publish" && !reportPastWeeksInitialized) {
+    reportPastWeeksInitialized = true;
+    renderReportPastWeeks();
   }
 }
 
@@ -1050,48 +1073,6 @@ document.getElementById("mpWeekSelect").addEventListener("change", renderMissing
 // computed data the public charts use (worker.js's computeStandings).
 // ============================================================
 
-const SEASON_YEAR = 2026;
-let standingsData = null; // raw data/standings.json, cached after first fetch
-
-async function fetchStandingsData() {
-  if (standingsData !== null) return standingsData;
-  try {
-    const res = await fetch(`data/standings.json?t=${Date.now()}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    standingsData = (data && data.standings) ? data : null;
-    return standingsData;
-  } catch (e) {
-    return null;
-  }
-}
-
-// Separate cache, separate file, separate fetch from fetchStandingsData()
-// above -- deliberately never merged with real-season standingsData, same
-// isolation-by-construction principle as computePreseasonSnapshot() in
-// worker.js.
-let preseasonStatsData = null;
-
-async function fetchPreseasonStats() {
-  if (preseasonStatsData !== null) return preseasonStatsData;
-  try {
-    const res = await fetch(`data/week-${PRESEASON_MP_KEY}.json?t=${Date.now()}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    preseasonStatsData = (data && data.stats) ? data.stats : null;
-    return preseasonStatsData;
-  } catch (e) {
-    return null;
-  }
-}
-
-// Same formatting rule as index.html's fmtPct (duplicated intentionally --
-// it's a formatting helper, not scoring logic, and this is a separate page).
-function fmtPct(v) {
-  const s = v.toFixed(3);
-  return s === "1.000" ? "1.000" : s.replace(/^0/, "");
-}
-
 // A week's games are never all decided until its own last game (normally
 // Monday Night Football) goes final -- the digest is meant for narrative
 // use once a week is fully wrapped, unlike the public PFPI stats charts,
@@ -1148,116 +1129,12 @@ async function populateDigestWeeks() {
   await renderDigest();
 }
 
-// Standings block: sorted by wins descending, GB column, ties show "--".
-function buildStandingsBlock(st, week, isFinal, titleOverride) {
-  const wKey = String(week);
-  const gp = (st.gamesPlayed && st.gamesPlayed[wKey]) || 0;
-  const rows = REAL_TEAMS.map(t => {
-    const wins = st.standings[t][wKey];
-    return { team: t, wins, losses: gp - wins, pct: st.standingsPct[t][wKey] };
-  });
-  rows.sort((a, b) => b.wins - a.wins);
-  const leaderWins = rows.length ? rows[0].wins : 0;
-
-  const lines = [];
-  lines.push(titleOverride || (isFinal ? `PFPI OFFICIAL FINAL ${SEASON_YEAR} STANDINGS` : `PFPI WEEK ${week} STANDINGS`));
-  lines.push(`Team`.padEnd(32) + (isFinal ? "Final Season" : "Season").padEnd(13) + "GB");
-  rows.forEach(r => {
-    const name = TEAM_SHORT[r.team].padEnd(32);
-    const record = `${r.wins}-${r.losses}`;
-    const pct = fmtPct(r.pct);
-    const gb = r.wins === leaderWins ? "--" : String(leaderWins - r.wins);
-    lines.push(`${name}${record}   ${pct}${gb.padStart(6)}`);
-  });
-  return lines.join("\n");
-}
-
-// Weekly Titles / Weeks Leading block: all 8 teams always listed, ties
-// joined with "&" and drop the "(N)" count.
-function buildPointBlock(label, dataObj, countObj, week) {
-  const wKey = String(week);
-  const entries = REAL_TEAMS.map(t => ({ team: t, value: dataObj[t][wKey], count: countObj[t][wKey] }));
-
-  entries.sort((a, b) => b.value - a.value);
-  const groups = [];
-  for (const e of entries) {
-    const last = groups[groups.length - 1];
-    if (last && last[0].value === e.value) last.push(e);
-    else groups.push([e]);
-  }
-
-  const text = groups.map(group => {
-    const tied = group.length > 1;
-    return group.map(e => {
-      const valStr = e.value.toFixed(2);
-      return tied ? `${e.team} ${valStr}` : `${e.team} ${valStr} (${e.count})`;
-    }).join(" & ");
-  }).join(", ");
-
-  return `${label}: ${text}.`;
-}
-
-// 10-Win Weeks block -- same tie-grouping style as buildPointBlock, no
-// secondary "(N)" count since the value itself already is the count.
-function buildTenWinBlock(st, week) {
-  const wKey = String(week);
-  const entries = REAL_TEAMS.map(t => ({ team: t, value: (st.tenWinWeeks[t] && st.tenWinWeeks[t][wKey]) || 0 }));
-  entries.sort((a, b) => b.value - a.value);
-  const groups = [];
-  for (const e of entries) {
-    const last = groups[groups.length - 1];
-    if (last && last[0].value === e.value) last.push(e);
-    else groups.push([e]);
-  }
-  const text = groups.map(group => group.map(e => `${e.team} ${e.value}`).join(" & ")).join(", ");
-  return `10-Win Weeks: ${text}.`;
-}
-
-// Unique Hits block -- "Team H-O" (hits-opportunities), all 8 teams always
-// listed, sorted by hits then opportunities descending.
-function buildUniqueHitsBlock(st, week) {
-  const wKey = String(week);
-  const entries = REAL_TEAMS.map(t => (st.uniqueHits[t] && st.uniqueHits[t][wKey]) || { hits: 0, opps: 0 });
-  const named = REAL_TEAMS.map((t, i) => ({ team: t, ...entries[i] }));
-  named.sort((a, b) => b.hits - a.hits || b.opps - a.opps);
-  const text = named.map(e => `${e.team} ${e.hits}-${e.opps}`).join(", ");
-  return `Unique Hits: ${text}.`;
-}
-
-// Best Week block: co-holders of an identical season-best pct share the
-// line, joined with "&".
-function buildBestWeekBlock(st, week) {
-  const wKey = String(week);
-  const entries = REAL_TEAMS
-    .map(t => ({ team: t, ...st.bestWeek[t][wKey] }))
-    .filter(e => e.total > 0);
-
-  if (entries.length === 0) return "Best Week: No weeks decided yet.";
-
-  const maxPct = Math.max(...entries.map(e => e.pct));
-  const holders = entries.filter(e => e.pct === maxPct);
-  const text = holders
-    .map(e => `${e.team} ${fmtPct(e.pct)} (${e.correct}-${e.total - e.correct}/${typeof e.week === "number" ? "W" + e.week : e.week})`)
-    .join(" & ");
-  return `Best Week: ${text}.`;
-}
-
-// Tie note block (added 2026-08-31, per Yeti after preseason Week 3 showed
-// reduced totals with no visible explanation): same wording/data source as
-// index.html's chart-tab tie note (st.tieNotes, computed server-side by
-// computeStandings()/computePreseasonSnapshot() in worker.js) -- kept in
-// sync by reading the same field rather than a separate copy. Returns null
-// (not an empty string) when there's no tie that week, so renderDigest()'s
-// .filter(Boolean) below drops it cleanly instead of leaving a blank block.
-function buildTieNoteBlock(st, week) {
-  const wKey = String(week);
-  const ties = (st.tieNotes && st.tieNotes[wKey]) || [];
-  if (ties.length === 0) return null;
-  const n = ties.length;
-  const gameWord = n === 1 ? "game" : "games";
-  const verb = n === 1 ? "is" : "are";
-  return `${n} ${gameWord} ended in a tie and ${verb} omitted from this week's scoring (${ties.join(", ")}).`;
-}
+// The digest-text builder functions that used to live here (standings/
+// points/ten-win/unique-hits/best-week/tie-note blocks) moved server-side
+// (2026-08-31, per Yeti) -- worker.js now generates the digest the moment
+// a week's last game goes final, so this page just displays what it
+// produced (see renderDigest() below) instead of recomputing it. See
+// worker.js's own copies of these same functions for the actual logic.
 
 function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -1286,43 +1163,123 @@ function buildRichDigestHtml(plainText, opts) {
 }
 
 let currentDigestPlainText = "";
+let currentDigestWeek = null;
+let reportPastWeeksInitialized = false;
 
+// Reads whatever worker.js already generated for this week (GET
+// /admin/digest) instead of recomputing anything client-side (2026-08-31,
+// per Yeti). A week only ever becomes selectable in digestWeekSelect once
+// getEffectiveCurrentWeek() says it's complete, so under normal use the
+// digest should already exist by the time this runs -- the "not generated
+// yet" status covers the brief race right at that boundary, not an
+// expected steady state.
 async function renderDigest() {
   const outputEl = document.getElementById("digestOutput");
   const statusEl = document.getElementById("digestStatus");
-  const rawWeek = document.getElementById("digestWeekSelect").value;
-  const isPreseason = rawWeek === PRESEASON_MP_KEY;
-  const week = isPreseason ? PRESEASON_MP_KEY : parseInt(rawWeek, 10);
+  const recomputeBtn = document.getElementById("digestRecomputeBtn");
+  const week = document.getElementById("digestWeekSelect").value;
+  currentDigestWeek = week;
 
   statusEl.textContent = "Loading...";
   statusEl.className = "status show";
   outputEl.innerHTML = "";
   currentDigestPlainText = "";
+  recomputeBtn.classList.add("hidden");
+  if (!week) return;
 
-  const st = isPreseason ? await fetchPreseasonStats() : await fetchStandingsData();
-  if (!st || !st.weeklyTitles || !st.weeksLeading || !st.bestWeek || !st.gamesPlayed || !st.tenWinWeeks || !st.uniqueHits) {
-    statusEl.textContent = isPreseason
-      ? "Preseason stats aren't available yet — check back once games are underway."
-      : "Digest data isn't available yet — check back in a few minutes.";
+  try {
+    const res = await fetch(`${SCORES_WORKER_BASE}/admin/digest?week=${week}`, { headers: { "X-Admin-Token": sessionToken } });
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not load the digest.");
+    if (!data.digest) {
+      statusEl.textContent = "This week's digest hasn't been generated yet -- it's created automatically once the week's last game goes final. Check back shortly.";
+      statusEl.className = "status show";
+      return;
+    }
+    currentDigestPlainText = data.digest.text;
+    outputEl.innerHTML = buildRichDigestHtml(currentDigestPlainText);
+    const recomputedNote = data.digest.source === "recompute" ? " (recomputed)" : "";
+    statusEl.textContent = `Generated ${fmtBriefTimestamp(data.digest.generatedAt)}${recomputedNote}.`;
     statusEl.className = "status show";
-    return;
+    recomputeBtn.classList.remove("hidden");
+  } catch (e) {
+    statusEl.textContent = "Error: " + e.message;
+    statusEl.className = "status show";
   }
-  statusEl.textContent = "";
-  statusEl.className = "status";
+  renderDigestPastWeeks();
+}
 
-  const isFinal = !isPreseason && week === NUM_WEEKS;
-  const titleOverride = isPreseason ? "PFPI PRESEASON STANDINGS (Week 3, unified)" : null;
-  const parts = [
-    buildStandingsBlock(st, week, isFinal, titleOverride),
-    buildTieNoteBlock(st, week),
-    buildPointBlock("Weeks Leading", st.weeksLeading, st.weeksLeadingCount, week),
-    buildPointBlock("Weekly Titles", st.weeklyTitles, st.weeklyTitlesCount, week),
-    buildTenWinBlock(st, week),
-    buildUniqueHitsBlock(st, week),
-    buildBestWeekBlock(st, week),
-  ].filter(Boolean);
-  currentDigestPlainText = parts.join("\n\n");
-  outputEl.innerHTML = buildRichDigestHtml(currentDigestPlainText);
+document.getElementById("digestRecomputeBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("digestRecomputeBtn");
+  const statusEl = document.getElementById("digestStatus");
+  if (!currentDigestWeek) return;
+  btn.disabled = true;
+  statusEl.textContent = "Recomputing...";
+  statusEl.className = "status show";
+  try {
+    const res = await fetch(`${SCORES_WORKER_BASE}/admin/digest-recompute`, {
+      method: "POST",
+      headers: { "X-Admin-Token": sessionToken, "Content-Type": "application/json" },
+      body: JSON.stringify({ week: currentDigestWeek }),
+    });
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not recompute.");
+    await renderDigest();
+  } catch (e) {
+    statusEl.textContent = "Error: " + e.message;
+    statusEl.className = "status show";
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+// "Past Weeks" archive (2026-08-31, per Yeti): every week that has a
+// generated digest, excluding whichever week is currently shown above --
+// as the admin-portal "current week" naturally advances (once the NEXT
+// week also completes), the previously-current week starts appearing here
+// automatically, no separate "move to archive" step needed.
+async function renderDigestPastWeeks() {
+  const listEl = document.getElementById("digestPastWeeksList");
+  const emptyEl = document.getElementById("digestPastWeeksEmpty");
+  listEl.innerHTML = "";
+  try {
+    const res = await fetch(`${SCORES_WORKER_BASE}/admin/digest-weeks`, { headers: { "X-Admin-Token": sessionToken } });
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    const data = await res.json();
+    const weeks = (data.weeks || [])
+      .filter(w => w !== currentDigestWeek)
+      .sort((a, b) => {
+        if (a === PRESEASON_MP_KEY) return -1;
+        if (b === PRESEASON_MP_KEY) return 1;
+        return parseInt(b, 10) - parseInt(a, 10);
+      });
+    if (weeks.length === 0) {
+      emptyEl.classList.remove("hidden");
+      return;
+    }
+    emptyEl.classList.add("hidden");
+    weeks.forEach(w => {
+      const label = w === PRESEASON_MP_KEY ? "Preseason" : "Week " + w;
+      const row = document.createElement("div");
+      row.className = "past-week-row";
+      row.innerHTML = `<span>${label}</span>`;
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.type = "button";
+      btn.textContent = "View";
+      btn.addEventListener("click", () => {
+        document.getElementById("digestWeekSelect").value = w;
+        renderDigest();
+      });
+      row.appendChild(btn);
+      listEl.appendChild(row);
+    });
+  } catch (e) {
+    emptyEl.textContent = "Could not load past digests.";
+    emptyEl.classList.remove("hidden");
+  }
 }
 
 document.getElementById("digestWeekSelect").addEventListener("change", renderDigest);
@@ -1496,11 +1453,13 @@ async function renderPublishTab() {
     if (!res.ok) throw new Error(data.error || "Could not load this week's brief.");
   } catch (e) {
     showBriefEditView("");
+    renderReportPastWeeks();
     return;
   }
 
   if (!data.current) {
     showBriefEditView("");
+    renderReportPastWeeks();
     return;
   }
 
@@ -1529,9 +1488,73 @@ async function renderPublishTab() {
   } else {
     versionsField.classList.add("hidden");
   }
+  renderReportPastWeeks();
 }
 
 document.getElementById("weekSelect").addEventListener("change", renderPublishTab);
+
+// "Past Weeks" archive (2026-08-31, per Yeti): every week that has a
+// published brief, excluding whichever week is currently shown above. As
+// the admin-portal "current week" naturally advances (once the next
+// week's games are complete), the previously-current, already-published
+// week starts appearing here automatically -- no separate "move to
+// archive" action needed. Reuses the exact same edit/publish/version-
+// history flow already built for the main card: "Edit" just points
+// weekSelect at that week and re-renders it.
+async function renderReportPastWeeks() {
+  const listEl = document.getElementById("reportPastWeeksList");
+  const emptyEl = document.getElementById("reportPastWeeksEmpty");
+  const currentWeekValue = document.getElementById("weekSelect").value;
+  listEl.innerHTML = "";
+  try {
+    const res = await fetch(`${WORKER_BASE}/greg/brief-weeks`, { headers: { "X-Session-Token": sessionToken } });
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    const data = await res.json();
+    const weeks = (data.weeks || [])
+      .filter(w => w !== currentWeekValue)
+      .sort((a, b) => {
+        if (a === PRESEASON_MP_KEY) return -1;
+        if (b === PRESEASON_MP_KEY) return 1;
+        return parseInt(b, 10) - parseInt(a, 10);
+      });
+    if (weeks.length === 0) {
+      emptyEl.classList.remove("hidden");
+      return;
+    }
+    emptyEl.classList.add("hidden");
+    weeks.forEach(w => {
+      const label = w === PRESEASON_MP_KEY ? "Preseason" : "Week " + w;
+      const row = document.createElement("div");
+      row.className = "past-week-row";
+      row.innerHTML = `<span>${label}</span>`;
+      const btn = document.createElement("button");
+      btn.className = "btn";
+      btn.type = "button";
+      btn.textContent = "Edit";
+      btn.addEventListener("click", () => {
+        const sel = document.getElementById("weekSelect");
+        if ([...sel.options].some(o => o.value === w)) {
+          sel.value = w;
+        } else {
+          // Not one of the normally-selectable weeks (e.g. an older
+          // already-published week now below getEffectiveCurrentWeek()'s
+          // floor) -- add it so it can actually be selected/edited.
+          const opt = document.createElement("option");
+          opt.value = w;
+          opt.textContent = label;
+          sel.appendChild(opt);
+          sel.value = w;
+        }
+        renderPublishTab();
+      });
+      row.appendChild(btn);
+      listEl.appendChild(row);
+    });
+  } catch (e) {
+    emptyEl.textContent = "Could not load past reports.";
+    emptyEl.classList.remove("hidden");
+  }
+}
 
 document.getElementById("briefEditBtn").addEventListener("click", () => {
   showBriefEditView(document.getElementById("briefSavedText").textContent);

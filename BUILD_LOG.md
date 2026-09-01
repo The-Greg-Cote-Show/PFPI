@@ -4426,3 +4426,106 @@ in his own regular browser whenever convenient (no urgency, no action
 item), consistent with the "verify in a real browser too" precaution
 carried over from the original incident, but every automated check here
 came back clean.
+
+## 2026-08-31 (continued) -- tie visibility + Weekly Digest/Commissioner's Report rework
+
+Yeti spot-checked the site post-launch and caught two real things during
+preseason Week 3 testing: (1) everyone's totals showed `X/15` instead of
+`X/16` with no visible explanation, and (2) the Weekly Digest tab and the
+Commissioner's Report tab could default to different weeks, and clicking
+"Insert into brief text" never synced them -- meaning a digest generated
+for one week could get silently published under a different week if the
+two dropdowns disagreed. He asked for both to be fixed properly, not just
+patched around, and for the digest to stop being a manually-triggered
+client-side tool entirely -- it should generate itself once a week
+finishes and email him, matching how "read-only history" ought to work.
+
+**Root cause of (1), not a bug:** game `hl-566557` (KC @ SEA) ended 9-9, a
+real tie. Per the existing rule (`normalizeGame()`, 2026-08-25 per Yeti), a
+tie is excluded from every team's tally AND the week's denominator --
+correct math, just invisible. `computePreseasonSnapshot()` never computed
+`tieNotes` the way `computeStandings()` already did for real weeks, so
+preseason had no way to show it.
+
+**Everything shipped, in order (see individual commits for full detail):**
+
+1. **Tie visibility everywhere.** `computePreseasonSnapshot()` now computes
+   `tieNotes` (worker.js), matching computeStandings()'s existing real-
+   season version -- both now format entries as `AWAY @ HOME`. index.html:
+   Games tab flags a tied final game directly next to its score ("Tie --
+   not counted toward PFPI scoring"); the existing chart-tab tie note
+   (previously real-season-only) now covers preseason too, repositioned
+   under the week label, reworded to Yeti's exact spec ("N games ended in
+   a tie and are omitted from this week's scoring (AWAY @ HOME)."). Same
+   note added to the Weekly Digest text. Also fixed three stale comments/
+   copy that pre-dated preseason picks being scored and claimed the
+   opposite.
+
+2. **The actual mismatch bug, fixed at its root.** Added
+   `getEffectiveCurrentWeek()` (latest week whose games are ALL final,
+   generalized to "every game in the week" rather than Monday-Night-
+   specific, so it holds up in the playoffs too) and made the Weekly
+   Digest AND Commissioner's Report tabs share it for both their default
+   value and max-selectable week, in **both** admin.html and brief.html
+   (brief.html had the identical bug independently -- same
+   `TESTING_ALLOW_ALL_WEEKS` temp flag, now retired in both, per the
+   project's own long-standing note that it needed reverting before real
+   use). "Insert into brief text" now force-syncs the Report's week
+   selector to the digest's week at the instant of insertion -- the actual
+   danger point -- regardless of whatever each dropdown's own prior state
+   was, and shows a status line confirming when it does.
+
+3. **Digest generation moved server-side.** Per Yeti: frozen snapshot by
+   default (what got emailed stays what's archived), with a manual
+   Recompute for the real case of a later stat correction, and versioned
+   (not overwritten) so recompute never destroys the original. worker.js
+   now has its own copies of the digest-text-building functions (ported
+   from admin.html/brief.html's client-side originals) and generates +
+   persists (`digest:{week}` + `digest-version:{week}:{timestamp}` KV) +
+   emails Greg (routed to Yeti per existing convention) the moment a
+   week's games are ALL final -- checked every cron tick for `currentWeek`
+   and `currentWeek-1`, and for preseason against its full 16-game
+   schedule. New endpoints: `GET /admin/digest?week=N`,
+   `GET /admin/digest-weeks`, `POST /admin/digest-recompute`. The Digest
+   tab in both admin.html and brief.html no longer computes anything
+   client-side -- it just displays what the server already generated, with
+   the dead client-side builder functions removed from both pages.
+
+4. **"Past Weeks" archives**, per Yeti's explicit call to cover both
+   portals: a card under both the Weekly Digest and Commissioner's Report
+   tabs, in **both** admin.html and brief.html, listing every week with a
+   generated digest / published brief, excluding whichever week is
+   currently shown above. As the admin-portal "current week" naturally
+   advances, a previously-current, already-published week starts
+   appearing here automatically -- no separate "move to archive" step
+   needed. Report rows' "Edit" buttons reuse the exact existing edit/
+   publish/version-history flow already built, just pointed at a
+   different week. New `GET /greg/brief-weeks` endpoint (picks-worker.js)
+   derives the week list straight from existing `brief-version:{week}:
+   {timestamp}` KV keys, no separate index.
+
+**Real bug caught and fixed mid-build, during live verification (not just
+code review):** `populateWeeks()` set the Commissioner's Report week
+dropdown's value on login but never actually called `renderPublishTab()`
+-- confirmed live that a real published Preseason brief existed
+(`/greg/brief-history?week=preseason-3` returned real saved text) but the
+main card showed a blank "Write this week's PFPI brief..." editor until
+the dropdown was manually touched. `populateDigestWeeks()` already did
+this correctly. Fixed in both files, redeployed, and reconfirmed live:
+the main card now shows the real saved Preseason brief immediately on
+first opening the tab, and the Past Weeks archive correctly lists Week 1
+/ Week 2 (excluding Preseason, since that's the one already shown above),
+with "Edit" correctly jumping the main card to that week's saved content.
+
+**Verified live (admin.html, Yeti's own session):** Games-tab tie flag on
+the real SEA@KC game; chart-tab tie note with correct positioning/wording;
+Weekly Digest showing the real persisted text including the tie line, its
+"Generated ... (recomputed)" status line, and a working Recompute button
+(confirmed via a real recompute during testing); the Digest Past Weeks
+card; the Commissioner's Report main card auto-loading on first open; its
+Past Weeks archive listing real past weeks; and a real "Edit" click
+correctly loading Week 2's actual saved content into the main card.
+**brief.html carries the identical implementation** (same functions, same
+endpoints, verified for syntax correctness and structural parity with
+admin.html) but was not independently live-tested -- this session doesn't
+have Greg's own login, only Yeti's admin session.

@@ -1411,6 +1411,7 @@ async function populateWeeks() {
     sel.appendChild(opt);
   }
   sel.value = String(effectiveWeek);
+  await renderPublishTab();
 }
 
 function updateCharCount() {

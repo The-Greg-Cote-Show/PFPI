@@ -4599,3 +4599,32 @@ auth change -- stopping there rather than working around it, per the
 credential hard-rule. Yeti: `gh auth switch --hostname github.com
 --user The-Greg-Cote-Show` run by you directly may be all that's
 needed, then have me retry the push.)
+
+**Safety-net wakeup scheduled:** a one-shot resume trigger for 5:00 AM
+EDT (Sept 3), conditional -- it reads this log on wake, no-ops if both
+queued tasks are already done, otherwise resumes only what's genuinely
+left, under the same hard rules. Confirmed this machine's local clock is
+already America/New_York, so no timezone conversion was needed. Caveat
+for Yeti: this scheduling mechanism is session-only (lives in this
+Claude Code session's memory, not on disk) -- it fires only if this
+session is still alive but idle when usage runs out, not if the CLI
+process itself is closed/killed overnight. If you need a guarantee
+independent of this session staying open, a real OS-level scheduled task
+would be the fallback.
+
+### Task 2: Real email-trigger inventory audit — reported to Yeti in chat
+
+Full grep-verified inventory of every place this codebase actually calls
+`sendPfpiEmail()` / the raw Resend API, across worker.js, picks-worker.js,
+and shared.js, delivered directly in the session (not duplicated here in
+full -- see the chat transcript for the complete table). Headline finding
+worth flagging here since it's easy to miss: `FAMILY_MEMBERS` in shared.js
+was emptied to `[]` on 2026-08-29 (see that date's entry above, "Remove
+fake teams"), and the weekly picks-open email loop in picks-worker.js's
+`handleWeeklyTrigger()` still iterates `for (const member of
+FAMILY_MEMBERS)` — so that scheduled weekly email has been silently
+sending to zero recipients since 2026-08-29, even though its cron is
+still firing hourly and the code path is otherwise fully functional. Not
+a bug I fixed (out of scope, this was an audit task, not a fix task) —
+flagging so Yeti can decide when the real per-team recipient list is
+wired up.

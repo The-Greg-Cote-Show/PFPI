@@ -4529,3 +4529,48 @@ correctly loading Week 2's actual saved content into the main card.
 endpoints, verified for syntax correctness and structural parity with
 admin.html) but was not independently live-tested -- this session doesn't
 have Greg's own login, only Yeti's admin session.
+
+## Overnight session started (2026-09-02) — running unattended
+
+Yeti kicked this off and won't be watching. Hard rules in effect for this
+whole session: stop and log here (no workaround) on anything that could
+delete/overwrite the repo/Worker/KV, any real-money step, any credential
+request beyond existing Cloudflare Secrets, or anything genuinely
+ambiguous. Two tasks queued: (1) fix the tie-note text breaking score-
+block centering on the Games tab, (2) full email-trigger inventory audit
+(code search, not memory/BUILD_LOG recall). A conditional cron trigger
+was also set up so that if usage runs out mid-session, the Worker's
+scheduled handler resumes work at 5:00 AM EDT instead of silently
+stopping -- see its own note below once added.
+
+### Task 1: Games-tab tie-note alignment fix — DONE
+
+**Root cause:** `.game-status` (the right-side status column in each
+`.game-row`) had `min-width:78px` and no upper bound. `.game-matchup`
+(the centered `AWAY score score HOME` block) uses `flex:1`, so it fills
+whatever space is left after `.game-status`. A plain "FINAL" label fits
+under 78px, but the tie-flag text ("Tie — not counted toward PFPI
+scoring") is wider than that and, with nothing capping the column, grew
+the flex item past 78px -- shrinking `.game-matchup`'s share of the row
+and shifting its centered content left, only on tied rows.
+
+**Fix (index.html, `.game-status` rule, ~line 151):** changed
+`min-width:78px` to a fixed `width:92px` (dropped `min-width` entirely).
+With `flex-shrink:0` already in place and no `flex-grow`, the column can
+now neither grow nor shrink below 92px regardless of content length --
+the tie-flag text wraps inside that fixed width instead of pushing the
+column wider. Same fix incidentally also protects the plain-FINAL vs.
+upcoming-kickoff-timestamp rows (kickoff datetime strings can be longer
+than "FINAL" too), not just the tie case, since the column width is now
+content-independent across every status state.
+
+**Verified:** ran a local static server (`python -m http.server`) over
+the working tree so `data/*.json` fetches worked without needing a
+deploy, opened Games tab → Preseason Week 3 (the real SEA 9-9 KC tie),
+and screenshotted the row list. The SEA-KC score block lines up in the
+exact same horizontal column as every plain-FINAL row above and below it
+(CIN/PHI, NO/DAL, and the full PIT...GB block checked together in one
+screenshot). No change to tie-note text, wording, or the underlying tie-
+detection/scoring logic -- CSS-only, as scoped. Not yet deployed to
+GitHub Pages at time of writing this entry -- see commit/push note
+below.

@@ -4628,3 +4628,57 @@ still firing hourly and the code path is otherwise fully functional. Not
 a bug I fixed (out of scope, this was an audit task, not a fix task) —
 flagging so Yeti can decide when the real per-team recipient list is
 wired up.
+
+## Email-trigger content audit + editable slide deck (2026-09-02)
+
+A separate request in a different session on the same date/machine
+(distinct from the audit logged just above, and from the tie-note fix
+above that): Yeti asked for the complete, verbatim content of every
+email this codebase sends — pulled from the actual code, not
+summarized from memory or from any prior audit — formatted as one
+block per email (From, To/Cc, the literal subject template string, the
+literal body text, and the exact trigger condition), then turned into
+an editable Google Slides deck so it's easier to review than a wall of
+chat text.
+
+**Verbatim audit:** grepped every `sendPfpiEmail()` call site across
+`picks-worker.js` and `worker.js`, plus `picks-worker.js`'s own
+separate `sendPicksEmail()` (which posts to Resend directly and does
+not go through the shared helper), read each function in full, and
+delivered the exact literal `subject`/`text` template strings straight
+from the source — not paraphrased — directly in chat. 11 distinct
+emails total, matching the count from an earlier same-night audit.
+Confirmed `FAMILY_MEMBERS` is still `[]`, so the weekly picks-open
+email (`sendPicksEmail`, fired from `handleWeeklyTrigger`) currently
+reaches zero recipients — same finding as logged elsewhere for this
+date, flagged again here since it surfaced independently.
+
+**Slide deck:** built a 13-slide deck locally with `python-pptx`
+(title slide, one slide per email formatted as a mocked-up inbox
+message — From/To/Cc/Subject/Body — each paired with a "When this
+fires" panel that translates the trigger condition into plain English
+instead of code, plus a closing "What You Need to Know" slide covering
+the empty family roster, the unverified sending domain, Greg's still-
+missing real email address, and suggested additional emails). Saved to
+`C:\Users\ggent\Downloads\PFPI Email Deck.pptx`.
+
+**Not auto-uploaded to Google Slides:** the Google Drive tool
+available in this session only accepts file content inline (base64) on
+the create-file call, not a file path — getting a ~56KB `.pptx` through
+that path meant relaying roughly 75,000 characters of base64 through
+the conversation by hand, which was slow and carried a real risk of
+silent corruption on a payload that size. Yeti opted to upload it
+manually instead (drag into drive.google.com, then "Open with Google
+Slides" to get a fully editable copy) rather than spend the tokens/risk
+on the automated path — the `.pptx` file itself is intact on disk
+either way.
+
+**Cron trigger:** a conditional resume-at-4:00-AM-EDT wakeup was
+created at the start of this task (in case usage ran out mid-audit)
+and cancelled once the audit and deck both finished inside the same
+session, well before 4 AM — nothing was left pending for it to
+resume.
+
+Purely a documentation/reporting deliverable — nothing here touched
+`index.html`, `worker.js`, `picks-worker.js`, or `shared.js`, and
+nothing needed deploying.

@@ -924,8 +924,36 @@ function renderGames(realGames){
   // format, so this is accurate, not a known limitation. See BUILD_LOG.md.
   // Sorted chronologically by kickoff -- neither Big Balls nor Highlightly
   // guarantee return order, per Yeti (2026-08-25, caught Aug 29's slate
-  // showing before Aug 27's on the Preseason view).
-  const sortedGames = [...realGames].sort((a, b) => new Date(a.kickoffISO) - new Date(b.kickoffISO));
+  // showing before Aug 27's on the Preseason view). Recomputed fresh on
+  // every render (not cached) so a flexed kickoff time re-sorts correctly
+  // the moment the underlying data changes.
+  //
+  // REAL, CONFIRMED LIMITATION (2026-09-03, per Yeti's own report --
+  // verified against real published data, not assumed): Big Balls
+  // supplies NO per-game kickoff time-of-day at all for regular-season
+  // games (see normalizeGame(), worker.js -- kickoffISO is synthesized as
+  // noon UTC on the real calendar date, confirmed by checking every game
+  // in the real, live data/week-1.json and data/week-2.json: literally
+  // every game shares the identical "T12:00:00.000Z" time). That means
+  // this sort is already doing everything it correctly can with the data
+  // it has -- same-day games (e.g. the ~13-game Sunday 1pm/4pm/8:20pm
+  // slate) are structurally indistinguishable by kickoff time in the
+  // current data source, and no sort-code change can recover a real
+  // ordering that was never captured in the first place. The tiebreaker
+  // below at least keeps that order STABLE and deterministic across
+  // reloads/polls (not silently reshuffling based on whatever order Big
+  // Balls' own API happens to return that day's games in) -- it is NOT a
+  // claim of real kickoff-time accuracy. A genuine fix needs a real
+  // per-game kickoff-time data source, which this build doesn't have for
+  // the regular season (Highlightly had real times but was explicitly
+  // scoped to the one-off Aug 27-29 preseason test and retired 2026-09-03
+  // -- reviving/expanding it for full-season use is a real quota/cost
+  // tradeoff for Yeti to decide, not something to guess at overnight).
+  const sortedGames = [...realGames].sort((a, b) => {
+    const diff = new Date(a.kickoffISO) - new Date(b.kickoffISO);
+    if (diff !== 0) return diff;
+    return `${a.away}@${a.home}`.localeCompare(`${b.away}@${b.home}`);
+  });
   sortedGames.forEach((g, idx) => {
     const isExpanded = expandedGameIdx === idx;
     const card = document.createElement("div");

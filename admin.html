@@ -203,17 +203,16 @@ button:hover{opacity:.9;}
       <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
         Emails a real, working picks link to your own admin address
         (yeti@yetiblanc.com) as whichever team you pick below — always your
-        inbox, never a real family member, no matter what's selected. Use
-        "preseason-3" for week to test safely against real live data with
-        zero effect on real scoring; a real numbered week (1-18) plugs into
-        real standings once picks are saved against it, so only use one of
-        those once you actually mean to test against the live season.
-        <strong>These are two separate buckets that never mix</strong> — a
-        pick saved against "preseason-3" shows up on the Preseason Games tab
-        but will NEVER appear on the Commissioner Portal's Missing Picks
-        tracker (which only ever looks at real numbered weeks), and vice
-        versa. If you're testing the Missing Picks tracker specifically, use
-        a real week number here, not "preseason-3."
+        inbox, never a real family member, no matter what's selected.
+        Preseason (the old safe-to-test-against sandbox week) was retired
+        2026-09-03 — every week below is a real numbered week, so picks
+        saved against it plug straight into real standings and DO appear
+        on the Commissioner Portal's Missing Picks tracker. If you're using
+        this to hand someone a link to practice with (e.g. a family member
+        who wants to get comfortable with the site before real picks
+        matter), clear their test picks afterward with "Clear all picks
+        for a week" below — read that panel's own note first, since it
+        clears the WHOLE week for every team, not just one.
       </div>
       <label for="testEmailTeam">Team (testing as)</label>
       <select id="testEmailTeam">
@@ -229,7 +228,7 @@ button:hover{opacity:.9;}
         </optgroup>
       </select>
       <label for="testEmailWeek">Week</label>
-      <input type="text" id="testEmailWeek" value="preseason-3" placeholder="preseason-3, or 1-18">
+      <select id="testEmailWeek"></select>
       <button id="testEmailBtn">Email me this test link</button>
       <div class="status" id="testEmailStatus"></div>
     </div>
@@ -285,13 +284,16 @@ button:hover{opacity:.9;}
       <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;color:var(--red);">Clear all picks for a week</div>
       <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
         Destructive — clears EVERY team's saved picks for the week below (all
-        8 real roster teams), not just one team. No undo. Built for
-        resetting preseason test data before a clean multi-person test, but
-        works on any week — remove this button yourself before opening the
-        site for real regular-season picks.
+        8 real roster teams), not just one team. No undo. Originally built
+        for resetting preseason test data before a clean multi-person test
+        (preseason itself was retired 2026-09-03), but works on any real
+        numbered week — including whatever week you use to test-send
+        someone a link above, and including real regular-season weeks, so
+        double-check the week number before clicking if anyone else might
+        already have real picks saved for it.
       </div>
       <label for="clearPicksWeek">Week</label>
-      <input type="text" id="clearPicksWeek" placeholder="preseason-3, or 1-18">
+      <input type="text" id="clearPicksWeek" placeholder="1-18">
       <label for="clearPicksAdminName">Your name (for the audit log)</label>
       <input type="text" id="clearPicksAdminName" value="Yeti">
       <button id="clearPicksBtn" style="background:var(--red);">Clear all picks for this week</button>
@@ -446,6 +448,7 @@ function showLoggedIn() {
   document.getElementById("mainSectionTabs2").classList.remove("hidden");
   document.getElementById("mainSectionTabs3").classList.remove("hidden");
   switchMainSection("admin");
+  populateTestEmailWeeks();
   populateCorrectionWeeks();
   populateMissingPicksWeeks();
   populateWeeks();
@@ -719,6 +722,26 @@ function fmtCorrectionKickoff(iso) {
   return new Date(iso).toLocaleString("en-US", {
     timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
   }) + " ET";
+}
+
+// Added 2026-09-03, per Yeti -- this used to be a free-text input
+// hardcoded to default to "preseason-3", which stopped existing once
+// preseason was retired that same day (see BUILD_LOG.md), leaving Yeti
+// with a field defaulting to a week that no longer resolves to anything.
+// Same 1..currentWeek dropdown pattern as populateCorrectionWeeks()/
+// populateMissingPicksWeeks() above, defaulting to the real shared
+// current-week value.
+async function populateTestEmailWeeks() {
+  const sel = document.getElementById("testEmailWeek");
+  const currentWeek = await fetchCurrentWeek();
+  sel.innerHTML = "";
+  for (let w = 1; w <= currentWeek; w++) {
+    const opt = document.createElement("option");
+    opt.value = String(w);
+    opt.textContent = "Week " + w;
+    sel.appendChild(opt);
+  }
+  sel.value = String(currentWeek);
 }
 
 async function populateCorrectionWeeks() {

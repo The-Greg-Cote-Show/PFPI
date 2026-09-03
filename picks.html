@@ -300,8 +300,17 @@ async function loadPicks() {
 
   // Chronological by kickoff, then grouped by kickoff calendar date (ET) --
   // games within a group are already in kickoff order since the full list
-  // was sorted first.
-  const sorted = [...data.games].sort((a, b) => new Date(a.kickoffISO) - new Date(b.kickoffISO));
+  // was sorted first. Same real data-source limitation as index.html's
+  // renderGames() (see that comment): Big Balls gives no real per-game
+  // kickoff time-of-day for regular-season games, so same-day games all
+  // share an identical synthesized timestamp and the tiebreaker below just
+  // keeps their order stable/deterministic across reloads, not truly
+  // kickoff-accurate.
+  const sorted = [...data.games].sort((a, b) => {
+    const diff = new Date(a.kickoffISO) - new Date(b.kickoffISO);
+    if (diff !== 0) return diff;
+    return `${a.away}@${a.home}`.localeCompare(`${b.away}@${b.home}`);
+  });
   const groups = [];
   let currentGroup = null;
   for (const game of sorted) {

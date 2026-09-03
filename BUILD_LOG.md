@@ -5270,3 +5270,320 @@ look per that note.
   Report tabs' default state next login, especially before real Week 1
   finishes.
 - Site should be safe to treat as clean and regular-season-ready.
+
+## Locations tab bugs, bot-traffic investigation, week-selector fix, games ordering (2026-09-03, daytime)
+
+Five-item task, not overnight this time (started ~12:30 PM ET) — same
+hard rules apply regardless: stop and log here (no workaround) on
+anything that could delete/overwrite the repo/Worker/KV, any
+real-money step, any credential request beyond existing Cloudflare
+Secrets, or anything genuinely ambiguous. No cron safety-net requested
+or scheduled for this one.
+
+### Item 1: Locations tab drilldown not resetting on World ↔ US switch — FIXED, verified live
+
+**Root cause, found by reading `analytics-shared.js` directly, not
+guessed:** `setGeoView(view)` (the World/United States toggle handler)
+reset `this._selectedCountry = null` — but that variable was dead
+state, never actually read anywhere in the file (confirmed by
+grepping every usage: set in two places, read in zero). The REAL
+drilldown card (`#paDrillHdr`/`#paDrillHint`/`#paDrillList`) is only
+ever touched by `_showCountryDrilldown()`/`_showStateDrilldown()` on a
+map click — neither `_renderWorldMap()` nor `_renderUSMap()` ever
+reset it, so it just kept showing whatever was last clicked, forever,
+across view switches. There wasn't even a correct default for the US
+view to begin with — the skeleton HTML hardcodes "Click a country" as
+the only default text that has ever existed, so even a *fresh* switch
+to US (before this specific bug) showed country-flavored text on the
+state map.
+
+**Fix:** added `_resetDrilldown()`, called from `setGeoView()`, which
+sets the header/hint/list back to the correct default for whichever
+view is now active ("Click a country" for World, "Click a state" for
+US, empty list either way).
+
+**Verified live**, not just by reading the code: loaded `analytics.html`
+locally, called `showLoggedIn()` directly from the console to mount
+the dashboard component without going through the real password login
+(no credentials involved — this only constructs the client-side
+component, it doesn't touch the network beyond what the component
+itself would normally do), fed it fake `geoData` so the map draw
+doesn't need real backend data, then reproduced the exact reported bug
+end-to-end: switched to US, called `_showStateDrilldown("South
+Dakota")` (simulating the map click), confirmed the card showed
+"South Dakota: cities", switched back to World, confirmed the card
+reset to "Click a country" with an empty list. Also confirmed the US
+view's own default ("Click a state") and the country-drilldown label
+format, both correct.
+
+### Item 2: Em dashes → colons in location labels — FIXED
+
+Grepped the entire repo (not just analytics-shared.js) for the
+`" — regions"`/`" — cities"` pattern. Found exactly two live instances,
+both in `analytics-shared.js` (`_showCountryDrilldown`/
+`_showStateDrilldown`'s header text) — both now colons:
+`countryName + ": regions"`, `stateName + ": cities"`. Deliberately
+did **not** touch the many *other* em dashes in this file (panel
+headers like "Methodology — location data", stat labels like "Today —
+Unique Visitors", prose sentences) — those are a general house style
+used consistently across the whole dashboard, not the specific
+"Location: Category" label pattern Yeti flagged, and changing them
+wasn't asked for.
+
+**Checked the PDF report generator specifically, per the instruction
+not to assume it's only in one place:** `buildReportPdf()` does NOT
+actually construct this pattern at all — its location section uses
+separate flat table titles ("Countries", "US States", "Cities"), never
+a combined "Name — Category" label. Confirmed by reading the whole
+function; nothing needed changing there.
+
+### Item 3: Bot/non-human traffic investigation — REAL INVESTIGATION DONE, genuinely inconclusive at the request-forensics level, here's exactly why and what the real data shows
+
+**First, the most important finding, which shapes everything else:**
+this analytics system is deliberately privacy-preserving by design —
+confirmed by reading `handleTrack()` and every function it calls in
+`worker.js` line by line. It stores **no raw User-Agent string, no IP
+address, and no per-visit timestamp finer than the calendar day**,
+anywhere. Every write is either (a) a SHA-256 hash used once to check
+"have I seen this exact IP+UA+day before" then discarded, or (b) a
+plain integer counter (`incrKV`) tracking aggregate counts per day per
+dimension (city, referrer, unique/new/repeat). There is no request log
+to pull, no stored User-Agent to inspect, and no way to check request
+timing intervals finer than "which calendar days had a hit." **This
+isn't a gap I can fix by looking harder tonight — the data needed for
+literal User-Agent/request-signature forensics was never collected, on
+purpose, as a privacy tradeoff made back when this system was built.**
+Also checked: no Cloudflare Logpush or similar raw-log integration
+exists (would be an Enterprise-tier feature anyway, already confirmed
+elsewhere in this codebase as not available on this account), and
+`wrangler tail` only streams *live* requests going forward, not
+historical ones — no way to retroactively inspect Aug/Sep traffic at
+the request level through any channel available tonight.
+
+**What I could investigate, and did:** the real aggregate visit counts,
+per city, per day, pulled live from `PFPI_KV` (not re-describing
+Yeti's PDF, independently re-fetched):
+
+| City | All-time | Aug 31 | Sep 1 | Sep 2 | Sep 3 (partial) | Days present |
+|---|---|---|---|---|---|---|
+| Atlanta, GA (baseline) | 14 | 3 | 3 | 6 | 2 | 4/4 |
+| Boardman, OR | 9 | 6 | 1 | 1 | 1 | **4/4** |
+| Ashburn, VA | 6 | 5 | 1 | 0 | 0 | 2/4 |
+| Amsterdam, NL | 4 | 2 | 0 | 2 | 0 | 2/4 |
+| Council Bluffs, IA | 3 | 2 | 0 | 1 | 0 | 2/4 |
+| Burnaby, BC | 2 | 1 | 0 | 1 | 0 | 2/4 |
+| Santa Clara, CA | 1 | 0 | 0 | 1 | 0 | 1/4 |
+
+Real geo-level tracking only goes back to **Aug 31**, not Aug 5 as the
+PDF's report-window start date might imply (confirmed via
+`analytics:geo-city:*` KV keys — the earliest that exist are Aug 31;
+`analytics:first-event-date` itself is Aug 28, and even that's for
+basic pageview/unique counts, not geo). **Worth flagging on its own:**
+the PDF report's date range creates an impression of a much longer
+observation window than what this system has actually been recording
+for — everything discussed here happened within a 4-day window, not a
+month.
+
+**Real signal, stated precisely:** across all cities with any traffic
+at all (17 distinct cities, 51 total city-attributed visits all-time,
+37 of them not Atlanta), the 6 cities Yeti flagged account for **25 of
+those 37 non-Atlanta visits (~68%)** — a real, notable concentration
+into known cloud/data-center hosting regions, not something I'm
+inflating. Two different patterns stand out within that group:
+- **Boardman, OR is the single strongest individual case**: present
+  on literally every one of the 4 tracked days, settling into a steady
+  ~1-visit-per-day cadence after an initial burst. A human visitor
+  from a ~3,600-population Oregon town whose economy is dominated by
+  an AWS data center, hitting a niche family pick'em site on 4
+  consecutive calendar days, is a much less likely coincidence than an
+  automated daily check (uptime monitor, scheduled crawler) — this is
+  the one case where I'd call the evidence genuinely suggestive, not
+  just circumstantial.
+- **Ashburn, VA looks like a different pattern**: concentrated almost
+  entirely in one day (5 of 6 visits on Aug 31), then essentially
+  stopped. Reads more like a single scan/sweep event than ongoing
+  monitoring — still consistent with automated traffic, just a
+  different shape than Boardman's.
+- **Amsterdam, Council Bluffs, Burnaby, Santa Clara** have too little
+  volume (1-4 visits each, all-time) to distinguish from noise. This
+  matters for a real reason, not just "small numbers are inconclusive"
+  as a platitude: Cloudflare's geo fields reflect **which network the
+  request was routed through, not a verified physical location** (this
+  is already stated on the dashboard's own methodology panel) — a real
+  human on a VPN, a corporate network, or certain mobile carriers can
+  legitimately show up as being in a data-center city despite being a
+  genuine visitor elsewhere. At 1-4 visits, I can't rule that out with
+  any confidence, and I'm not going to claim I can.
+- **Atlanta, GA (14 visits, present all 4/4 days, steady 2-6/day)**
+  is, exactly as Yeti suspected, consistent with his own real testing
+  traffic — by far the highest volume, most consistent daily presence
+  of anything in the dataset. I can't directly confirm this is
+  specifically Yeti (no per-visit identity data exists, by the same
+  privacy-by-design constraint above), but nothing about the pattern
+  contradicts it, and if it IS him without `notrack` reliably applied,
+  these 14 hits are quietly inflating the "real visitor" numbers the
+  dashboard shows everyone else.
+
+**For context, not as evidence of anything specific:** the existing
+UA-pattern bot filter (`BOT_UA_PATTERN`, `worker.js`) is catching a
+small number of self-identifying bots already — 2 filtered on Aug 31,
+1 on Sep 1, 0 recorded on Sep 2/3 — out of 23/5/10/3 daily-unique
+visitors those same days. Not a large fraction, and not something this
+task asked me to change.
+
+**Bottom line, stated plainly per the instruction not to guess:** the
+geographic concentration into known hosting cities is real and worth
+taking seriously, and Boardman's daily cadence is the strongest single
+piece of evidence for automated traffic in this dataset — but I
+**cannot confirm this with request-level forensic evidence (User-Agent
+strings, request signatures, timing intervals)** because that data was
+never collected by this system's deliberately privacy-preserving
+design, not because I didn't look hard enough. **No filtering change
+made** — per the explicit instruction not to overcorrect without real
+evidence, and because the strongest available heuristic (block-by-city)
+would risk filtering real VPN/corporate-network visitors on exactly
+the kind of hunch the task warned against. **If Yeti wants to actually
+pursue request-level forensics going forward**, that would require a
+deliberate, known tradeoff against the current privacy posture (e.g.
+temporarily logging raw UA strings alongside geo hits) — a real
+decision for him to make explicitly, not something to add unilaterally
+overnight.
+
+### Item 4: Admin Portal test-email week field — FIXED, verified in code
+
+**Confirmed the actual bug directly, not assumed:** `admin.html`'s
+`testEmailWeek` field was `<input type="text" id="testEmailWeek"
+value="preseason-3" placeholder="preseason-3, or 1-18">` — a free-text
+field hardcoded to default to a week that stopped existing the moment
+last night's preseason teardown ran, exactly as Yeti described.
+
+**Fix:** converted to a `<select>`, populated 1..currentWeek via a new
+`populateTestEmailWeeks()` (same pattern as the existing
+`populateCorrectionWeeks()`/`populateMissingPicksWeeks()` in this same
+file), reading the real shared `current-week` value via the existing
+`fetchCurrentWeek()` helper (which itself reads the Worker's
+`/current-week` endpoint — not recomputed or hardcoded), defaulting to
+`currentWeek`. Wired into `showLoggedIn()` alongside its siblings so it
+populates on login like the other week selectors already do.
+
+Also updated this panel's own help text, which was still actively
+describing the now-nonexistent "preseason-3 is a safe sandbox" split —
+left as-is it would have actively misled Yeti into thinking there's
+still a consequence-free way to test here. New text states plainly:
+every week here is now real (picks plug into real standings and DO
+show up on the Missing Picks tracker), and points at the Clear Picks
+tool for cleanup, with an explicit heads-up about that tool's real
+scope (see below).
+
+**"Clear all picks for a week" tool — verified its real scope, did NOT
+change its behavior, per the explicit instruction not to:** re-read
+`handleClearWeekPicks()` (`picks-worker.js`) directly. Confirmed: it
+clears **every team's picks for the given week** (`allTeams = [...TEAMS,
+...FAMILY_MEMBERS.map(m => m.team)]`, looped and deleted one by one) —
+**not** a single team, **not** scoped to whichever team you used for
+the test email. Its own on-page help text in `admin.html` already
+stated this accurately ("clears EVERY team's saved picks for the week
+below (all 8 real roster teams), not just one team. No undo.") — this
+was already correct and did not need a behavior change, only the one
+stale placeholder fix noted below. **Real, practical implication for
+Yeti's actual plan tonight:** if he sends Uncle Dick a test link for,
+say, real Week 1, and anyone else (including Yeti's own earlier
+testing) has already saved real Week 1 picks, running "Clear all picks
+for Week 1" to clean up after Uncle Dick will also wipe those other
+picks — there's no way to clear just one team with this tool as it
+exists. **Recommend using a week nobody else has real picks in yet**
+(or accepting that cleanup means everyone re-picks that week), not a
+code problem, just something to know before clicking.
+
+Fixed `clearPicksWeek`'s placeholder text too (`"preseason-3, or
+1-18"` → `"1-18"`) since it was pointing at the same now-dead value —
+this is a one-line text-only change, not a scope or behavior change to
+the tool itself, per the instruction not to touch that.
+
+**Not live-tested through an actual login** (same constraint as last
+night's admin.html/brief.html work — would require entering a
+password, outside what an unattended/autonomous session should do).
+Verified via Node's `new Function()` parse check on both inline
+`<script>` blocks (clean) and by reading the full call chain
+(`populateTestEmailWeeks` → `fetchCurrentWeek` → real `/current-week`
+endpoint) line by line.
+
+### Item 5: Games sorted by real kickoff time — the sort code was already correct; the real, deeper issue is a data-source limitation, documented and partially mitigated
+
+**Checked first, not assumed:** both `index.html`'s `renderGames()`
+and `picks.html`'s date-grouping already sorted by `new Date(a.kickoffISO)
+- new Date(b.kickoffISO)`, recomputed fresh on every render (not
+cached — confirmed `renderGames()` is called from the main `render()`
+path that runs on every data refresh, plus recursively on
+expand/collapse). This part already does exactly what Yeti's stated
+"don't cache it, flex schedules change" caveat asks for.
+
+**Real root cause of what Yeti's actually seeing, confirmed against
+live published data, not assumed:** Big Balls (the sole live
+regular-season data source now that preseason/Highlightly is retired)
+supplies **no real per-game kickoff time-of-day at all**. Checked
+`data/week-1.json` and `data/week-2.json` directly: every single game
+in both files shares the exact same synthesized `kickoffISO` time
+(`T12:00:00.000Z`, i.e. a placeholder noon-UTC anchored only to the
+real calendar date) — confirmed by extracting the distinct
+time-of-day values across every game in both files: exactly one value,
+for all of them. This matches `worker.js`'s own `normalizeGame()`
+comment, verified back on 2026-08-25 against real Big Balls responses
+and never contradicted since: "there is NO kickoff time-of-day field,
+only a date-only `game_date`." **The sort code cannot recover an
+ordering that was never captured in the first place** — the ~13-game
+Sunday slate (1pm/4:05pm/4:25pm/8:20pm ET kickoffs in real life) is
+structurally indistinguishable by timestamp in this data source, full
+stop. No amount of sort-function rewriting fixes a missing input.
+
+**What I actually changed:** added a deterministic tiebreaker
+(alphabetical by `away@home`) for games that tie on kickoffISO, in
+both `index.html` and `picks.html`. This does **not** claim to know
+real kickoff order — it's honestly documented inline as exactly what
+it is — but it does fix a real, separate problem: without a tiebreaker,
+same-day games' relative order depends entirely on whatever order Big
+Balls' own API happens to return them in on a given poll, which is not
+guaranteed stable poll-to-poll. The tiebreaker means the displayed
+order for a given slate is now the same every time, not silently
+reshuffling.
+
+**Flagging clearly, not guessing at a bigger fix:** a genuine fix — real
+per-game kickoff-time ordering — needs a real per-game time-of-day
+data source, which this build does not have for the regular season.
+Highlightly (the retired preseason integration) DID carry real kickoff
+timestamps, but was explicitly scoped by Yeti's own prior decision to
+the one-off Aug 27-29 test window on a 100/day quota, and reviving or
+expanding it for full-season use is a real cost/quota tradeoff that
+should be Yeti's explicit call, not something to guess at and wire in
+unilaterally. This is the one item tonight where the honest answer is
+"partially mitigated, not fully fixable without a decision only Yeti
+can make."
+
+**Verified live:** loaded `index.html` locally against the real
+current `data/week-1.json`, confirmed the Games tab renders correctly
+(Wed/Thu games first, then the full Sunday slate in the new stable
+alphabetical order), zero console errors. `picks.html`'s inline script
+also parses clean (Node syntax check).
+
+### Summary for Yeti
+
+1. **Locations drilldown reset** — fixed, verified live via direct
+   component testing (no login needed for this one).
+2. **Em dash → colon in location labels** — fixed (2 instances found
+   and changed); PDF report doesn't have this pattern at all.
+3. **Bot traffic investigation** — real investigation done with real
+   numbers, genuinely can't go further than "suggestive, especially
+   Boardman's daily cadence" because this system was deliberately built
+   to not retain the request-level data that would confirm it either
+   way. No filter changes made. Your call if you ever want to trade
+   some of that privacy posture for better forensics.
+4. **Test-email week field** — fixed, now a real dropdown defaulting
+   to the current week. Clear Picks tool's scope confirmed unchanged
+   (whole week, all teams) — pick a week nobody else has real picks in
+   yet before you clean up after Uncle Dick.
+5. **Games kickoff ordering** — the sort itself was already correct;
+   the real problem is Big Balls has no real kickoff-time data at all
+   for any game, confirmed against live data. Added a stable tiebreaker
+   so ordering at least stops shifting between visits, but a true fix
+   needs a real time-of-day data source, which is your call to make,
+   not mine to guess at.

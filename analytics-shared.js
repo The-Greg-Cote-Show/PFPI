@@ -832,10 +832,30 @@
   };
 
   // ----- LOCATIONS -----
+  // Bug fix (2026-09-03, per Yeti -- confirmed via screenshot): switching
+  // World <-> United States used to leave the drilldown card (#paDrillHdr/
+  // #paDrillHint/#paDrillList) showing whatever was last clicked on the
+  // OTHER view (e.g. "South Dakota: Cities" still showing after switching
+  // back to World) -- neither _renderWorldMap() nor _renderUSMap() ever
+  // touched that card, only _showCountryDrilldown()/_showStateDrilldown()
+  // did, on click. this._selectedCountry was set here but never actually
+  // read anywhere (dead state, not what was causing the stale card) --
+  // _resetDrilldown() below is the real fix, restoring the correct
+  // per-view default instead.
+  PFPIAnalytics.prototype._resetDrilldown = function () {
+    const hdr = this.root.querySelector("#paDrillHdr");
+    const hint = this.root.querySelector("#paDrillHint");
+    const list = this.root.querySelector("#paDrillList");
+    hdr.textContent = this.geoView === "us" ? "Click a state" : "Click a country";
+    hint.textContent = "Darker shading means more recorded visits (all-time). Click any shaded area for a breakdown.";
+    list.innerHTML = "";
+  };
+
   PFPIAnalytics.prototype.setGeoView = function (view) {
     this.geoView = view;
     this.root.querySelectorAll('[data-pa="geoview"]').forEach(b => b.classList.toggle("active", b.dataset.geoview === view));
     this._selectedCountry = null;
+    this._resetDrilldown();
     this._drawCurrentMap();
   };
 
@@ -991,7 +1011,7 @@
     const hdr = this.root.querySelector("#paDrillHdr");
     const hint = this.root.querySelector("#paDrillHint");
     const list = this.root.querySelector("#paDrillList");
-    hdr.textContent = countryName + " — regions";
+    hdr.textContent = countryName + ": regions";
     hint.textContent = "All-time recorded visits by region within this country.";
 
     const regions = {};
@@ -1017,7 +1037,7 @@
     const hdr = this.root.querySelector("#paDrillHdr");
     const hint = this.root.querySelector("#paDrillHint");
     const list = this.root.querySelector("#paDrillList");
-    hdr.textContent = stateName + " — cities";
+    hdr.textContent = stateName + ": cities";
     hint.textContent = "All-time recorded visits by city within this state.";
 
     const cities = {};

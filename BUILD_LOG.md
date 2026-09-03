@@ -5752,3 +5752,27 @@ actually distinguishes "fixed" from "looked fixed for one lucky tick."
 Apologies for shipping the first version with this gap — should have
 traced through what happens on a non-refetch tick before calling it
 done, not just verified the one tick that happened to refetch.
+
+## Follow-up: kickoff time/timezone wrapping to two lines on the Games tab — FIXED
+
+Small, expected side effect of the kickoff-time fix landing real,
+longer status text: `index.html`'s `.game-status` column was a fixed
+`width:92px` with no `white-space:nowrap` (set that way in an earlier,
+unrelated session to fix a different tie-note-alignment bug, back when
+this column only ever held short text like "FINAL" or a date with no
+time). Real kickoff text like "MON, SEP 14, 8:20 PM ET" doesn't fit in
+92px, so it wrapped onto a second line.
+
+Measured the actual rendered width needed (not guessed) by loading the
+live site and rendering the real candidate strings off-screen with the
+column's exact computed font/letter-spacing: widest real case
+("MON, SEP 14, 8:20 PM ET") came out to ~157px. Set `.game-status` to a
+fixed `width:168px` (a little headroom over the measured max) plus
+explicit `white-space:nowrap` as a defensive backstop. Kept it a fixed
+width (not `min-width`), same reasoning as the original tie-note fix
+this column came from -- a content-independent, stable column width is
+what keeps the centered score block from shifting per-row.
+
+Verified live (local server against the real, already-enriched
+`data/week-1.json`): every status column now renders on one line,
+row layout still reads cleanly, zero console errors.

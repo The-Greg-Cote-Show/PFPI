@@ -4920,3 +4920,124 @@ environment) — the structural verification above gives high confidence
 it's well-formed and editable, but Yeti should do a quick visual
 open-and-look pass whenever convenient, same as any first-time
 generated Office file.
+
+### Part 2: Cron-drift investigation — DONE, real root cause found (NOT the wrangler-deploy-clearing-triggers bug from before)
+
+**Short version: it's not actually cron drift, and Big Balls' quota is
+not at risk. The real problem is a dead preseason republish loop that
+was never turned off after Aug 29, wasting ~12 commits/hour on stale
+data — and Part 3 was already going to delete the code that causes it.**
+
+**1. Checked the two Workers' actual trigger config (repo-level, the
+proven-authoritative source per the 2026-08-25 incident this same log
+already documents — dashboard-only triggers get silently wiped by a
+plain `wrangler deploy`):**
+- `wrangler.toml` (pfpi-picks-worker): `crons = ["0 * * * *"]` — hourly,
+  as intended, for the Tuesday-picks-email worker. Not the worker
+  flagged last time.
+- `wrangler-scores.toml` (pfpi-scores-worker, the one actually flagged):
+  `crons = ["* * * * *"]` — **every minute**, not hourly. This is NOT a
+  bug or drift — it's documented, deliberate design (see the "POLLING
+  THROTTLE" comment block in `worker.js` around line 969): this build
+  has no Durable Object alarms, so a 1-minute Cron Trigger is the finest
+  available floor, and the Worker's own internal logic throttles actual
+  work on top of that floor rather than relying on a coarser cron.
+  **The premise of last session's flag — "cron was designed for hourly,
+  running 28x too often" — was itself based on conflating the two
+  Workers.** The scores worker was never hourly.
+
+**2. Confirmed this is live and ongoing, not a past spike** — pulled the
+30 most recent `data/*.json` automated commits with exact timestamps
+(not just the 12-hour window already flagged). They land in a perfectly
+clean, repeating pattern: `Update preseason Week 3 (Highlightly)
+[automated]` at every 5-minute mark (23:00, 22:55, 22:50, 22:45...) and
+`Update current week pointer` / `Update standings through Week 1` at
+every 15-minute mark (23:00, 22:45, 22:30...) — still firing as of
+23:00 tonight, i.e. right now.
+
+**3. Traced the actual code path for each commit type in `worker.js`'s
+`pollAndPublish()` to find out WHY, not just confirm THAT:**
+- **Big Balls path** (`data/week-N.json`, `data/standings.json`,
+  `data/current.json`): gated by `shouldPollBigBallsThisTick()` — every
+  tick during real live-game windows (Thu/Sun/Mon evenings), else every
+  15 min (`minute % 15 === 0`). Today (Wed, no live window) that's 4
+  ticks/hour × up to 4 commits per tick ≈ 16 commits/hour. **This part
+  is working exactly as designed** — not a bug.
+- **Preseason path** (`data/week-preseason-3.json`, labeled
+  "Highlightly" in its commit message): gated by a *separate*,
+  unconditional `force || minute % 5 === 0` check — 12 ticks/hour,
+  forever, with no expiration. The actual Highlightly API fetch inside
+  it (`shouldPollHighlightlyThisTick`) is correctly hardcoded to only
+  ever return true for Aug 27-29, 2026 (its own comment says outright:
+  *"After Aug 29 this returns false forever; this was only ever a
+  testing bridge, not an ongoing source"*) — so **zero live Highlightly
+  API calls have happened since Aug 29**, confirmed. But the surrounding
+  republish step was never wired to that same cutoff: when the fresh
+  fetch comes back null, it falls back to whatever's cached in KV
+  (`schedule:week:preseason-3`, frozen since Aug 29) and **republishes
+  that stale data to GitHub every 5 minutes anyway**, forever, because
+  `commitJSONToGitHub()` (`shared.js`) has no content-diffing at all —
+  it always PUTs, and every payload includes a fresh
+  `updatedAt: new Date().toISOString()`, so every call is a genuinely
+  different commit even though nothing about the underlying data has
+  changed since Aug 29. **16 + 12 ≈ 28 commits/hour — this fully and
+  exactly accounts for the "~28x" figure flagged last session**, with
+  no need to assume anything else is wrong.
+
+**4. Big Balls quota check — not at risk.** At the documented cadence
+(2 API calls per gated tick — `weeksToPoll = [currentWeek,
+currentWeek+1]` — × 4 ticks/hour off-window, or × up to 60 ticks/hour
+during a live window), worst-case usage stays well under the 2000/day
+budget even on a full Thu+Sun+Mon live-game day; the one-time
+272-game full-season preload is KV-flag-gated to run exactly once ever.
+**Highlightly's 100/day budget is a non-issue** — confirmed zero calls
+since Aug 29, per point 3 above; the commit message still says
+"(Highlightly)" purely because that label was never updated when the
+code started falling back to cached data instead of a live fetch,
+which is itself a little misleading (reads like it's still hitting the
+API) but not a functional problem.
+
+**5. Checked whether this is the same class of bug as the earlier
+`wrangler deploy`-clears-dashboard-triggers incident — it is not.**
+Both `[triggers]` blocks live in their respective `.toml` files (not
+dashboard-only), matching that incident's actual fix. Also confirmed
+via `wrangler deployments status -c wrangler-scores.toml` that the last
+real deploy (2026-08-31 ~11:32 AM ET) lines up with `worker.js`'s own
+git history (last real commit to that file: 2026-08-31 11:38 AM ET,
+6 minutes later, no worker.js commits since) — so the live Worker is
+running essentially what's in the repo today, not some older orphaned
+version. No dashboard-vs-repo drift found.
+
+**Did not log into the Cloudflare web dashboard** to cross-check the
+trigger UI directly — `dash.cloudflare.com` redirected to a login page
+with a saved-password autofill already populated in the form. Per the
+hard rules (no credential handling beyond what's already set as
+Secrets), I did not click Sign in on that pre-filled form and closed
+the tab without submitting anything. Relied instead on `wrangler`
+CLI (already authenticated on this machine, same tool/credential path
+used for deploys in past sessions) plus the git-timestamp correlation
+above, which is direct evidence of real runtime behavior — arguably
+stronger than a static dashboard config field would have been anyway.
+
+**Root-cause fix — deliberately deferred to Part 3, not done here:**
+the actual fix for the preseason republish loop is to remove that
+whole code block from `worker.js` (the `if (force || ...minute % 5
+=== 0) { ... commitJSONToGitHub("data/week-preseason-3.json", ...) }`
+section and its supporting preseason-fetch plumbing) — which is
+*exactly* what Part 3 already asks for under "remove/retire the
+preseason-specific test-team infrastructure if anything still
+references it." Doing that edit here, before Part 3's archive step,
+would violate tonight's own sequencing rule (archive-then-delete) for
+no benefit — the loop is wasteful but not harmful, and it's about to be
+retired anyway. **See Part 3 below for the actual code change and
+redeploy.** The other real commit-volume contributor —
+`data/current.json` being recommitted every 15 minutes purely because
+`commitJSONToGitHub()` has no diff-check and every payload includes a
+fresh timestamp — touches the real regular-season live-scores path and
+was deliberately **not** touched tonight, per the explicit instruction
+not to touch regular-season infrastructure and to log rather than
+guess at anything touching the live scores pipeline. It's low-severity
+(GitHub commit-history noise, no wasted external API budget) and can
+be a separate, deliberate daytime decision if Yeti wants
+`commitJSONToGitHub` to support a real no-op-on-unchanged-content
+check across all its callers.

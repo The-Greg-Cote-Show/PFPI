@@ -4847,3 +4847,76 @@ Yeti can check the Worker logs / Cloudflare dashboard for what's
 actually triggering this when awake — if it's genuinely misfiring every
 ~2 minutes it's presumably burning through Highlightly/Big-Balls API
 quota and GitHub commit history much faster than intended.
+
+## Overnight: PowerPoint conversion, cron-drift investigation, preseason archive & teardown (2026-09-02, continued)
+
+Yeti kicked off a new 3-part overnight task, again unattended. Same hard
+rules as every unattended session: stop and log here (no workaround) on
+anything that could delete/overwrite the repo/Worker/KV, any real-money
+step, any credential request beyond existing Cloudflare Secrets, or
+anything genuinely ambiguous — with Part 3 explicitly called out as the
+highest-stakes item since it's destructive by design (clearing real
+preseason data). Two conditional session-only cron wakeups scheduled at
+the start (3:00 AM and 4:00 AM EDT, Sept 3) in case usage runs out
+mid-task, same session-only caveat as prior nights (only fires if this
+Claude Code process stays open and idle). Parts run strictly in order;
+Part 3 does not start until Parts 1 and 2 are genuinely resolved.
+
+### Part 1: Convert training slideshow to editable PowerPoint — DONE
+
+Built `training-deck/PFPI-Family-Training-Slideshow.pptx` with
+`python-pptx` (already available in this environment, same tool used
+for the earlier email-audit deck). Faithfully reproduces all 8 slides
+from `PFPI-Family-Training-Slideshow.html` — same content, structure,
+and color scheme (dark navy background, gold accent, matching the
+site's own palette) — using **native, editable PowerPoint elements**:
+real text boxes with separate bold/gold runs (not a single flattened
+string per slide, so individual phrases stay independently editable),
+real rounded-rectangle shapes for the callout/card elements, and real
+embedded `<Picture>` objects for all 5 screenshots — not a rasterized
+image of each slide.
+
+**Screenshots reused, not regenerated:** verified programmatically
+after building that all 5 embedded images are byte-for-byte the same
+files already in `training-deck/screenshots/` (matched file sizes:
+`picks-page-top.jpg` 27,366 B, `submit-button-context.jpg` 27,384 B,
+`submit-button-zoom.png` 1,228 B, `games-tab-preseason-wk3.jpg`
+48,435 B, `standings-tab-preseason-wk3.png` 47,070 B) — nothing was
+re-captured or faked for this conversion, per the explicit instruction
+not to.
+
+**Verified structurally** (no way to render pptx→image in this
+environment — no LibreOffice/PowerPoint available headless — so this
+was a programmatic check via `python-pptx`, not a visual screenshot of
+the deck itself): re-opened the saved file and walked every shape on
+every slide, checking (a) text content matches the source HTML slide-
+by-slide, (b) every shape's bounding box stays within the 13.333"×7.5"
+slide canvas (caught and fixed two real layout bugs this way — see
+below), and (c) all 5 pictures are present with the expected byte
+sizes. The "em dash renders as �" in one console dump was just a
+Windows terminal codepage display issue, not a real file problem —
+confirmed by checking the actual character code (`U+2014`, a real em
+dash) directly from the saved XML.
+
+**Two real bugs caught and fixed before finalizing:**
+1. Slide 6's five category cards (3+2 grid) originally started too low
+   and the second row's bottom edge (7.63") ran past the slide's 7.5"
+   height, overlapping the page-counter footer. Fixed by shrinking the
+   standings-tab image, moving the card grid up, and slightly reducing
+   card height/spacing so the 2-row grid now fits entirely within the
+   canvas with room to spare above the footer.
+2. Slide 4's zoomed Submit-button close-up was vertically misaligned
+   next to the taller "button in context" screenshot (floating
+   mid-height rather than centered). Fixed by computing the close-up's
+   vertical position relative to the actual rendered height of the
+   context image, so the two now sit visually centered against each
+   other regardless of their very different aspect ratios.
+
+**Output:** both `training-deck/PFPI-Family-Training-Slideshow.html`
+(kept, unchanged) and `training-deck/PFPI-Family-Training-Slideshow.pptx`
+(new) now exist side by side in the same folder, per Yeti's instruction.
+**Not yet opened in real PowerPoint/Office** (not available in this
+environment) — the structural verification above gives high confidence
+it's well-formed and editable, but Yeti should do a quick visual
+open-and-look pass whenever convenient, same as any first-time
+generated Office file.

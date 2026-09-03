@@ -5041,3 +5041,53 @@ guess at anything touching the live scores pipeline. It's low-severity
 be a separate, deliberate daytime decision if Yeti wants
 `commitJSONToGitHub` to support a real no-op-on-unchanged-content
 check across all its callers.
+
+### Part 3, Step 1–2: Build and verify the preseason archive — DONE, VERIFIED, checkpoint passed
+
+**This is the highest-stakes part of tonight's work, per the hard
+rules — moved carefully, archive built and independently verified
+complete BEFORE anything live was touched.**
+
+**Found every preseason-scoped key first, not assumed a prefix:**
+ran `wrangler kv key list --namespace-id 3b5cd856fa7b40908601404f46b95456
+--remote` against the real `PFPI_KV` namespace (866 keys total, mostly
+unrelated analytics data) and grepped the full dump for "preseason"
+case-insensitively — found exactly 32 keys, all genuinely
+`preseason-3`-scoped (no `preseason-1`/`preseason-2` exist; this
+testing round was always just the one). Also confirmed there's no
+separate FAMILY_MEMBERS-test-team picks key (`Gentry's Neanderbrows`,
+the sandboxed persona used in the test link) — that team's identity is
+carried entirely inside its token (`token:pfpi-preseason3-test` →
+`{"team":"Gentry's Neanderbrows","week":"preseason-3"}`), not a
+separate KV entry.
+
+**Archived to `archive/preseason-2026/`** (new folder, committed to the
+repo, not left as a local-only file): all 32 KV values fetched via
+`wrangler kv key get --remote` into `archive/preseason-2026/kv/` (one
+file per key, `:` → `_` in filenames for Windows path compatibility),
+plus the two live published JSON files
+(`data/week-preseason-3.json`, `data/brief-week-preseason-3.json`)
+copied into `archive/preseason-2026/data/`. A `README.md` in that
+folder documents what each file is, in plain terms, for future
+reference.
+
+**Verification performed (the explicit checkpoint this task called
+for) — all passed:**
+1. All 34 archived JSON files (32 KV + 2 data) parse as valid JSON —
+   none empty, truncated, or corrupted.
+2. The archived `data/week-preseason-3.json` is byte-identical to the
+   file that's live in the repo/public site right now.
+3. **Cross-checked every real team's raw KV picks against what the
+   published merged JSON actually shows for that team** — all 66
+   individual picks across all 8 real teams matched exactly (Chickens
+   2/2, Critters 15/15, Ferraris 2/2, Giraffes 15/15, Llamas 2/2, Lobos
+   16/16, Maniacs 2/2, Roughriders 2/2). This is the strongest evidence
+   available that the archive reflects genuinely live, current state —
+   not stale or partial data — since it independently confirms the raw
+   per-team KV data and the public-facing merged output agree, key by
+   key, pick by pick.
+
+**Confirmation: the archive is genuinely complete and correct**, per
+direct inspection as described above. Proceeding to Step 3 (the actual
+teardown) only now that this checkpoint has passed and been committed
+to the repo.

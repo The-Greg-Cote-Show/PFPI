@@ -4822,3 +4822,28 @@ fully closed.
 
 **Committed and pushed** — see the commit immediately following this
 log entry for the exact file list.
+
+**⚠️ Unrelated anomaly noticed while pushing — flagging, not touching:**
+`git push` was rejected as non-fast-forward, and `git fetch` showed 338
+new commits on `origin/main` since this session started, all
+`[automated]`-tagged (`Update preseason Week 3 (Highlightly)`,
+`Update current week pointer`, `Update standings through Week 1`,
+`Update Week 1/2 scores/picks`), spanning roughly 09:45 AM to 10:00 PM
+EDT today (Sept 2) — averaging about one commit every ~2 minutes for
+12+ hours straight, only ever touching `data/current.json`,
+`data/standings.json`, and `data/week-preseason-3.json`. Per this same
+log (top of file, cron-triggers entry), the scheduled Worker cron is
+supposed to fire *hourly*, not every ~2 minutes, so this cadence looks
+off by roughly 30x — possibly a retry loop or a misfiring trigger
+somewhere in `worker.js`'s scheduled handler. Confirmed still actively
+committing as of 10:03 PM EDT (right when this session merged and
+pushed). All 338 commits only touched those 3 data files — no overlap
+with anything in this task, so the merge was clean (`git pull --no-edit`,
+no conflicts) and didn't require touching `worker.js` or any Worker
+config. **Not investigated or fixed** — outside this task's scope, and
+diagnosing/changing the Worker's scheduled-handler behavior isn't
+something to guess at overnight per the hard rules. Flagging clearly so
+Yeti can check the Worker logs / Cloudflare dashboard for what's
+actually triggering this when awake — if it's genuinely misfiring every
+~2 minutes it's presumably burning through Highlightly/Big-Balls API
+quota and GitHub commit history much faster than intended.

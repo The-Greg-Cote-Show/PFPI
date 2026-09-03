@@ -187,11 +187,31 @@ function normalizeTeamCodeFromHighlightly(code) {
   return HIGHLIGHTLY_TO_BIGBALLS_CODE[upper] || upper;
 }
 
-// Refetch at most this often, regardless of how often the surrounding
-// Big Balls poll itself runs -- keeps this comfortably under
-// Highlightly's 100/day RapidAPI budget (a fetch every 3 hours is 8/day
-// on its own) even stacked with occasional admin force-triggers.
+// Refetch from the real API at most this often, regardless of how often
+// the surrounding Big Balls poll itself runs -- keeps this comfortably
+// under Highlightly's 100/day RapidAPI budget (a fetch every 3 hours is
+// 8/day on its own) even stacked with occasional admin force-triggers.
 const HIGHLIGHTLY_KICKOFF_REFRESH_MS = 3 * 60 * 60 * 1000;
+
+// REAL BUG FOUND AND FIXED same-day (2026-09-03, ~3:35 PM ET), caught by
+// Yeti reporting kickoff times still weren't showing shortly after the
+// first version of this deployed: the first version only returned a
+// lookup Map on the ONE tick that actually refetched from Highlightly
+// (every ~3 hours) and returned null every other tick -- but Big Balls'
+// own normalizeGame() ALWAYS resynthesizes a fresh noon-UTC placeholder
+// every single time it runs (it has no memory of a previous
+// enrichment), and enrichKickoffTimes() correctly leaves a null-lookup
+// tick's games untouched -- meaning the very next 15-minute Big Balls
+// tick after a successful enrichment immediately overwrote it right
+// back to placeholder times, and it only became briefly correct again
+// once every ~3 hours. Confirmed live: `curl https://pfpi.me/data/
+// week-1.json` showed hasRealTime:false again about 20 minutes after
+// the first deploy's own verified-correct tick. Fix: persist the
+// PARSED LOOKUP ITSELF in KV (`highlightly-kickoff:cache`), not just a
+// "when did we last fetch" timestamp -- every tick now gets a usable
+// lookup (freshly fetched, or the last successfully cached one) and
+// enrichment is applied every single tick, not just the lucky one.
+const HIGHLIGHTLY_KICKOFF_CACHE_TTL_SECONDS = 24 * 60 * 60;
 
 async function shouldRefreshHighlightlyKickoffTimes(env) {
   const lastFetchRaw = await env.PFPI_KV.get("highlightly-kickoff:last-fetch");
@@ -199,19 +219,7 @@ async function shouldRefreshHighlightlyKickoffTimes(env) {
   return Date.now() - Number(lastFetchRaw) > HIGHLIGHTLY_KICKOFF_REFRESH_MS;
 }
 
-// Returns a Map of "AWAY|HOME" (Big-Balls-normalized codes) -> real
-// kickoff ISO timestamp, or null if the fetch was skipped/throttled/
-// failed. Callers must treat null as "no fresh data this tick" and keep
-// whatever kickoffISO they already had (Big Balls' synthesized
-// placeholder, or a previously-enriched real time) -- never leave a game
-// without SOME kickoffISO.
-async function fetchHighlightlyKickoffTimes(env, force) {
-  if (!env.HIGHLIGHTLY_API_KEY) {
-    console.error("Skipping Highlightly kickoff-time fetch: HIGHLIGHTLY_API_KEY not set.");
-    return null;
-  }
-  if (!force && !(await shouldRefreshHighlightlyKickoffTimes(env))) return null;
-
+async function fetchHighlightlyKickoffTimesFromAPI(env) {
   const res = await fetch(`${HIGHLIGHTLY_BASE}/matches?league=NFL&season=${SEASON}&limit=100`, {
     headers: { "x-rapidapi-key": env.HIGHLIGHTLY_API_KEY },
   });
@@ -229,10 +237,39 @@ async function fetchHighlightlyKickoffTimes(env, force) {
     if (!home || !away || !g.date) continue;
     lookup.set(`${away}|${home}`, g.date);
   }
-
-  await env.PFPI_KV.put("highlightly-kickoff:last-fetch", String(Date.now()));
   console.log(`Highlightly kickoff-time fetch: parsed ${lookup.size} usable games from ${raw.length} raw entries.`);
   return lookup;
+}
+
+// Returns a Map of "AWAY|HOME" (Big-Balls-normalized codes) -> real
+// kickoff ISO timestamp for THIS tick to use, or null only if no usable
+// lookup exists at all yet (never fetched successfully, or the cache has
+// fully expired). On a tick that isn't due for a real refetch, this
+// still returns the last successfully cached lookup from KV -- so every
+// tick applies enrichment with the best data available, not just the
+// tick that happened to refresh it.
+async function getHighlightlyKickoffLookup(env, force) {
+  if (!env.HIGHLIGHTLY_API_KEY) {
+    console.error("Skipping Highlightly kickoff-time fetch: HIGHLIGHTLY_API_KEY not set.");
+    return null;
+  }
+
+  if (force || (await shouldRefreshHighlightlyKickoffTimes(env))) {
+    const fetched = await fetchHighlightlyKickoffTimesFromAPI(env);
+    if (fetched) {
+      await env.PFPI_KV.put("highlightly-kickoff:cache", JSON.stringify([...fetched]), { expirationTtl: HIGHLIGHTLY_KICKOFF_CACHE_TTL_SECONDS });
+      await env.PFPI_KV.put("highlightly-kickoff:last-fetch", String(Date.now()));
+      return fetched;
+    }
+    // Fetch failed -- fall through to whatever's still cached below
+    // rather than go without real times just because this one attempt
+    // failed (a network blip shouldn't revert every game to placeholder
+    // times for the next 3 hours).
+  }
+
+  const cachedRaw = await env.PFPI_KV.get("highlightly-kickoff:cache");
+  if (!cachedRaw) return null;
+  return new Map(JSON.parse(cachedRaw));
 }
 
 // Overrides Big-Balls-normalized games' synthesized kickoffISO with a
@@ -246,7 +283,7 @@ async function fetchHighlightlyKickoffTimes(env, force) {
 // can't confidently match every game for this week, so a real gap is
 // visible in Worker logs rather than silently missed.
 function enrichKickoffTimes(games, kickoffLookup) {
-  if (!kickoffLookup) return games; // no fresh fetch this tick -- keep existing times as-is.
+  if (!kickoffLookup) return games; // no usable lookup at all yet (never fetched, or fully expired) -- keep Big Balls' placeholder times as-is.
   let matched = 0;
   const enriched = games.map(g => {
     const realISO = kickoffLookup.get(`${g.away}|${g.home}`);
@@ -903,11 +940,13 @@ async function pollAndPublish(env, force = false) {
     await preloadFullSeasonScheduleIfNeeded(env);
 
     // Own throttle, independent of Big Balls' -- see
-    // fetchHighlightlyKickoffTimes' own comment. Returns null (not an
-    // empty Map) on a throttled/failed tick, so enrichKickoffTimes below
-    // correctly leaves existing kickoff times untouched rather than
-    // wiping out a previous successful enrichment.
-    const kickoffLookup = await fetchHighlightlyKickoffTimes(env, force);
+    // getHighlightlyKickoffLookup's own comment (and the bug it fixes:
+    // this must return a usable lookup on EVERY tick, from cache if this
+    // isn't a refetch tick, not just the tick that actually refetches --
+    // Big Balls resynthesizes a placeholder kickoff time from scratch
+    // every time it runs, so anything less than "enrich every tick"
+    // silently reverts the fix between refetches).
+    const kickoffLookup = await getHighlightlyKickoffLookup(env, force);
 
     // Poll current week and next week, so next week's kickoff times (and
     // therefore deadlines) are available before Tuesday's picks email goes out.

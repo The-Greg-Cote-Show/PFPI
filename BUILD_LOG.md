@@ -5686,3 +5686,69 @@ real fix is switching to Highlightly's `date=YYYY-MM-DD` param (already
 confirmed to exist and work from the retired preseason integration),
 one call per real game-day in the polled weeks — not something to
 pre-build speculatively tonight without evidence it's actually needed.
+
+## Same-day follow-up: kickoff-time fix was self-reverting — real bug found and fixed (2026-09-03, ~3:40 PM ET)
+
+Yeti reported kickoff times still weren't showing on the Games tab
+shortly after the fix above went live. Investigated rather than assumed
+it was a caching issue — found a real, distinct bug in the fix itself,
+not the earlier root cause repeating.
+
+**Root cause:** the first version of `getHighlightlyKickoffLookup` (then
+named `fetchHighlightlyKickoffTimes`) only returned a usable lookup Map
+on the ONE tick that actually refetched from Highlightly (throttled to
+once per ~3 hours) — every other tick got `null` back by design. That
+was meant to be safe (`enrichKickoffTimes(games, null)` correctly leaves
+games untouched). The actual problem: Big Balls' `normalizeGame()`
+**always resynthesizes a fresh noon-UTC placeholder from scratch**,
+every single time it runs — it has no memory of a previous enrichment.
+So the very next 15-minute Big Balls tick after a successful
+enrichment started from a brand-new placeholder-only `normalized` array,
+got a `null` lookup (not due for a refetch yet), and published that
+placeholder straight through — silently overwriting the correct data it
+had just published 15-45 minutes earlier. This repeated on ~11 of every
+12 ticks, so the site was only briefly correct right after each ~3-hour
+refetch, then reverted.
+
+**Confirmed against real history, not just theory:** pulled the actual
+commit from **3:30 PM** (15 minutes after the first fix's own verified-
+good 3:15 PM tick, under the pre-fix code) directly from git —
+`data/week-1.json` at that commit shows `"kickoffISO":
+"2026-09-09T12:00:00.000Z", "hasRealTime": false"` for NE @ SEA: back
+to the placeholder, exactly matching what Yeti saw.
+
+**Fix:** persist the parsed lookup itself in KV
+(`highlightly-kickoff:cache`, 24h TTL), not just a "when did we last
+fetch" timestamp. Every tick now calls `getHighlightlyKickoffLookup()`,
+which either does a fresh fetch (refreshing the cache, same ~3-hour
+throttle as before) or falls back to the last successfully cached
+lookup from KV — so enrichment applies on every single tick using the
+best available data, not just the lucky refetch tick. A failed fetch
+attempt also now falls through to the cache instead of going without,
+so one bad network blip doesn't blank out real times for up to 3 hours.
+
+**Deployed and re-verified live against the specific failure mode that
+broke it the first time — the fix holds:** redeployed, then manually
+cleared the stale `highlightly-kickoff:last-fetch` KV key so the very
+next tick would populate the new cache key immediately rather than wait
+out the remaining ~2.5 hours of the old throttle window. Watched
+`wrangler tail` through the 3:45 PM tick (a real refetch: "parsed 100
+usable games from 100 raw entries," no mismatches) and confirmed the
+live published data was correct immediately after — same as the first
+version already did, not the real test on its own.
+
+**The test that actually mattered: the 4:00 PM tick — 15 minutes later,
+comfortably inside the 3-hour refetch throttle, so it could NOT have
+done a fresh Highlightly fetch (confirmed both deterministically, since
+`Date.now() - lastFetch` was ~15 min against a 3-hour threshold, and by
+reading the actual committed data back from git at that exact commit)
+— stayed correct**: `data/week-1.json` at the 4:00 PM commit
+(`4c0b393b`) still shows `hasRealTime: true` with the real kickoff time
+for every game checked, pulling from the new KV cache exactly as
+designed, instead of reverting to the placeholder the way the first
+version did at the equivalent 3:30 PM tick. This was the one case that
+actually distinguishes "fixed" from "looked fixed for one lucky tick."
+
+Apologies for shipping the first version with this gap — should have
+traced through what happens on a non-refetch tick before calling it
+done, not just verified the one tick that happened to refetch.

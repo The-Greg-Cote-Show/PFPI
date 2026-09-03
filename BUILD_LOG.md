@@ -4682,3 +4682,143 @@ resume.
 Purely a documentation/reporting deliverable — nothing here touched
 `index.html`, `worker.js`, `picks-worker.js`, or `shared.js`, and
 nothing needed deploying.
+
+## Family-team training slideshow — overnight, unattended (2026-09-02)
+
+Yeti kicked this off before bed and won't be watching. Hard rules in
+effect: stop and log here (no workaround) on anything that could
+delete/overwrite the repo/Worker/KV, any real-money step, any
+credential request beyond existing Cloudflare Secrets, or anything
+genuinely ambiguous. Two conditional session-only cron wakeups were
+also scheduled at the very start (3:00 AM and 4:00 AM EDT, Sept 3) in
+case usage ran out mid-task — see the note at the bottom of this entry
+for how they turned out. **Nothing below hit any hard-rule stop —
+completed fully in one pass.**
+
+**What this is:** a training slideshow for the real family teams (not
+Yeti/Greg's own admin tools) explaining how to use the picks site, per
+Yeti's content spec. Output is a self-contained HTML slide deck (no
+external dependencies, no build step) rather than PowerPoint or PDF —
+chosen because it could be built and verified end-to-end with tools
+already in this session (a text editor and the Chrome browser tool),
+with real screenshots embedded as local image files rather than
+relayed as base64 through the conversation (the earlier same-week
+`.pptx` deck task, logged above, hit real friction doing that with
+Google Slides — avoided here by keeping everything local).
+
+**File to open:** `training-deck/PFPI-Family-Training-Slideshow.html`
+— double-click to open in any browser, or open via File > Open. Arrow
+keys (or the Prev/Next buttons at the bottom) move between the 8
+slides. Screenshots live alongside it in `training-deck/screenshots/`
+— keep that folder next to the HTML file if you move it.
+
+**Real screenshots — all captured live via the Chrome browser tool
+against the actual deployed site, not fabricated or mocked up:**
+- `picks-page-top.jpg` / `submit-button-context.jpg` /
+  `submit-button-zoom.png` — all from the live test link
+  `https://pfpi.me/picks.html?token=pfpi-preseason3-test` (redirects
+  from the github.io URl to the pfpi.me custom domain), showing
+  Gentry's Neanderbrows' real Preseason Week 3 slate.
+- `games-tab-preseason-wk3.jpg` — the public site's Games tab, real
+  Preseason Week 3 final scores (no token/login).
+- `standings-tab-preseason-wk3.png` — the public site's Standings tab,
+  real non-zero Preseason Week 3 bar chart (Lobos 9, Critters 8,
+  Giraffes 7, etc.) — deliberately cropped to exclude the Commissioner's
+  Report panel that sits directly below it on that page (see below for
+  why).
+
+**One thing I could NOT do live, flagging honestly rather than faking
+it:** the spec asked for a screenshot of the actual pick-selection
+action (tapping a team button). Every game in the seeded test week
+(Preseason Week 3, games played Aug 27–29, 2026) is already past its
+own deadline as of tonight (Sept 2), so every button on that live page
+renders LOCKED and doesn't respond to a click. I captured the real
+page layout (unlocked-style button UI, just marked LOCKED) and
+described the tap-to-pick action in the slide text instead of showing
+a "selected" highlight state, since I couldn't trigger one live
+without either fabricating it or waiting for a future non-locked test
+week. Not a blocker, just noting it so Yeti can re-shoot that one
+screenshot with a live/unlocked test link later if a truer "selected"
+visual is wanted.
+
+**Commissioner's Report slide (slide 7) — no screenshot, by design,
+per Yeti's own instruction not to fabricate one:** checked all three
+existing `data/brief-week-*.json` files (`brief-week-1.json`,
+`brief-week-2.json`, `brief-week-preseason-3.json`) before writing this
+slide. All three are obviously placeholder/test text ("Testing the
+commissioner's brief...", "Testing for week 2", "Preseason Testing Is
+finished. Thatkindathing...") — not a real weekly recap Greg actually
+wrote for family consumption. Per the instructions ("use a real one if
+it exists, don't fabricate one"), slide 7 is description-only: what the
+report is and where to find it on the public site, no screenshot of
+its content. **Flagging for Yeti:** once Greg publishes a real brief,
+it'd be worth re-screenshotting the Standings-tab page (or Games tab —
+`briefPanel` shows on whichever tab is active) with the real text
+showing, and optionally adding it as a 9th slide or swapping it into
+slide 7.
+
+**Excluded per spec, confirmed absent from every slide:** no
+admin.html/brief.html (Commissioner Portal) screenshots, no analytics/
+visitor-tracking mentions anywhere, no troubleshooting/FAQ content —
+slide 8 is exactly the two contact lines Yeti specified (Yeti →
+technical, Greg → league rules, no contact info listed for Greg since
+the family already has it).
+
+**Email-mechanism slide (slide 2) — read from the real code, not
+assumed:** based on `handleWeeklyTrigger()` and `sendPicksEmail()` in
+`picks-worker.js` (lines ~135–248). Confirmed accurate to what's
+actually implemented today:
+- The weekly email goes out once per week, gated on `getCurrentWeek()`
+  plus a floor of "on or after the calendar day of that week's first
+  game, at or after 7:00 AM Eastern" — computed fresh from the real
+  schedule, not a hardcoded day.
+- The email body text literally says "Use this link any time this
+  week, you can save and come back before each game's deadline" — the
+  slide's "valid all week" framing matches this exactly.
+- Per-game deadlines: the email's own `formatWeekDeadlines()` describes
+  Tue/Wed/Thu/Fri games as locking individually 2 hours before their
+  own kickoff, and Sat/Sun/Mon games all locking together at 1:00 PM ET
+  Saturday — the slide's "locks at its own deadline, usually shortly
+  before that game kicks off" is a deliberately simplified version of
+  this for a non-technical audience (didn't reproduce the full Sat/
+  Sun/Mon collapsing rule since the outline said orientation, not a
+  rules seminar).
+
+**⚠️ Flagging for Yeti to double-check before this goes out to real
+people — not a slide-content error, but worth knowing:** `FAMILY_MEMBERS`
+in `shared.js` is currently `[]` (empty), and `handleWeeklyTrigger()`
+loops `for (const member of FAMILY_MEMBERS)` to decide who gets the
+weekly email. That means the automated weekly picks-link email
+described in slide 2 — while fully implemented and accurate as
+*described* — is not actually reaching any real family member's inbox
+yet, because nobody's in that array. This was already flagged twice
+elsewhere in this log (2026-09-02 entries above) as a known gap, not
+something new broken by tonight's work; repeating it here because
+slide 2 is the one piece of this deck that describes a mechanism that
+isn't live for anyone yet. Once real per-team emails are added to
+`FAMILY_MEMBERS`, slide 2's description should still hold true as
+written — nothing to change there, just don't send this deck out
+implying the email is already flowing to real people today.
+
+**Local-server note:** verified all 8 slides rendered correctly (images
+loading, layout, button states) using a throwaway local
+`python -m http.server` over the `training-deck/` folder, viewed via
+the Chrome browser tool, then killed the server. No files outside
+`training-deck/` were touched to do this. (Also had to kill one other
+stray `python -m http.server` process left running from an earlier,
+unrelated session before starting mine — same low-risk local dev
+server pattern used in that same-day tie-note-fix session above, not a
+production process, nothing deployed or data-bearing.)
+
+**Cron wakeups:** both the 3:00 AM and 4:00 AM EDT one-shot resume
+triggers scheduled at the start of this session are still pending as
+of this write-up, but the task finished well before either would fire
+— cancelling isn't needed since they're conditional (each checks this
+log for completion and no-ops if already done), but flagging that
+they'll fire harmlessly and self-delete if Yeti's still asleep past
+3/4 AM. Same session-only caveat as before: this only works if the
+Claude Code process itself stays open and idle overnight, not if it's
+fully closed.
+
+**Committed and pushed** — see the commit immediately following this
+log entry for the exact file list.

@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PFPI — How to Use the Site</title>
+<style>
+  :root{
+    --bg:#0b0e14;
+    --panel:#131722;
+    --panel2:#171c29;
+    --border:#232838;
+    --border2:#2c3245;
+    --text:#f2f4f8;
+    --muted:#8b93a7;
+    --gold:#eab63e;
+    --gold-text:#1a1406;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    height:100%;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    overflow:hidden;
+  }
+  #deck{
+    position:relative;
+    height:100vh;
+    width:100vw;
+  }
+  .slide{
+    position:absolute;
+    inset:0;
+    display:none;
+    flex-direction:column;
+    padding:4.5vh 6vw 3vh;
+    overflow-y:auto;
+  }
+  .slide.active{display:flex;}
+  .kicker{
+    font-size:.8rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--gold);
+    font-weight:700;
+    margin-bottom:.6rem;
+  }
+  h1{
+    font-size:2.6rem;
+    margin:0 0 .5rem;
+    line-height:1.15;
+  }
+  h1 .accent{color:var(--gold);}
+  .subtitle{
+    font-size:1.15rem;
+    color:var(--muted);
+    margin:0 0 1.5rem;
+    max-width:44rem;
+  }
+  .body-text{
+    font-size:1.15rem;
+    line-height:1.6;
+    max-width:46rem;
+    color:var(--text);
+  }
+  .body-text p{margin:0 0 1rem;}
+  .body-text strong{color:var(--gold);}
+  .content-row{
+    display:flex;
+    gap:3rem;
+    align-items:flex-start;
+    flex:1;
+    min-height:0;
+  }
+  .content-row.stack{flex-direction:column;}
+  .text-col{
+    flex:0 0 auto;
+    max-width:34rem;
+  }
+  .img-col{
+    flex:1;
+    min-width:0;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+  }
+  .shot{
+    max-width:100%;
+    max-height:66vh;
+    border-radius:10px;
+    border:1px solid var(--border2);
+    box-shadow:0 20px 50px rgba(0,0,0,.5);
+    background:#000;
+  }
+  .shot-caption{
+    text-align:center;
+    font-size:.85rem;
+    color:var(--muted);
+    margin-top:.6rem;
+  }
+  .shot-frame{display:flex;flex-direction:column;align-items:center;}
+  .two-shots{
+    display:flex;
+    gap:2rem;
+    flex:1;
+    min-height:0;
+    align-items:center;
+    justify-content:center;
+  }
+  .two-shots .shot-frame{flex:1;min-width:0;}
+  .two-shots .shot{max-height:52vh;}
+  .callout{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-left:4px solid var(--gold);
+    border-radius:8px;
+    padding:1rem 1.25rem;
+    font-size:1.05rem;
+    margin:1rem 0;
+    max-width:46rem;
+  }
+  .checklist{list-style:none;margin:0;padding:0;max-width:46rem;}
+  .checklist li{
+    display:flex;
+    gap:.75rem;
+    align-items:flex-start;
+    font-size:1.1rem;
+    line-height:1.5;
+    margin-bottom:1rem;
+  }
+  .checklist .num{
+    flex:0 0 auto;
+    width:2rem;height:2rem;
+    border-radius:50%;
+    background:var(--gold);
+    color:var(--gold-text);
+    font-weight:800;
+    display:flex;align-items:center;justify-content:center;
+    font-size:.95rem;
+  }
+  .cat-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:1rem 2.5rem;
+    max-width:52rem;
+    margin-top:.5rem;
+  }
+  .cat-item{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:.9rem 1.1rem;
+  }
+  .cat-item .cat-name{
+    color:var(--gold);
+    font-weight:700;
+    font-size:1rem;
+    margin-bottom:.25rem;
+  }
+  .cat-item .cat-desc{
+    font-size:.95rem;
+    color:var(--text);
+    line-height:1.4;
+  }
+  .contact-cards{
+    display:flex;
+    gap:2rem;
+    margin-top:1.5rem;
+    flex-wrap:wrap;
+  }
+  .contact-card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:1.75rem 2rem;
+    min-width:20rem;
+  }
+  .contact-card .label{
+    font-size:.8rem;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:.5rem;
+  }
+  .contact-card .who{
+    font-size:1.3rem;
+    font-weight:700;
+    margin-bottom:.4rem;
+  }
+  .contact-card .detail{
+    font-size:1.05rem;
+    color:var(--text);
+  }
+  .contact-card a{color:var(--gold);text-decoration:none;}
+  .contact-card a:hover{text-decoration:underline;}
+  .center-slide{
+    justify-content:center;
+    align-items:flex-start;
+  }
+  .intro-slide{
+    justify-content:center;
+  }
+  .logo-row{
+    display:flex;
+    align-items:baseline;
+    gap:.5rem;
+    margin-bottom:1.25rem;
+  }
+  .logo-row .logo{
+    font-size:2.2rem;
+    font-weight:900;
+    letter-spacing:.02em;
+  }
+  .logo-row .logo .yr{color:var(--gold);}
+  .foot{
+    margin-top:auto;
+    padding-top:1.5rem;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    color:var(--muted);
+    font-size:.8rem;
+  }
+  /* nav controls */
+  #nav{
+    position:fixed;
+    bottom:1.4vh;
+    left:0;right:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:1.2rem;
+    z-index:50;
+  }
+  #nav button{
+    background:var(--panel2);
+    border:1px solid var(--border2);
+    color:var(--text);
+    border-radius:8px;
+    padding:.5rem 1.1rem;
+    font-size:.95rem;
+    cursor:pointer;
+  }
+  #nav button:hover{background:var(--border);}
+  #nav button:disabled{opacity:.35;cursor:default;}
+  #dots{display:flex;gap:.4rem;}
+  #dots span{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--border2);
+    cursor:pointer;
+  }
+  #dots span.active{background:var(--gold);}
+  #counter{color:var(--muted);font-size:.85rem;min-width:3.5rem;text-align:center;}
+</style>
+</head>
+<body>
+
+<div id="deck">
+
+  <!-- Slide 1: Intro -->
+  <section class="slide active intro-slide">
+    <div class="logo-row">
+      <span class="logo">PFPI <span class="yr">2026</span></span>
+    </div>
+    <div class="kicker">Welcome</div>
+    <h1>Welcome to <span class="accent">PFPI</span> — <br>Pro Football Predictions, Incorporated</h1>
+    <p class="subtitle">
+      This is a quick walkthrough of the new site: how you'll get your weekly
+      picks link, how to make your picks, and where to check the standings
+      once games are final. No football or tech knowledge required — just
+      follow along.
+    </p>
+    <div class="callout">
+      Takes about 5 minutes. By the end you'll know exactly what to expect
+      each week and exactly what to click.
+    </div>
+  </section>
+
+  <!-- Slide 2: How you'll get your picks link -->
+  <section class="slide">
+    <div class="kicker">Step 1</div>
+    <h1>How you'll get your <span class="accent">picks link</span></h1>
+    <div class="body-text">
+      <p>
+        Each week, once that week's games are set, you'll get an <strong>email
+        with a personal link</strong> — it's tied to your team, so it's yours
+        and yours alone.
+      </p>
+      <p>
+        The link is good <strong>all week</strong>. You don't have to make every
+        pick the moment the email arrives — open it, make a few picks, close
+        it, come back later and finish. Your picks save automatically as you
+        go.
+      </p>
+      <p>
+        The only thing that changes is that each individual game <strong>locks
+        at its own deadline</strong> — usually shortly before that game kicks
+        off. Once a game locks, you can no longer change that pick, but every
+        other still-open game on the page is unaffected.
+      </p>
+    </div>
+    <div class="callout">
+      Bookmark or save the email — that link is how you'll always get back to
+      your picks page for the week.
+    </div>
+  </section>
+
+  <!-- Slide 3: Making your picks -->
+  <section class="slide">
+    <div class="kicker">Step 2</div>
+    <h1>Making your <span class="accent">picks</span></h1>
+    <div class="content-row">
+      <div class="text-col body-text">
+        <p>
+          Your picks page lists the week's games <strong>grouped by day</strong>,
+          with that day's deadline shown right above the games.
+        </p>
+        <p>
+          Each game shows two buttons — one for each team. Just <strong>tap the
+          team you think will win</strong>. That's the whole action.
+        </p>
+        <p>
+          A game marked <strong>LOCKED</strong> has already passed its deadline
+          and can no longer be changed — that's expected for older games, not
+          an error.
+        </p>
+      </div>
+      <div class="img-col">
+        <div class="shot-frame">
+          <img class="shot" src="screenshots/picks-page-top.jpg" alt="PFPI picks page showing games grouped by date with a deadline shown for each day">
+          <div class="shot-caption">The actual picks page — games grouped by date, deadline shown per day</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 4: Submitting your picks -->
+  <section class="slide">
+    <div class="kicker">Step 3 — Don't skip this</div>
+    <h1>Submitting your <span class="accent">picks</span></h1>
+    <div class="body-text">
+      <p>
+        <strong>Tapping a team button by itself does not finalize anything.</strong>
+        It just saves that one pick. To actually send your picks in for the
+        week, you need to press the <strong>Submit picks</strong> button at
+        the bottom of the page.
+      </p>
+    </div>
+    <div class="two-shots">
+      <div class="shot-frame">
+        <img class="shot" src="screenshots/submit-button-context.jpg" alt="Bottom of the picks page showing the Submit picks button">
+        <div class="shot-caption">The Submit picks button, at the bottom of the page</div>
+      </div>
+      <div class="shot-frame">
+        <img class="shot" src="screenshots/submit-button-zoom.png" alt="Close-up of the Submit picks button">
+        <div class="shot-caption">Close-up</div>
+      </div>
+    </div>
+    <div class="callout">
+      Come back and press Submit again any time you change a pick — you can
+      resubmit as many times as you like before each game locks.
+    </div>
+  </section>
+
+  <!-- Slide 5: Public site - Games -->
+  <section class="slide">
+    <div class="kicker">The public site</div>
+    <h1>The <span class="accent">Games</span> tab</h1>
+    <div class="content-row">
+      <div class="text-col body-text">
+        <p>
+          Anyone can visit the public PFPI site — no link or login needed. The
+          <strong>Games</strong> tab shows that week's full schedule.
+        </p>
+        <p>
+          As games are played, scores fill in automatically. Once a game is
+          <strong>FINAL</strong>, tapping it reveals what everyone in the
+          family picked for that game.
+        </p>
+      </div>
+      <div class="img-col">
+        <div class="shot-frame">
+          <img class="shot" src="screenshots/games-tab-preseason-wk3.jpg" alt="Public Games tab showing final scores for a week's schedule">
+          <div class="shot-caption">The Games tab — schedule and scores for the week</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 6: Public site - Standings -->
+  <section class="slide">
+    <div class="kicker">The public site</div>
+    <h1>Standings &amp; <span class="accent">categories</span></h1>
+    <div class="content-row">
+      <div class="text-col body-text">
+        <p>
+          The <strong>Standings</strong> tab shows a simple bar chart — one
+          bar per team, tallest is in the lead. It's the fastest way to see
+          where everyone stands.
+        </p>
+        <p>There are a few other categories along the top too, in plain English:</p>
+      </div>
+      <div class="img-col">
+        <div class="shot-frame">
+          <img class="shot" src="screenshots/standings-tab-preseason-wk3.png" alt="Public Standings tab showing a bar chart of team records">
+          <div class="shot-caption">The Standings tab — cumulative correct picks by team</div>
+        </div>
+      </div>
+    </div>
+    <div class="cat-grid">
+      <div class="cat-item">
+        <div class="cat-name">Weeks Leading</div>
+        <div class="cat-desc">How many weeks that team has been in first place.</div>
+      </div>
+      <div class="cat-item">
+        <div class="cat-name">Weekly Titles</div>
+        <div class="cat-desc">How many individual weeks that team has actually won outright.</div>
+      </div>
+      <div class="cat-item">
+        <div class="cat-name">10-Win Weeks</div>
+        <div class="cat-desc">How many weeks that team picked 10 or more games correctly.</div>
+      </div>
+      <div class="cat-item">
+        <div class="cat-name">Unique Hits</div>
+        <div class="cat-desc">Correct picks nobody else in the family also got right.</div>
+      </div>
+      <div class="cat-item">
+        <div class="cat-name">Best Week</div>
+        <div class="cat-desc">That team's single best-ever week, for bragging rights.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 7: Commissioner's Report -->
+  <section class="slide center-slide">
+    <div class="kicker">The public site</div>
+    <h1>The <span class="accent">Commissioner's Report</span></h1>
+    <div class="body-text">
+      <p>
+        Each week, Greg writes up a short recap — his take on how the week
+        went, who's rising, who's falling, and anything worth calling out.
+      </p>
+      <p>
+        You'll find it right on the main site, underneath the standings for
+        that week. No separate link needed — it's just part of the page.
+      </p>
+    </div>
+    <div class="callout">
+      New report goes up most weeks once that week's games are final — check
+      back after Sunday/Monday night football wraps up.
+    </div>
+  </section>
+
+  <!-- Slide 8: Questions/support -->
+  <section class="slide center-slide">
+    <div class="kicker">Questions?</div>
+    <h1>Who to <span class="accent">ask</span></h1>
+    <div class="contact-cards">
+      <div class="contact-card">
+        <div class="label">Technical / site problems</div>
+        <div class="who">Yeti</div>
+        <div class="detail"><a href="mailto:yeti@yetiblanc.com">yeti@yetiblanc.com</a></div>
+      </div>
+      <div class="contact-card">
+        <div class="label">League rules / questions</div>
+        <div class="who">Greg</div>
+        <div class="detail">You've already got his contact info.</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div id="nav">
+  <button id="prevBtn" onclick="go(-1)">&larr; Prev</button>
+  <div id="dots"></div>
+  <span id="counter"></span>
+  <button id="nextBtn" onclick="go(1)">Next &rarr;</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dotsEl = document.getElementById('dots');
+  const counterEl = document.getElementById('counter');
+  let i = 0;
+
+  slides.forEach((_, idx) => {
+    const d = document.createElement('span');
+    d.addEventListener('click', () => { i = idx; render(); });
+    dotsEl.appendChild(d);
+  });
+
+  function render(){
+    slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+    [...dotsEl.children].forEach((d, idx) => d.classList.toggle('active', idx === i));
+    counterEl.textContent = (i+1) + ' / ' + slides.length;
+    document.getElementById('prevBtn').disabled = i === 0;
+    document.getElementById('nextBtn').disabled = i === slides.length - 1;
+  }
+
+  function go(delta){
+    const next = i + delta;
+    if(next < 0 || next >= slides.length) return;
+    i = next;
+    render();
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if(e.key === 'ArrowRight' || e.key === ' ') go(1);
+    if(e.key === 'ArrowLeft') go(-1);
+  });
+
+  render();
+</script>
+
+</body>
+</html>

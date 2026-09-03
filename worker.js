@@ -111,17 +111,162 @@ function normalizeGame(raw) {
 // ============================================================
 // HIGHLIGHTLY preseason Week 3 stopgap (Aug 27-29, 2026) RETIRED 2026-09-03
 // ============================================================
-// This whole section (normalizeHighlightlyGame, shouldPollHighlightlyThisTick,
-// fetchHighlightlyPreseasonWeek3, and their supporting constants) has been
-// removed as part of retiring preseason from the live site ahead of real
-// Week 1 -- see BUILD_LOG.md's "PowerPoint conversion, cron-drift
-// investigation, preseason archive & teardown" entry for the full archive
-// and root-cause writeup (this was also the actual fix for the ~28
-// commits/hour cron-drift finding: the republish loop this fed into was
-// never retired after Aug 29, and kept recommitting stale cached preseason
-// data every 5 minutes). Big Balls (normalizeGame, above) is untouched --
-// this only ever covered the one preseason testing week Big Balls itself
-// has zero data for.
+// The full live-scores/picks-merge Highlightly integration that used to
+// live here (normalizeHighlightlyGame, shouldPollHighlightlyThisTick,
+// fetchHighlightlyPreseasonWeek3) was removed as part of retiring
+// preseason -- see BUILD_LOG.md's "PowerPoint conversion, cron-drift
+// investigation, preseason archive & teardown" entry. That removal is
+// NOT reversed by the section directly below -- this is a new, much
+// narrower use of the same provider, added the same day per Yeti's
+// explicit request, for a genuinely different purpose (kickoff-time
+// enrichment for the real regular season, not a preseason score feed).
+
+// ============================================================
+// HIGHLIGHTLY — real kickoff-time enrichment for the regular season
+// (2026-09-03, per Yeti, after the games-ordering investigation
+// surfaced a real, currently-live bug, not just a display issue)
+// ============================================================
+// ROOT CAUSE THIS FIXES: Big Balls supplies NO kickoff time-of-day at
+// all for any regular-season game (see normalizeGame() above --
+// kickoffISO is synthesized as noon UTC on the real calendar date,
+// confirmed 2026-08-25 and re-confirmed 2026-09-03 against the live
+// data/week-1.json and data/week-2.json: every game in both files
+// shares the identical synthesized time). computeGameDeadline()
+// (shared.js) subtracts 2 hours from kickoff for Tue/Wed/Thu/Fri games
+// -- with a fake noon-UTC kickoff, that produced a genuinely wrong,
+// live deadline: Week 1's Wednesday opener (NE @ SEA, real kickoff
+// ~8:00 PM ET) was computing a 6:00 AM ET deadline, locking picks ~14
+// hours before the real game. Weekend (Sat/Sun/Mon) deadlines were NOT
+// affected -- computeGameDeadline() only ever uses the kickoff's
+// calendar DATE for those, never its time, and the synthesized
+// noon-UTC placeholder always lands on the correct real calendar day.
+//
+// SCOPE: kickoff-time enrichment ONLY -- Big Balls already handles real
+// scores/status for the regular season correctly; this only supplies
+// the one thing it structurally cannot. Polled far less often than Big
+// Balls' own score polling (kickoff times don't move minute-to-minute
+// the way live scores do -- a flex-schedule change is a rare, discrete,
+// announced event, not something that needs checking every tick).
+//
+// TEAM-CODE MAPPING, VERIFIED AGAINST REAL DATA FROM BOTH PROVIDERS, not
+// guessed: compared Highlightly's own 32 real team abbreviations (every
+// team appears exactly once in the archived real preseason Week 3
+// schedule, archive/preseason-2026/kv/schedule_week_preseason-3.json --
+// a genuine 16-game, all-32-team dataset, not a partial sample) against
+// Big Balls' real published codes (data/week-1.json, data/week-2.json).
+// 30 of 32 matched exactly. Two confirmed mismatches: Highlightly "LAR"
+// = Big Balls "LA" (Rams), Highlightly "WSH" = Big Balls "WAS"
+// (Washington). Mapped below; every other code passes through
+// unchanged -- not assumed safe, empirically confirmed for all 32.
+//
+// KNOWN, STATED LIMITATION (verify-first, not a silent assumption): the
+// `/matches?...&limit=100` call below is unfiltered by week/date --
+// proven to reliably cover "current + next week" for the season's early
+// weeks (very little of the season has been played yet, so the current
+// and next week's games are necessarily near the front of whatever
+// order Highlightly returns), but NOT independently verified to still
+// reliably include the right games once the season is deep into
+// mid/late weeks, when far more of the season's 272 games sit ahead of
+// the current week in that same unfiltered response. `enrichKickoffTimes`
+// below logs a clear match-count warning every time it can't confidently
+// match every game for a polled week, specifically so a real gap later
+// in the season is visible in Worker logs rather than silently missed --
+// if that starts showing up, the real fix is switching this fetch to
+// Highlightly's `date=YYYY-MM-DD` param (confirmed to exist and work,
+// see the retired preseason section's own history in BUILD_LOG.md) with
+// one call per real game-day in the polled weeks, not something to
+// pre-build speculatively tonight without evidence it's needed.
+// ============================================================
+
+const HIGHLIGHTLY_BASE = "https://american-football.highlightly.net";
+
+const HIGHLIGHTLY_TO_BIGBALLS_CODE = { LAR: "LA", WSH: "WAS" };
+
+function normalizeTeamCodeFromHighlightly(code) {
+  const upper = (code || "").toUpperCase().trim();
+  return HIGHLIGHTLY_TO_BIGBALLS_CODE[upper] || upper;
+}
+
+// Refetch at most this often, regardless of how often the surrounding
+// Big Balls poll itself runs -- keeps this comfortably under
+// Highlightly's 100/day RapidAPI budget (a fetch every 3 hours is 8/day
+// on its own) even stacked with occasional admin force-triggers.
+const HIGHLIGHTLY_KICKOFF_REFRESH_MS = 3 * 60 * 60 * 1000;
+
+async function shouldRefreshHighlightlyKickoffTimes(env) {
+  const lastFetchRaw = await env.PFPI_KV.get("highlightly-kickoff:last-fetch");
+  if (!lastFetchRaw) return true; // never fetched -- e.g. right after this feature's first deploy.
+  return Date.now() - Number(lastFetchRaw) > HIGHLIGHTLY_KICKOFF_REFRESH_MS;
+}
+
+// Returns a Map of "AWAY|HOME" (Big-Balls-normalized codes) -> real
+// kickoff ISO timestamp, or null if the fetch was skipped/throttled/
+// failed. Callers must treat null as "no fresh data this tick" and keep
+// whatever kickoffISO they already had (Big Balls' synthesized
+// placeholder, or a previously-enriched real time) -- never leave a game
+// without SOME kickoffISO.
+async function fetchHighlightlyKickoffTimes(env, force) {
+  if (!env.HIGHLIGHTLY_API_KEY) {
+    console.error("Skipping Highlightly kickoff-time fetch: HIGHLIGHTLY_API_KEY not set.");
+    return null;
+  }
+  if (!force && !(await shouldRefreshHighlightlyKickoffTimes(env))) return null;
+
+  const res = await fetch(`${HIGHLIGHTLY_BASE}/matches?league=NFL&season=${SEASON}&limit=100`, {
+    headers: { "x-rapidapi-key": env.HIGHLIGHTLY_API_KEY },
+  });
+  if (!res.ok) {
+    console.error(`Highlightly kickoff-time fetch failed: ${res.status} ${await res.text()}`);
+    return null;
+  }
+
+  const data = await res.json();
+  const raw = data.data || [];
+  const lookup = new Map();
+  for (const g of raw) {
+    const home = normalizeTeamCodeFromHighlightly(g.homeTeam && g.homeTeam.abbreviation);
+    const away = normalizeTeamCodeFromHighlightly(g.awayTeam && g.awayTeam.abbreviation);
+    if (!home || !away || !g.date) continue;
+    lookup.set(`${away}|${home}`, g.date);
+  }
+
+  await env.PFPI_KV.put("highlightly-kickoff:last-fetch", String(Date.now()));
+  console.log(`Highlightly kickoff-time fetch: parsed ${lookup.size} usable games from ${raw.length} raw entries.`);
+  return lookup;
+}
+
+// Overrides Big-Balls-normalized games' synthesized kickoffISO with a
+// real Highlightly kickoff time where a confident match exists.
+// Defensive, not blind trust: only overrides when (a) the team-code pair
+// matches exactly -- safe within one season, since an ordered
+// (away,home) pair does not repeat -- AND (b) the real kickoff falls
+// within 1 calendar day (ET) of Big Balls' own synthesized date, so a
+// stray bad match can't silently plant a wildly wrong deadline on the
+// wrong game. Logs a match-count warning (doesn't throw) whenever it
+// can't confidently match every game for this week, so a real gap is
+// visible in Worker logs rather than silently missed.
+function enrichKickoffTimes(games, kickoffLookup) {
+  if (!kickoffLookup) return games; // no fresh fetch this tick -- keep existing times as-is.
+  let matched = 0;
+  const enriched = games.map(g => {
+    const realISO = kickoffLookup.get(`${g.away}|${g.home}`);
+    if (!realISO) return g;
+    const realDay = getEasternDateParts(new Date(realISO));
+    const placeholderDay = getEasternDateParts(new Date(g.kickoffISO));
+    const realMidnight = new Date(`${realDay.year}-${realDay.month}-${realDay.day}T00:00:00.000Z`).getTime();
+    const placeholderMidnight = new Date(`${placeholderDay.year}-${placeholderDay.month}-${placeholderDay.day}T00:00:00.000Z`).getTime();
+    if (Math.abs(realMidnight - placeholderMidnight) > 24 * 60 * 60 * 1000) {
+      console.error(`Highlightly kickoff-time mismatch for ${g.away}@${g.home}: real date ${realDay.year}-${realDay.month}-${realDay.day} vs. Big Balls date ${placeholderDay.year}-${placeholderDay.month}-${placeholderDay.day} -- too far apart, NOT overriding.`);
+      return g;
+    }
+    matched++;
+    return { ...g, kickoffISO: realISO, hasRealTime: true };
+  });
+  if (matched < games.length) {
+    console.error(`Highlightly kickoff-time enrichment: matched ${matched}/${games.length} games this tick -- the rest kept Big Balls' synthesized (date-only) kickoff time.`);
+  }
+  return enriched;
+}
 
 // ============================================================
 // STANDINGS + tie-split point categories (cumulative correct picks per
@@ -757,6 +902,13 @@ async function pollAndPublish(env, force = false) {
   } else {
     await preloadFullSeasonScheduleIfNeeded(env);
 
+    // Own throttle, independent of Big Balls' -- see
+    // fetchHighlightlyKickoffTimes' own comment. Returns null (not an
+    // empty Map) on a throttled/failed tick, so enrichKickoffTimes below
+    // correctly leaves existing kickoff times untouched rather than
+    // wiping out a previous successful enrichment.
+    const kickoffLookup = await fetchHighlightlyKickoffTimes(env, force);
+
     // Poll current week and next week, so next week's kickoff times (and
     // therefore deadlines) are available before Tuesday's picks email goes out.
     const weeksToPoll = [currentWeek, Math.min(currentWeek + 1, 18)];
@@ -765,7 +917,7 @@ async function pollAndPublish(env, force = false) {
     for (const week of weeksToPoll) {
       const raw = await fetchBigBallsWeek(week, env);
       if (!raw) continue;
-      const normalized = raw.map(normalizeGame);
+      const normalized = enrichKickoffTimes(raw.map(normalizeGame), kickoffLookup);
 
       // Schedule cache for the picks worker's deadline math: kickoff times only.
       await env.PFPI_KV.put(

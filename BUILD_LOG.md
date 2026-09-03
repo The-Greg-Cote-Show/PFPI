@@ -5587,3 +5587,102 @@ also parses clean (Node syntax check).
    so ordering at least stops shifting between visits, but a true fix
    needs a real time-of-day data source, which is your call to make,
    not mine to guess at.
+
+## Follow-up: revived Highlightly for real kickoff-time enrichment (2026-09-03, same day) — DONE, verified live in production
+
+Yeti's explicit response to item 5 above: yes, pull real kickoff times
+from Highlightly (the retired preseason provider) even though it's an
+extra moving part — he flagged that mid-week deadlines depend on real
+kickoff time, which turned out to be exactly right and more urgent than
+the earlier writeup made it sound.
+
+**Confirmed this is a real, currently-live bug before building anything,
+not just a display/ordering nice-to-have:** `computeGameDeadline()`
+(shared.js) subtracts 2 hours from kickoff for Tue/Wed/Thu/Fri games.
+With Big Balls' synthesized noon-UTC placeholder as the only kickoff
+time available, Week 1's real Wednesday opener (NE @ SEA, real kickoff
+~8:20 PM ET) was computing a deadline of **6:00 AM ET the same day** —
+picks would have locked ~14 hours before the real game, for a game 6
+days away at the time. Quantified this by hand before writing any code.
+Weekend (Sat/Sun/Mon) deadlines were NOT affected by the same gap —
+`computeGameDeadline()` only ever uses the kickoff's calendar date for
+those, never the time, and the placeholder always lands on the correct
+real day.
+
+**Built a narrow, kickoff-time-only Highlightly integration** (new
+section in `worker.js`, right where the retired preseason section used
+to live) — explicitly NOT a revival of the old live-scores/picks-merge
+machinery, just: fetch Highlightly's schedule, extract real kickoff
+timestamps, merge them into Big Balls' already-normalized games before
+anything downstream (KV schedule cache, deadline computation, published
+JSON) ever sees them. Big Balls stays the sole source for scores/status;
+Highlightly only ever supplies the one field it structurally can't.
+
+**Team-code mismatch risk — verified against real data from both
+providers, not guessed:** compared Highlightly's own 32 real team
+abbreviations (from the archived real preseason Week 3 schedule,
+`archive/preseason-2026/kv/schedule_week_preseason-3.json` — a genuine
+16-game, all-32-team dataset from last night's teardown archive) against
+Big Balls' real published codes. 30 of 32 matched exactly; 2 confirmed
+mismatches (Highlightly `LAR` = Big Balls `LA`; Highlightly `WSH` = Big
+Balls `WAS`), mapped explicitly in code. Everything else passes through
+unchanged — confirmed for all 32 teams, not assumed.
+
+**Defense-in-depth against a bad match corrupting a deadline:** a
+Highlightly kickoff time only overrides Big Balls' placeholder if it
+falls within 1 calendar day (ET) of the placeholder's own date — any
+mismatch beyond that gets logged as an error and rejected, keeping the
+original synthesized time rather than risk planting a wildly wrong
+deadline on the wrong game from a bad team-code match.
+
+**Throttled independently of Big Balls' own polling cadence** — kickoff
+times don't move minute-to-minute the way live scores do (a flex
+schedule change is a rare, announced, discrete event), so this refetches
+at most once every 3 hours (KV-timestamp-gated, ~8 calls/day worst case)
+regardless of how often Big Balls' own 15-min/live-window gate lets
+`pollAndPublish()` run — comfortably inside Highlightly's 100/day
+RapidAPI budget with a lot of headroom, even stacked with occasional
+admin force-triggers.
+
+**Unit-tested the merge logic locally before deploying** (a standalone
+Node script mirroring the exact code, using real team names and
+realistic kickoff times, deleted after use): confirmed the LAR/WSH
+aliasing works, confirmed a `null` lookup (throttled tick) leaves games
+completely unchanged, confirmed a deliberately-wrong-date match gets
+rejected and the original kept. All three passed before this went
+anywhere near production.
+
+**Deployed and verified live against the real API, not just simulated
+data:** `wrangler deploy -c wrangler-scores.toml`, then watched
+`wrangler tail` through the very next real cron tick (3:15 PM ET) —
+real log line: `Highlightly kickoff-time fetch: parsed 100 usable games
+from 100 raw entries` (100% clean parse, no malformed entries), and
+critically **no mismatch/partial-match warnings**, meaning every Week
+1 and Week 2 game found a confident match on the first real attempt.
+Confirmed end-to-end by reading back the actual committed
+`data/week-1.json`/`data/week-2.json` from `origin/main` immediately
+after: every game in both weeks now has `hasRealTime: true` with a real,
+distinct kickoff timestamp (Week 2: 16 games, 6 distinct real broadcast
+windows, vs. 1 identical placeholder before). **NE @ SEA's deadline is
+now 6:20 PM ET the day before kickoff (2 hours before the real ~8:20 PM
+ET kickoff) — correct**, replacing the old 6:00 AM ET bug. This also
+fully resolves item 5's original ask (real chronological kickoff
+ordering) with genuine data, not just the stable-but-arbitrary
+tiebreaker from the earlier fix — that tiebreaker stays in place
+harmlessly as a fallback for any future tick where Highlightly's fetch
+is throttled/fails and a placeholder time is all that's available.
+
+**Known, stated limitation, not silently assumed safe long-term:** the
+Highlightly call (`limit=100`, unfiltered by week) reliably covers
+"current + next week" right now because so little of the season has
+been played yet — not independently verified to keep working once the
+season is deep into mid/late weeks, when far more games sit ahead of
+the current week in that same unfiltered response. `enrichKickoffTimes`
+logs a clear match-count warning any week it can't confidently match
+every game, specifically so a real gap later in the season shows up in
+Worker logs rather than silently regressing back to placeholder times.
+Flagging now so it's not a surprise: if that warning ever appears, the
+real fix is switching to Highlightly's `date=YYYY-MM-DD` param (already
+confirmed to exist and work from the retired preseason integration),
+one call per real game-day in the polled weeks — not something to
+pre-build speculatively tonight without evidence it's actually needed.

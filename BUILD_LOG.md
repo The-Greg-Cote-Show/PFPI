@@ -5091,3 +5091,182 @@ for) — all passed:**
 direct inspection as described above. Proceeding to Step 3 (the actual
 teardown) only now that this checkpoint has passed and been committed
 to the repo.
+
+### Part 3, Step 3: Clear preseason from the live site — DONE
+
+**KV data deleted** (all 32 keys from the verified archive above, via
+`wrangler kv key delete --namespace-id 3b5cd856fa7b40908601404f46b95456
+--remote`, one at a time, each confirmed against the exact same key
+list the archive was built from): every `picks:preseason-3:*`,
+`notified-picks:preseason-3:*`, `digest:preseason-3` /
+`digest-version:preseason-3:*`, `brief-version:preseason-3:*`,
+`override-log:preseason-3:*`, `schedule:week:preseason-3`, and
+`token:pfpi-preseason3-test`. Spot-verified the very first deletion
+(`token:pfpi-preseason3-test`) with an immediate follow-up `kv key get`
+that returned a real 404, confirming deletes take effect immediately
+against the live namespace, before deleting the rest. Re-ran
+`wrangler kv key list` afterward and grepped for "preseason" again —
+zero matches, and the total key count dropped by exactly 96 lines
+(32 keys × 3 lines each in the JSON listing), confirming nothing else
+was accidentally touched.
+
+**Note for Yeti:** the live test link
+(`https://pfpi.me/picks.html?token=pfpi-preseason3-test`) used in the
+training-slideshow session is now dead (its token no longer resolves,
+by design — that's the same KV delete above). The slideshow itself is
+unaffected since it only embeds static screenshots, never the live
+link text.
+
+**Published data files removed:** `data/week-preseason-3.json` and
+`data/brief-week-preseason-3.json` deleted from the repo (`git rm`) --
+both fully preserved in `archive/preseason-2026/data/` already.
+`data/` now contains only real-week files (`week-1.json`, `week-2.json`,
+`current.json`, `standings.json`) plus the two real-week test briefs
+(`brief-week-1.json`, `brief-week-2.json`, unrelated to preseason, left
+alone per the real-regular-season-data boundary).
+
+**Week-selector UI removed** from every place Yeti named:
+- **`index.html` (public site):** deleted the "Preseason" button from
+  `renderWeekRow()` -- confirmed via `grep` that nothing else in the
+  file can ever set `currentWeek` to `PRESEASON_WEEK_KEY` (no URL param
+  reads it either, only that one now-removed `onclick` handler ever
+  did). Left the `PRESEASON_WEEK_KEY`/`isPreseason`/`preseasonStats`
+  branches elsewhere in the file (`render()`, `realDataFor()`, etc.)
+  in place as permanently-dead code rather than excising every one --
+  a deliberate, lower-risk call given these are interleaved with real
+  regular-season rendering logic I did not want to risk breaking
+  overnight without the ability to fully exercise every code path
+  live. Documented this decision inline at the deletion site.
+- **`admin.html` / `brief.html` (Greg's own tools -- named explicitly
+  in the task even though they're not public-facing):** both files
+  had near-identical duplicated logic (4 separate `<select>`
+  populators each: correction-form week picker, Missing Picks tracker,
+  Weekly Digest, Commissioner's Report publish tab). Removed all 8
+  "Preseason" `<option>`-injection blocks (4 per file). Left the
+  `PRESEASON_MP_KEY` constant and its downstream comparison branches
+  in place as inert dead code (same reasoning as index.html) **except
+  one real, deliberate fix in both files**: `getEffectiveCurrentWeek()`
+  used to fall back to `PRESEASON_MP_KEY` when no regular-season week
+  was complete yet (the exact situation right now, pre-real-Week-1) --
+  left as-is, this would have produced a genuinely broken UI state
+  (an empty dropdown with no matching option, since the Preseason
+  option is now gone, plus a stale "Preseason is available to test"
+  status message). Changed the fallback to `1` (Week 1) instead, which
+  the existing "hasn't been generated yet" messaging already handles
+  honestly. **Flagging for Yeti:** this one change (in both files) was
+  made without being able to log into admin.html/brief.html live to
+  verify visually -- doing so would have required entering a password,
+  which is outside what an unattended session should do per the hard
+  rules on credentials. Low severity if something's still off (private
+  tool, no data risk), but worth a quick look at the Weekly Digest and
+  Commissioner's Report tabs' default state next time either of you
+  logs in, especially before real Week 1 finishes (since that's
+  exactly the window this fallback is live for).
+- Every edited file's inline `<script>` block was parsed with Node
+  (`new Function(source)`) after editing to catch any syntax error
+  from the deletions before considering the edit done -- all clean.
+- **`picks.html`:** zero preseason references existed here to begin
+  with (token-driven, no hardcoded week dropdown) -- confirmed, no
+  changes needed.
+
+**Backend left alone, deliberately:**
+- **`picks-worker.js`'s `handleClearWeekPicks`** ("Clear all picks for
+  a week" admin tool) accepts `week === "preseason-3"` but is
+  explicitly documented in its own comment as "deliberately works on
+  ANY week, not just preseason (confirmed intentional, not scope
+  creep)" -- this is real, reusable regular-season admin
+  infrastructure that happens to also work on preseason, not
+  preseason-specific infrastructure. Not touched.
+- **`picks-worker.js`'s other `week === "preseason-3"` branches**
+  (reminder-email endpoint, publish-brief endpoint, brief-history
+  endpoint) are input-validation guards letting that one string value
+  pass through alongside real week numbers. Now permanently
+  unreachable (nothing in the UI can ever send that value again, and
+  the token that would have let a visitor submit against it is
+  deleted), but left as inert dead code rather than risk editing
+  request-parsing logic shared with real week numbers. Not touched.
+
+**`worker.js` -- the real fix, and also Part 2's root cause,
+removed together:**
+- Deleted the entire "HIGHLIGHTLY — preseason Week 3 ONLY" section:
+  `normalizeHighlightlyGame()`, `shouldPollHighlightlyThisTick()`,
+  `fetchHighlightlyPreseasonWeek3()`, and their supporting constants
+  (`HIGHLIGHTLY_BASE`, `PRESEASON_WEEK3_ET_DATES`, `easternDateKey()`)
+  -- confirmed via grep that none of these were referenced anywhere
+  else in the file before deleting.
+- Deleted `computePreseasonSnapshot()` entirely -- confirmed by
+  re-reading it line by line (and its own extensive comments) that it
+  shares no code or mutable state with `computeStandings()` (the real
+  regular-season aggregator), only the tiny generic `splitShare()`/
+  `round2()` math helpers, which have no notion of "week" and are
+  untouched. Fixed its one real remaining caller
+  (`computeDigestStatsForWeek()`, the manual digest-recompute endpoint)
+  to drop the now-dead `week === "preseason-3"` branch entirely rather
+  than leave a dangling reference to a deleted function.
+- Deleted the whole preseason republish block inside `pollAndPublish()`
+  -- this is the literal fix for Part 2's root-cause finding (the
+  `minute % 5 === 0` loop that kept recommitting stale cached preseason
+  data forever, since it was never tied to Highlightly's own Aug-29
+  retirement).
+- Removed the now-unused `FAMILY_MEMBERS` import (only ever used by the
+  deleted preseason code).
+- `worker.js` dropped from 1935 to 1527 lines. `node -c worker.js`
+  (full syntax check) passes clean after every edit. `computeStandings()`
+  itself, tie handling (`normalizeGame()`'s `tie`/`winner` logic, which
+  real weeks use), the Weekly Digest system, and every other
+  regular-season code path are untouched -- confirmed by grepping for
+  every remaining "preseason" mention post-edit: all of them are
+  historical comments, none are live code.
+
+**Deployed:** `npx wrangler deploy -c wrangler-scores.toml` --
+succeeded, confirmed live trigger config `schedule: * * * * *` (exactly
+matching `wrangler-scores.toml`, so still no dashboard-vs-repo drift).
+This is the actual live fix taking effect, not just a local file
+change. **Verified in production, not just assumed:** before this
+deploy, `data/*.json` automated commits included "Update preseason
+Week 3 (Highlightly) [automated]" every 5 minutes on the dot (23:20,
+23:15, 23:10, 23:05, 23:00...); after the KV delete + deploy, that
+commit message stopped appearing entirely on the next expected 5-minute
+mark, while the real Big Balls-path commits (current week pointer,
+standings, week files) kept landing normally on their own unrelated
+15-minute cadence -- confirming the fix actually works live, and
+regular-season polling/publishing is unaffected.
+
+**Live-tested `index.html`** (the one file in this list that's genuinely
+public and testable without a password) against a local static server
+via the Chrome browser tool: Games tab and Standings tab both render
+correctly, only "Wk 1" appears in the week row (no Preseason button
+anywhere), and the browser console shows zero errors on load or after
+switching tabs. `admin.html`/`brief.html` could not be live-tested the
+same way (they require an authenticated admin login, and entering a
+password is outside what an unattended session should do) -- covered
+instead by the Node syntax check and the deliberate, documented
+`getEffectiveCurrentWeek()` fix above; flagged for Yeti's own quick
+look per that note.
+
+### Summary for Yeti (read this first)
+
+- **Part 1 (PowerPoint deck): DONE.** `training-deck/PFPI-Family-Training-Slideshow.pptx`
+  exists alongside the HTML version, same real screenshots, editable
+  text/images. Not yet opened in real PowerPoint to eyeball -- worth a
+  quick look whenever convenient.
+- **Part 2 (cron-drift investigation): DONE, root cause found and
+  fixed** (as part of Part 3's teardown, since the cause WAS preseason
+  infrastructure). Not the wrangler-deploy-clears-triggers bug from
+  before -- both Workers' triggers are correctly repo-configured. Real
+  cause: a dead preseason republish loop, now removed and confirmed
+  stopped in production.
+- **Part 3 (archive & teardown): DONE.** Preseason fully archived
+  (`archive/preseason-2026/`, verified complete before anything was
+  deleted) and fully retired from the live site: KV data deleted,
+  published JSON files removed, UI entry points removed from
+  index.html/admin.html/brief.html, dead Worker code removed and
+  redeployed, all confirmed working live. Real regular-season
+  data/scoring/tie-handling untouched throughout.
+- **The one thing worth Yeti's own eyes on:** the `getEffectiveCurrentWeek()`
+  fallback change in admin.html/brief.html (falls back to Week 1
+  instead of Preseason now) was made without a live login to verify --
+  low-risk, but take a look at the Weekly Digest / Commissioner's
+  Report tabs' default state next login, especially before real Week 1
+  finishes.
+- Site should be safe to treat as clean and regular-season-ready.

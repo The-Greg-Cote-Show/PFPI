@@ -483,14 +483,6 @@ async function populateWeeks() {
   const maxWeek = effectiveWeek === PRESEASON_MP_KEY ? 0 : effectiveWeek;
   const sel = document.getElementById("weekSelect");
   sel.innerHTML = "";
-  // Preseason option (per Yeti, 2026-08-28) -- same PRESEASON_MP_KEY the
-  // Missing Picks/Weekly Digest tabs already use, so Greg can publish and
-  // test a real brief against the preseason sandbox as a full dress
-  // rehearsal before real weekly use, exactly like those other two tabs.
-  const preseasonOpt = document.createElement("option");
-  preseasonOpt.value = PRESEASON_MP_KEY;
-  preseasonOpt.textContent = "Preseason";
-  sel.appendChild(preseasonOpt);
   // Only weeks up through the latest fully-complete week are selectable —
   // Greg can publish that week's brief or go back and fix an earlier one,
   // but can't accidentally pick a week that hasn't finished yet.
@@ -775,10 +767,6 @@ async function populateMissingPicksWeeks() {
   const currentWeek = await fetchCurrentWeek();
   const sel = document.getElementById("mpWeekSelect");
   sel.innerHTML = "";
-  const preseasonOpt = document.createElement("option");
-  preseasonOpt.value = PRESEASON_MP_KEY;
-  preseasonOpt.textContent = "Preseason";
-  sel.appendChild(preseasonOpt);
   for (let w = 1; w <= currentWeek; w++) {
     const opt = document.createElement("option");
     opt.value = w;
@@ -940,29 +928,25 @@ function isWeekComplete(games) {
 // whose games are ALL final, not the raw calendar-based /current-week
 // value -- generalized to "every game in the week," not specifically
 // Monday Night Football, so this also works unchanged in the playoffs
-// (which don't schedule MNF). Falls back to Preseason if not even Week 1
-// is complete yet.
+// (which don't schedule MNF). Used to fall back to Preseason if not even
+// Week 1 was complete yet -- Preseason was retired from the site
+// 2026-09-03 (see BUILD_LOG.md), so this now falls back to Week 1 itself;
+// renderDigest()/populateWeeks() already show an honest "hasn't been
+// generated yet" state for a week with no digest/brief, so defaulting to
+// a not-yet-complete Week 1 is a normal, truthful state rather than a
+// special case.
 async function getEffectiveCurrentWeek() {
   const calendarWeek = await fetchCurrentWeek();
   const latestGames = await fetchWeekGames(calendarWeek);
   const latestComplete = isWeekComplete(latestGames);
   const maxCompleteWeek = latestComplete ? calendarWeek : calendarWeek - 1;
-  return maxCompleteWeek >= 1 ? maxCompleteWeek : PRESEASON_MP_KEY;
+  return maxCompleteWeek >= 1 ? maxCompleteWeek : 1;
 }
 
 async function populateDigestWeeks() {
   const sel = document.getElementById("digestWeekSelect");
   const statusEl = document.getElementById("digestStatus");
   sel.innerHTML = "";
-
-  // Preseason is always offered, regardless of real-season completeness
-  // below -- per Yeti (2026-08-27), it's a testing/verification sandbox
-  // (same PRESEASON_MP_KEY the Missing Picks tab already uses), not a
-  // "final week" narrative digest, so it shouldn't wait on anything.
-  const preseasonOpt = document.createElement("option");
-  preseasonOpt.value = PRESEASON_MP_KEY;
-  preseasonOpt.textContent = "Preseason";
-  sel.appendChild(preseasonOpt);
 
   const effectiveWeek = await getEffectiveCurrentWeek();
   const maxSelectableWeek = effectiveWeek === PRESEASON_MP_KEY ? 0 : effectiveWeek;
@@ -974,13 +958,10 @@ async function populateDigestWeeks() {
     sel.appendChild(opt);
   }
 
-  if (maxSelectableWeek < 1) {
-    statusEl.textContent = "No regular-season week is finished yet -- Preseason is available to test now; real weeks will appear here once each one's last game goes final.";
-    statusEl.className = "status show";
-  }
+  statusEl.textContent = "";
+  statusEl.className = "status";
 
-  // Default to the most useful real week if one's actually finished;
-  // otherwise Preseason is the only thing there is to look at right now.
+  // Default to the most useful real week that's actually finished.
   sel.value = String(effectiveWeek);
   await renderDigest();
 }

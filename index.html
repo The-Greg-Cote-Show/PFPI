@@ -559,15 +559,12 @@ function renderTabs(){
 function renderWeekRow(){
   const el = document.getElementById("weekRow"); el.innerHTML = "";
 
-  const preseasonBtn = document.createElement("button");
-  preseasonBtn.className = "week-btn" + (currentWeek === PRESEASON_WEEK_KEY ? " active" : "");
-  preseasonBtn.textContent = "Preseason";
-  // Games is the only category that makes sense for preseason -- no PFPI
-  // picks are scored against it, so Standings/etc. would just show an
-  // honest "no data" empty state. Switching straight to Games is the more
-  // useful default than making a visitor click over themselves.
-  preseasonBtn.onclick = () => { currentWeek = PRESEASON_WEEK_KEY; currentCat = "games"; render(); };
-  el.appendChild(preseasonBtn);
+  // Preseason button retired 2026-09-03 (see BUILD_LOG.md) -- with it gone,
+  // currentWeek can never become PRESEASON_WEEK_KEY again, so the
+  // isPreseason branches elsewhere in this file (render(), realDataFor(),
+  // etc.) are now permanently inert rather than deleted outright -- see
+  // that log entry for why a full excision was judged riskier than leaving
+  // them dormant.
 
   for (let w=1; w<=CURRENT_WEEK; w++){
     const btn = document.createElement("button");

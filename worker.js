@@ -36,7 +36,7 @@
 // guesses exactly, including the game_id's YYYY_WW_AWAY_HOME format.
 // ============================================================
 
-import { TEAMS, TEAM_SHORT, computeCurrentWeekFromDate, commitJSONToGitHub, getEasternDateParts, FAMILY_MEMBERS, computeGameDeadline, sendPfpiEmail } from "./shared.js";
+import { TEAMS, TEAM_SHORT, computeCurrentWeekFromDate, commitJSONToGitHub, getEasternDateParts, computeGameDeadline, sendPfpiEmail } from "./shared.js";
 
 const BIG_BALLS_BASE = "https://api.bigballsdata.com";
 const SEASON = 2026;
@@ -109,226 +109,19 @@ function normalizeGame(raw) {
 }
 
 // ============================================================
-// HIGHLIGHTLY — preseason Week 3 (Aug 27-29, 2026) ONLY
+// HIGHLIGHTLY preseason Week 3 stopgap (Aug 27-29, 2026) RETIRED 2026-09-03
 // ============================================================
-// SCOPE, DECIDED 2026-08-25 (per PFPI_highlightly_overnight_handoff.md's
-// explicit instruction not to silently expand scope): this is a STOPGAP
-// for this one preseason week specifically, not an ongoing parallel source
-// alongside Big Balls. Big Balls has zero PRE/POST coverage (confirmed, see
-// BUILD_LOG.md) so it can't cover this week at all; Highlightly can, but
-// nothing here assumes it'll be used again after Week 3. If postseason
-// coverage is ever wanted the same way, that's a separate decision for
-// Yeti to make, not something this build extends to automatically.
-//
-// VERIFIED LIVE (2026-08-25) against the real ESPN-published Week 3
-// schedule Yeti pasted in chat: GET /matches?league=NFL&season=2026&limit=100
-// returns 78 games (45 preseason + 33 already-scheduled regular season) in
-// one call, no pagination needed. Filtering to round==="preseason" and an
-// Eastern-calendar-date of Aug 27/28/29 (not the raw `date` field's UTC
-// calendar date, which splits some games onto the wrong day — evening ET
-// kickoffs roll into the next UTC day) reliably returns all 16 real games,
-// matched matchup-for-matchup and kickoff-time-for-kickoff-time against the
-// ESPN listing. The `date=YYYY-MM-DD` query param this same endpoint
-// supports does NOT reliably do this (confirmed: date=2026-08-27 alone
-// returns only 1 of the 4 real Aug-27-ET games, missing the three 8pm+ ET
-// games that land on 2026-08-28 in UTC) — don't use it for this purpose.
-//
-// CONFIRMED 2026-08-27 ~11pm ET (was flagged unconfirmed here originally):
-// `state.score.current` is a combined "X - Y" string with no separate
-// home/away fields. The initial guess ("away - home", matching this
-// site's own away@home display convention) was wrong -- real evidence
-// from PIT@BUF proved it's actually "home - away". See
-// normalizeHighlightlyGame()'s own note at the fix site for the real
-// evidence and the full blast radius (scores, winner, and every
-// downstream pick-correctness result were all affected, not just display).
-
-const HIGHLIGHTLY_BASE = "https://american-football.highlightly.net";
-const PRESEASON_WEEK3_ET_DATES = new Set(["2026-08-27", "2026-08-28", "2026-08-29"]);
-
-function easternDateKey(isoString) {
-  const parts = getEasternDateParts(new Date(isoString));
-  return `${parts.year}-${parts.month}-${parts.day}`;
-}
-
-function normalizeHighlightlyGame(g) {
-  const home = g.homeTeam?.abbreviation || null;
-  const away = g.awayTeam?.abbreviation || null;
-
-  // REAL BUG FOUND AND FIXED 2026-08-27 ~10pm ET, live during PIT@BUF:
-  // Highlightly's actual completed-game `state.description` is "Finished",
-  // not "Final" -- confirmed by directly logging the raw payload of a game
-  // stuck reporting status:"in_progress" while its own state.report field
-  // already read "Final" (`desc.includes("final")` was false against
-  // "finished", which does not contain the substring "final"). This meant
-  // NO preseason game could ever be detected as final at all, silently --
-  // computePreseasonSnapshot()'s `finalResults` filter would stay
-  // permanently empty regardless of how many real games actually finished.
-  // Checking "finished" too, not replacing "final" with it, since it's
-  // unconfirmed whether Highlightly ever uses the literal word "final" in
-  // some other response shape/edge case.
-  const desc = (g.state?.description || "").toLowerCase();
-  const status = (desc.includes("final") || desc.includes("finished")) ? "final" : desc.includes("scheduled") ? "scheduled" : "in_progress";
-
-  // REAL BUG FOUND AND FIXED 2026-08-27 ~11pm ET, per Yeti checking real
-  // results against the live site: the gap notice above flagged this order
-  // as an unconfirmed guess ("away - home"), and the guess was wrong. Real
-  // evidence: PIT@BUF's `state.score.current` was "27 - 28", and Yeti
-  // confirmed the real-world result is BUF 28, PIT 27 (BUF won) -- so the
-  // first number in the string is HOME's score, not away's. This single
-  // parsing bug corrupted every preseason score and, downstream, every
-  // `winner` determination and therefore every pick-correctness result in
-  // computePreseasonSnapshot() -- not just a display issue.
-  let awayScore = null, homeScore = null;
-  const current = g.state?.score?.current;
-  if (current && current !== "0 - 0") {
-    const parts = current.split(" - ").map(s => parseInt(s.trim(), 10));
-    if (parts.length === 2 && parts.every(n => !isNaN(n))) {
-      [homeScore, awayScore] = parts;
-    }
-  }
-
-  // Same tie fix as normalizeGame() above -- a tie must not fall through to
-  // the away-team branch. Preseason games aren't scored for PFPI picks, but
-  // a wrong "winner" would still be a real display bug if any of these 16
-  // games ties (plausible in real preseason play).
-  const tie = status === "final" && homeScore !== null && awayScore !== null && homeScore === awayScore;
-  let winner = null;
-  if (status === "final" && homeScore !== null && awayScore !== null && !tie) {
-    winner = homeScore > awayScore ? home : away;
-  }
-
-  // Live game clock (added 2026-08-27, per Yeti) -- confirmed by directly
-  // logging one real in-progress game's raw payload (not guessed):
-  // Highlightly's `state.report` is a ready-made string, e.g. "9:33 - 1st
-  // Quarter", matching `state.clock`/`state.period` (573 seconds, period 1)
-  // exactly. Only meaningful while in_progress -- null for scheduled/final,
-  // so the frontend can tell "no clock to show" apart from "0:00". This
-  // reflects whatever Highlightly returned as of THIS poll, not a live
-  // client-side ticking clock -- see shouldPollHighlightlyThisTick's own
-  // cadence for how fresh that actually is.
-  const clockReport = status === "in_progress" ? (g.state?.report || null) : null;
-
-  return {
-    id: `hl-${g.id}`,
-    // hasRealTime: true -- unlike Big Balls, Highlightly's `date` is a real
-    // kickoff timestamp, not a synthesized placeholder (see gap notice
-    // above and normalizeGame()'s own hasRealTime: false). Lets the
-    // frontend show an actual time for preseason games and be honest that
-    // it can't for regular-season ones.
-    // picks: {} -- no PFPI picks are ever made against preseason games, but
-    // an empty object keeps this game's shape consistent with regular-season
-    // games (buildWeekPublicJSON always includes one, possibly empty),
-    // which the frontend's picks-breakdown expects to exist.
-    home, away, homeScore, awayScore, status, kickoffISO: g.date, winner, tie, hasRealTime: true, picks: {}, clockReport,
-  };
-}
-
-// Throttled to fit Highlightly's 100/day free-tier budget, per Yeti
-// (2026-08-25), REVISED 2026-08-27 after two corrections to the original
-// design:
-//
-// 1. The real game split is NOT evenly spread across the three days -- it's
-//    4 games Thu Aug 27, 10 games Fri Aug 28, 2 games Sat Aug 29 (confirmed
-//    against the real published schedule + Yeti directly), with one game
-//    each Thu and Fri night kicking off late enough to finish after
-//    midnight ET (LAR@LAC, 10pm ET Thu -> est. finish ~1:15-1:30am ET Fri;
-//    MIN@DEN, 9pm ET Fri -> est. finish ~12:15am ET Sat). The original
-//    per-day windows below cut off well before those two games actually
-//    end, which would have delayed their final score by many hours (until
-//    the next day's window opened) instead of missing it outright.
-//
-// 2. This key is consumed via RapidAPI (see the `x-rapidapi-key` header
-//    below), and RapidAPI's "100/day" quota is NOT a midnight-UTC or
-//    midnight-ET calendar-day reset -- per RapidAPI's own docs, it's a
-//    ROLLING 24-hour window anchored to the account's original subscription
-//    timestamp. Yeti confirmed that timestamp is ~1:00-1:30am ET (signup
-//    confirmation email logged at 1:16am ET). 1:00am ET is used below as
-//    the conservative (earliest-possible) daily boundary between one day's
-//    budget and the next -- a window that closes a few minutes before the
-//    real boundary just leaves unused headroom; one that assumes a later
-//    boundary and is wrong would risk spending the next day's budget early.
-//
-// Budgets under this design (all well under 100, verified by hand):
-//   "Thu" quota day (1am ET Thu -> 1am ET Fri): ~72 polls (7pm-1am, every 5
-//     min), covering all 4 Thu games including the first hour of LAR@LAC.
-//   "Fri" quota day (1am ET Fri -> 1am ET Sat): ~85 polls -- the last ~6
-//     polls of LAR@LAC's tail (1:00-1:30am ET Fri, technically Friday's
-//     budget, negligible against its much larger 10-game allowance),
-//     6pm-1am covering all 10 Fri games, plus MIN@DEN's tail into Sat.
-//   "Sat" quota day (1am ET Sat -> 1am ET Sun): ~84 polls across two short
-//     windows (1-4:30pm, 6-9:30pm ET) bracketing the day's only 2 games,
-//     skipping the dead ~4:30-6pm gap between them.
-//
-// Outside these specific windows: no call is made at all -- not just a
-// no-op response, an actual skipped fetch, so nothing is spent when
-// there's nothing to learn. After Aug 29 this returns false forever; this
-// was only ever a testing bridge, not an ongoing source (see scope notice
-// above this section).
-function shouldPollHighlightlyThisTick(now) {
-  const parts = getEasternDateParts(now);
-  const dateKey = `${parts.year}-${parts.month}-${parts.day}`;
-  const hour = parseInt(parts.hour, 10);
-  const minute = now.getUTCMinutes(); // safe: whole-hour ET/UTC offset (EDT) all three days
-
-  // Thu Aug 27 evening (PIT@BUF 7pm, NE@CLE 8pm, SF@LV 8pm ET) through the
-  // Aug27/28 ET midnight rollover.
-  if (dateKey === "2026-08-27" && hour >= 19) return minute % 5 === 0;
-  if (dateKey === "2026-08-28" && hour < 1) return minute % 5 === 0;
-  // Tail end of LAR@LAC (10pm ET Thu kickoff, est. finish ~1:15-1:30am ET
-  // Fri) -- deliberately spills a handful of polls past the ~1am ET quota
-  // boundary into Friday's own (much larger) budget rather than stop short
-  // and miss this game's final score for hours.
-  if (dateKey === "2026-08-28" && hour === 1 && minute <= 30) return minute % 5 === 0;
-
-  // Fri Aug 28 evening (10 games, 6-9pm ET kickoffs) through the Aug28/29
-  // ET midnight rollover.
-  if (dateKey === "2026-08-28" && hour >= 18) return minute % 5 === 0;
-  // Tail end of MIN@DEN (9pm ET Fri kickoff, est. finish ~12:15am ET Sat) --
-  // still inside Friday's own quota day (1am Fri -> 1am Sat), not
-  // Saturday's.
-  if (dateKey === "2026-08-29" && hour === 0 && minute <= 35) return minute % 5 === 0;
-
-  // Sat Aug 29: only 2 games (DET@IND 1pm ET, CHI@TEN 6pm ET), each
-  // finishing well within its own window -- two short windows instead of
-  // one long one spanning the dead ~4:30-6pm gap between them.
-  if (dateKey === "2026-08-29" && hour >= 13 && hour < 17) return minute % 5 === 0;
-  if (dateKey === "2026-08-29" && hour >= 18 && hour < 22) return minute % 5 === 0;
-
-  return false;
-}
-
-async function fetchHighlightlyPreseasonWeek3(env, force) {
-  if (!env.HIGHLIGHTLY_API_KEY) {
-    console.error("Skipping Highlightly preseason Week 3 fetch: HIGHLIGHTLY_API_KEY not set.");
-    return null;
-  }
-  // `force` (added 2026-08-28 for the admin manual-poll-trigger button)
-  // bypasses the window/cadence throttle entirely -- an explicit manual
-  // click is a deliberate, informed use of one API call, not the
-  // automatic cron that the 100/day budget is actually protecting.
-  if (!force && !shouldPollHighlightlyThisTick(new Date())) {
-    return null;
-  }
-
-  const res = await fetch(`${HIGHLIGHTLY_BASE}/matches?league=NFL&season=${SEASON}&limit=100`, {
-    headers: { "x-rapidapi-key": env.HIGHLIGHTLY_API_KEY },
-  });
-  if (!res.ok) {
-    console.error(`Highlightly fetch failed: ${res.status} ${await res.text()}`);
-    return null;
-  }
-
-  const data = await res.json();
-  const games = (data.data || [])
-    .filter(g => g.round === "preseason" && PRESEASON_WEEK3_ET_DATES.has(easternDateKey(g.date)))
-    .map(normalizeHighlightlyGame);
-
-  if (games.length !== 16) {
-    console.error(`Highlightly preseason Week 3: expected 16 games, got ${games.length}. Check for a real schedule change or a filter regression.`);
-  }
-
-  return games;
-}
+// This whole section (normalizeHighlightlyGame, shouldPollHighlightlyThisTick,
+// fetchHighlightlyPreseasonWeek3, and their supporting constants) has been
+// removed as part of retiring preseason from the live site ahead of real
+// Week 1 -- see BUILD_LOG.md's "PowerPoint conversion, cron-drift
+// investigation, preseason archive & teardown" entry for the full archive
+// and root-cause writeup (this was also the actual fix for the ~28
+// commits/hour cron-drift finding: the republish loop this fed into was
+// never retired after Aug 29, and kept recommitting stale cached preseason
+// data every 5 minutes). Big Balls (normalizeGame, above) is untouched --
+// this only ever covered the one preseason testing week Big Balls itself
+// has zero data for.
 
 // ============================================================
 // STANDINGS + tie-split point categories (cumulative correct picks per
@@ -535,168 +328,17 @@ async function computeStandings(throughWeek, env) {
 }
 
 // ============================================================
-// PRESEASON SCORING SNAPSHOT (2026-08-27 round)
+// PRESEASON SCORING SNAPSHOT — RETIRED 2026-09-03
 // ============================================================
-// Yeti's real requirement: when preseason is the selected week, Standings/
-// Weekly Titles/Weeks Leading/Best Week should compute and show real
-// numbers from real preseason picks/results, same as a genuine numbered
-// week -- for real hands-on testing this weekend. Confirmed scope: all of
-// preseason Week 3 (Aug 27-29) is ONE single unified week for scoring
-// purposes (same as a normal NFL week already bundles Thu/Sun/Mon games),
-// and it must be structurally impossible for this to ever sum into real
-// regular-season cumulative totals, now or after the real season starts.
-//
-// How that's actually guaranteed, not just asserted: this function shares
-// NO code and NO mutable state with computeStandings() above -- it is not
-// a call into that function with a special-cased argument, it is a
-// completely separate, stateless, single-week-only computation (the only
-// things reused are the tiny generic math helpers splitShare()/round2(),
-// which have no notion of "week" or "cumulative" at all). computeStandings
-// ONLY EVER iterates a numeric range (`for week = 1; week <= throughWeek`)
-// -- there is no code path by which it could read "preseason-3" even if
-// asked to, and this function never writes into `results:week:N` (the KV
-// namespace computeStandings reads from) or into data/standings.json (the
-// file the real-season frontend loads) at all. The result is committed
-// into its own field inside data/week-preseason-3.json (see
-// pollAndPublish below), a file computeStandings/data/standings.json have
-// no knowledge of. Two independent computations, two independent output
-// destinations -- not one function with a bypassable guard clause.
-function computePreseasonSnapshot(finalResults, picksByTeam, weekLabel) {
-  const tiedGames = finalResults.filter(g => g.tie);
-  const scorableGames = finalResults.filter(g => !g.tie);
-  const weekTotal = scorableGames.length;
-
-  // tieNotes, added 2026-08-31 after Yeti caught preseason Week 3 showing
-  // "X / 15" with no visible explanation of why (the 16th game, KC @ SEA,
-  // was a real 9-9 tie -- correctly excluded per the existing tie-handling
-  // rule, see normalizeGame()'s own comment, but silently so, since this
-  // function never computed tieNotes the way computeStandings() already
-  // does for real weeks). Same shape as computeStandings()'s tieNotes
-  // (`{weekKey: ["AWAY @ HOME", ...]}`) so index.html's existing
-  // `realDataFor("tieNotes", week)` routing works for preseason with no
-  // frontend special-casing beyond what standings/weeklyTitles/etc. already
-  // get.
-  const tieNotes = {};
-  if (tiedGames.length > 0) {
-    tieNotes[weekLabel] = tiedGames.map(g => `${g.away} @ ${g.home}`);
-  }
-
-  const correctThisTeam = {};
-  TEAMS.forEach(team => {
-    const picks = picksByTeam[team] || {};
-    let correct = 0;
-    for (const game of scorableGames) {
-      if (game.winner && picks[game.id] === game.winner) correct++;
-    }
-    correctThisTeam[team] = correct;
-  });
-
-  // Weekly Titles and Weeks Leading collapse to the identical computation
-  // here -- both concepts ("best record this week" / "leading the
-  // cumulative season") are the same thing when there's only one week in
-  // the "season" to lead or win. Not a bug that they end up numerically
-  // equal for preseason.
-  let holders = [], share = 0;
-  if (weekTotal > 0) {
-    const maxCorrect = Math.max(...TEAMS.map(t => correctThisTeam[t]));
-    holders = TEAMS.filter(t => correctThisTeam[t] === maxCorrect);
-    share = splitShare(holders.length);
-  }
-
-  const standings = {}, standingsPct = {};
-  const weeklyTitles = {}, weeklyTitlesCount = {};
-  const weeksLeading = {}, weeksLeadingCount = {};
-  const bestWeek = {};
-
-  TEAMS.forEach(team => {
-    const correct = correctThisTeam[team];
-    const pct = weekTotal > 0 ? correct / weekTotal : 0;
-    const isHolder = holders.includes(team);
-
-    standings[team] = { [weekLabel]: correct };
-    standingsPct[team] = { [weekLabel]: pct };
-    weeklyTitles[team] = { [weekLabel]: isHolder ? round2(share) : 0 };
-    weeklyTitlesCount[team] = { [weekLabel]: isHolder ? 1 : 0 };
-    weeksLeading[team] = { [weekLabel]: isHolder ? round2(share) : 0 };
-    weeksLeadingCount[team] = { [weekLabel]: isHolder ? 1 : 0 };
-    bestWeek[team] = {
-      [weekLabel]: weekTotal > 0
-        ? { correct, total: weekTotal, pct, week: "Preseason" }
-        : { correct: 0, total: 0, pct: 0, week: "Preseason" },
-    };
-  });
-
-  // gamesPlayed (added 2026-08-27 for the Commissioner's Digest, which
-  // needs a loss count -- `wins`/`gamesPlayed` -- the same way it already
-  // does for real weeks via data/standings.json's own gamesPlayed field).
-  // Flat, not per-team, matching that same real-week shape exactly:
-  // computeStandings() above keys this identically (gamesPlayed[week] =
-  // total games), it's just a single-week value here instead of a running
-  // cumulative total, since there's only ever one preseason "week."
-  const gamesPlayed = { [weekLabel]: weekTotal };
-
-  // Unique Hits, added 2026-08-27 per Yeti -- previously "permanently out
-  // of scope" (no real data source existed, see BUILD_LOG.md's many
-  // earlier entries), reversed specifically for preseason once real picks
-  // + real results made it genuinely computable, and confirmed against
-  // Yeti's own deliberately-set-up test case before writing any of this
-  // (Giraffes picked CLE over NE, alone, and CLE won -- expected exactly
-  // one hit; verified by hand against real KV picks data first). Per the
-  // original framework doc's own definition (archive/pfpi_mockup_v3.html):
-  // "Hits-to-opportunities on picks nobody else made." A pick is "unique"
-  // for a game if, among the TEAMS that actually picked that game, exactly
-  // one team chose that side -- it's a "hit" if that side also won. Only
-  // compares real-roster TEAMS against each other (not FAMILY_MEMBERS --
-  // this is a competitive-roster stat, matching every other category
-  // here), and only counts games that were actually decided
-  // (scorableGames, same tie-exclusion as every other stat above).
-  //
-  // UPDATE 2026-08-28: this same definition is now ALSO computed for real
-  // regular-season weeks in computeStandings() above, per Yeti ("Unique
-  // Hits must extend through the regular season, updating after every
-  // game"). The two computations are separate code (this function is
-  // still single-unified-week-only, computeStandings() is still the
-  // cumulative-across-18-weeks one) -- kept that way deliberately, same
-  // isolation-by-construction principle as every other preseason stat
-  // here, not a shared helper the two could ever drift apart from
-  // silently.
-  const uniqueHits = {}, uniqueOpportunities = {};
-  TEAMS.forEach(team => { uniqueHits[team] = 0; uniqueOpportunities[team] = 0; });
-  scorableGames.forEach(game => {
-    const pickCounts = {};
-    TEAMS.forEach(team => {
-      const pick = (picksByTeam[team] || {})[game.id];
-      if (pick) pickCounts[pick] = (pickCounts[pick] || 0) + 1;
-    });
-    TEAMS.forEach(team => {
-      const pick = (picksByTeam[team] || {})[game.id];
-      if (pick && pickCounts[pick] === 1) {
-        uniqueOpportunities[team]++;
-        if (game.winner && pick === game.winner) uniqueHits[team]++;
-      }
-    });
-  });
-  const uniqueHitsStat = {};
-  TEAMS.forEach(team => {
-    uniqueHitsStat[team] = { [weekLabel]: { hits: uniqueHits[team], opps: uniqueOpportunities[team] } };
-  });
-
-  // 10-Win Weeks, added 2026-08-28 alongside the regular-season version in
-  // computeStandings() -- for consistency, since preseason is meant as a
-  // full dress rehearsal of every category, not just some of them. Only
-  // one "week" exists here, so this is just 1 or 0 per team (10+ correct
-  // in the unified preseason week, or not) rather than a running count
-  // across weeks.
-  const tenWinWeeksStat = {};
-  TEAMS.forEach(team => {
-    tenWinWeeksStat[team] = { [weekLabel]: correctThisTeam[team] >= 10 ? 1 : 0 };
-  });
-
-  return {
-    standings, standingsPct, weeklyTitles, weeklyTitlesCount, weeksLeading, weeksLeadingCount, bestWeek, gamesPlayed,
-    uniqueHits: uniqueHitsStat, tenWinWeeks: tenWinWeeksStat, tieNotes,
-  };
-}
+// computePreseasonSnapshot() lived here: a fully separate, stateless,
+// single-week-only stats computation for the preseason Week 3 sandbox,
+// sharing no code or mutable state with computeStandings() above (only the
+// generic splitShare()/round2() math helpers, which have no notion of
+// "week" at all). Removed as part of retiring preseason from the live site
+// ahead of real Week 1 -- see BUILD_LOG.md's "PowerPoint conversion,
+// cron-drift investigation, preseason archive & teardown" entry for the
+// archive of everything this used to compute. computeStandings() itself
+// (real regular-season scoring, including tie handling) is untouched.
 
 // ============================================================
 // WEEKLY DIGEST -- server-side generation, persistence, and email
@@ -864,24 +506,13 @@ async function generateAndStoreDigest(env, weekKey, st, isFinal, titleOverride, 
 
 // Freshly recomputes the stats snapshot for a week, for the manual
 // recompute endpoint (the automatic path in pollAndPublish() already has
-// a freshly-computed snapshot in hand and doesn't need this).
+// a freshly-computed snapshot in hand and doesn't need this). Used to also
+// handle week === "preseason-3" via computePreseasonSnapshot() -- removed
+// 2026-09-03 along with the rest of the preseason infrastructure (see
+// BUILD_LOG.md); this manual-recompute endpoint is only ever reachable for
+// a real numbered week now, since admin.html/brief.html's digest-week
+// dropdown no longer offers "Preseason" as a selectable value.
 async function computeDigestStatsForWeek(week, env) {
-  if (week === "preseason-3") {
-    const cachedRaw = await env.PFPI_KV.get("schedule:week:preseason-3");
-    const preseasonGames = cachedRaw ? JSON.parse(cachedRaw) : [];
-    const preseasonPicksTeams = [...TEAMS, ...FAMILY_MEMBERS.map(m => m.team)];
-    const picksByTeam = {};
-    for (const team of preseasonPicksTeams) {
-      const picksRaw = await env.PFPI_KV.get(`picks:preseason-3:${team}`);
-      picksByTeam[team] = picksRaw ? JSON.parse(picksRaw) : {};
-    }
-    const finalResults = preseasonGames.filter(g => g.status === "final");
-    return {
-      st: computePreseasonSnapshot(finalResults, picksByTeam, "preseason-3"),
-      isFinal: false,
-      titleOverride: "PFPI PRESEASON STANDINGS (Week 3, unified)",
-    };
-  }
   const weekNum = parseInt(week, 10);
   const st = await computeStandings(weekNum, env);
   return { st, isFinal: weekNum === 18, titleOverride: null };
@@ -1209,111 +840,14 @@ async function pollAndPublish(env, force = false) {
     }
   }
 
-  // Preseason Week 3 stopgap (Aug 27-29, 2026 only) — see scope notice above
-  // fetchHighlightlyPreseasonWeek3(). Schedule/score refresh stays on its
-  // own tight Highlightly budget (shouldPollHighlightlyThisTick only calls
-  // the API during the real game windows). Re-merging + republishing PICKS
-  // is deliberately decoupled from that below.
-  //
-  // [BUG FOUND 2026-08-25/26, root-caused fresh per Yeti's handoff doc --
-  // NOT the apostrophe/team-name theory it flagged as worth checking, and
-  // NOT a KV or merge-logic bug either]: Yeti reported picks missing for
-  // Gracelin's Giraffes and Mike's Chickens but not Dick's Roughriders.
-  // Direct KV reads (`wrangler kv key get picks:preseason-3:Giraffes` /
-  // `...:Chickens`) proved both teams' picks were saved correctly, all 16
-  // games each -- so submission and storage were never the problem for any
-  // team. The real cause: this whole picks-merge-and-republish block used
-  // to live INSIDE `if (preseasonGames)`, gated on a fresh, successful
-  // Highlightly fetch -- and that fetch is intentionally throttled to only
-  // ever hit the API during the Aug 27/28/29 game windows (100/day budget).
-  // Outside those windows (i.e. right now, Aug 25), the fetch always
-  // returns null, so the merge+publish step never ran at all -- confirmed
-  // by the committed data/week-preseason-3.json being frozen at whatever
-  // picks existed at the *last* successful Highlightly fetch, not the real
-  // current KV state. Roughriders had been tested before that last fetch
-  // and got captured in the frozen snapshot; Giraffes/Chickens were tested
-  // afterward and simply never got a chance to publish -- not team-specific
-  // at all, any team tested after that point would have "disappeared" the
-  // same way. Fix: fall back to the last cached schedule
-  // (schedule:week:preseason-3) when Highlightly isn't polled this tick,
-  // and re-merge+republish picks on their own 5-minute cadence -- cheap
-  // (KV reads only, no external API call) and no longer dependent on a
-  // live score fetch to "unlock" a picks update.
-  const freshPreseasonGames = await fetchHighlightlyPreseasonWeek3(env, force);
-  if (freshPreseasonGames) {
-    // Schedule cache stays picks-free, matching schedule:week:N's existing
-    // shape (kickoff-math only, not for public reading).
-    await env.PFPI_KV.put("schedule:week:preseason-3", JSON.stringify(freshPreseasonGames));
-  }
-
-  if (force || new Date().getUTCMinutes() % 5 === 0) {
-    let preseasonGames = freshPreseasonGames;
-    if (!preseasonGames) {
-      const cachedRaw = await env.PFPI_KV.get("schedule:week:preseason-3");
-      preseasonGames = cachedRaw ? JSON.parse(cachedRaw) : null;
-    }
-
-    if (preseasonGames) {
-      // The published JSON must merge in saved picks -- Highlightly's raw
-      // response has no concept of PFPI picks at all. Regular-season weeks
-      // never had this problem because buildWeekPublicJSON() always merges
-      // picks in; preseason skipped that function entirely. Mirrors the
-      // same one-KV-read-per-team approach, but merges BOTH the real
-      // 8-team roster and the two sandboxed FAMILY_MEMBERS test teams
-      // (imported from shared.js, not duplicated), since preseason-3 is
-      // specifically Yeti's cross-team testing sandbox -- whichever team he
-      // tests as, the picks need to actually show up.
-      const preseasonPicksTeams = [...TEAMS, ...FAMILY_MEMBERS.map(m => m.team)];
-      const picksByTeam = {};
-      for (const team of preseasonPicksTeams) {
-        const picksRaw = await env.PFPI_KV.get(`picks:preseason-3:${team}`);
-        picksByTeam[team] = picksRaw ? JSON.parse(picksRaw) : {};
-      }
-      const preseasonGamesWithPicks = preseasonGames.map(g => {
-        const picks = {};
-        for (const team of preseasonPicksTeams) {
-          if (picksByTeam[team][g.id]) picks[team] = picksByTeam[team][g.id];
-        }
-        // Added 2026-08-29, per Yeti's "unique pick" raccoon-badge request
-        // (index.html) -- buildWeekPublicJSON() (regular season, above)
-        // always included this via the same computeGameDeadline() call;
-        // preseason skipped it entirely since nothing previously needed a
-        // per-game deadline on this path. Same function, same shape, so
-        // index.html's isGameLocked() works identically on both week types
-        // without needing to special-case preseason.
-        return { ...g, picks, deadline: computeGameDeadline(g.kickoffISO) };
-      });
-
-      // Real Standings/Weekly Titles/Weeks Leading/Best Week for preseason
-      // (2026-08-27 round) -- see computePreseasonSnapshot()'s own comment
-      // for the full isolation reasoning. Only the REAL 8-team roster
-      // scores here (matches computeStandings' own TEAMS-only loop) --
-      // picksByTeam has FAMILY_MEMBERS entries too (needed for the picks
-      // merge above), computePreseasonSnapshot simply never looks at them.
-      // finalResults comes straight from this tick's own Highlightly-
-      // shaped game objects already in memory -- never written to or read
-      // from the `results:week:N` KV namespace real weeks use, so there
-      // is no shared storage for the two computations to ever collide in.
-      const finalResults = preseasonGames.filter(g => g.status === "final");
-      const preseasonStats = computePreseasonSnapshot(finalResults, picksByTeam, "preseason-3");
-
-      // Same auto-generation-once-complete rule as the real season above --
-      // "complete" here means every real game on the schedule (16, tie
-      // included -- a tie is still a decided/final game, it's just excluded
-      // from the scoring math) has reached status:"final".
-      const alreadyGeneratedPreseason = await env.PFPI_KV.get("digest:preseason-3");
-      if (!alreadyGeneratedPreseason && preseasonGames.length > 0 && finalResults.length === preseasonGames.length) {
-        await generateAndStoreDigest(env, "preseason-3", preseasonStats, false, "PFPI PRESEASON STANDINGS (Week 3, unified)", "auto");
-      }
-
-      await commitJSONToGitHub(
-        "data/week-preseason-3.json",
-        { week: "preseason-3", games: preseasonGamesWithPicks, stats: preseasonStats, updatedAt: new Date().toISOString() },
-        "Update preseason Week 3 (Highlightly) [automated]",
-        env
-      );
-    }
-  }
+  // The preseason Week 3 stopgap that used to run here (Highlightly fetch,
+  // KV-cache fallback, picks merge, and the data/week-preseason-3.json
+  // republish) has been removed -- retired 2026-09-03 along with the rest
+  // of the preseason infrastructure, see BUILD_LOG.md. This was also the
+  // real root cause behind the "~28 commits/hour" cron-drift finding from
+  // that same investigation: this block's `minute % 5 === 0` gate had no
+  // expiration tied to Highlightly's own Aug-29 cutoff, so it kept
+  // recommitting stale cached preseason data every 5 minutes indefinitely.
 }
 
 // ============================================================

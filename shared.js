@@ -160,17 +160,14 @@ export const YETI_EMAIL = "yeti@yetiblanc.com";
 // monitored inbox, so every email carries a "Reply to ___" mailto footer
 // pointing at the real human on that side instead.
 //
-// Greg's real personal email address was NOT found anywhere in this
-// codebase or BUILD_LOG.md (grepped both before writing this) -- GREG_EMAIL
-// in both Workers is still explicitly a yeti@yetiblanc.com placeholder, and
-// no other real address for Greg appears anywhere. Per Yeti's own
-// instruction not to invent a real-looking address, `commissioner`'s
-// replyTo below is a deliberately, obviously-non-deliverable placeholder
-// (the .invalid TLD is reserved by RFC 2606 for exactly this purpose) --
-// NOT a guess at Greg's real address, and NOT yeti@yetiblanc.com either
-// (so a reply attempt fails loudly/bounces rather than silently misrouting
-// to Yeti). Swap this one string for Greg's real address the moment it's
-// known; nothing else needs to change when that happens.
+// Greg's real personal email (upsetbird@aol.com) -- given directly by
+// Yeti, 2026-09-06, replacing the earlier .invalid placeholder this file
+// shipped with a few minutes prior (that placeholder was NOT a guess --
+// Greg's address genuinely didn't appear anywhere in this codebase or
+// BUILD_LOG.md at the time; see BUILD_LOG.md for the full note). Also
+// happens to be the exact same address already used as Greg's Lobos'
+// training-page routing email (TRAINING_ROUTES, picks-worker.js) -- same
+// real person, consistent, not a coincidence worth re-verifying.
 const SENDER_IDENTITIES = {
   admin: {
     from: "PFPI Admin <admin@mail.pfpi.me>",
@@ -180,7 +177,7 @@ const SENDER_IDENTITIES = {
   commissioner: {
     from: "PFPI Commissioner <commissioner@mail.pfpi.me>",
     replyLabel: "Reply to Greg",
-    replyTo: "greg-real-email-not-yet-provided@pfpi-placeholder.invalid",
+    replyTo: "upsetbird@aol.com",
   },
 };
 

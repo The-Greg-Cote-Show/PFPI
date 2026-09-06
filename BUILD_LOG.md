@@ -6373,3 +6373,64 @@ off: same command with `"false"` instead of `"true"`.
   not a live test (see item 5 above) -- logically identical to the
   `to`-blocking branch that WAS live-tested, but flagging the distinction
   honestly rather than overclaiming.
+
+## Same-evening follow-up (2026-09-06, ~6:30 PM ET) -- interactive, not overnight
+
+Yeti, live in chat (not unattended): gave Greg's real personal email
+(upsetbird@aol.com) for the "Reply to Greg" link, asked whether recipient
+emails are wired in/ready, and asked for a live demo -- a real test picks
+link for Dick's Roughriders, emailed to him from the commissioner
+identity.
+
+**Greg's real reply-to address wired in:** `shared.js`'s
+`SENDER_IDENTITIES.commissioner.replyTo` updated from the `.invalid`
+placeholder to `upsetbird@aol.com` -- the same address already used as
+Greg's Lobos' training-page routing email (TRAINING_ROUTES,
+picks-worker.js), same real person, consistent. Did NOT change
+`GREG_EMAIL` in either Worker (still the yeti@yetiblanc.com placeholder,
+used as a real send TARGET in several places) -- Yeti's ask was scoped
+specifically to the reply-to link, not to redirecting real commissioner-
+identity sends to Greg's inbox; flagging the distinction so it's not
+conflated later.
+
+**Status check (asked "are recipient emails wired in and ready?"):**
+- Training page (`TRAINING_ROUTES`): yes, all 8 real addresses are wired
+  in and correctly routed by team/token.
+- Real (non-training) picks flow: `FAMILY_MEMBERS` is still `[]` -- no
+  real per-team recipients configured for the actual live weekly
+  picks-open/confirmation emails yet. Unrelated to tonight, a pre-existing
+  gap.
+- Regardless of either being wired in: **nothing reaches a real
+  family/Greg inbox right now** -- `emails-live-for-everyone` is still
+  `"false"` (confirmed via `wrangler kv key get` before answering), so
+  every real-address send still redirects to yeti@yetiblanc.com per
+  last night's flag. This is the expected, correct state Yeti asked for.
+
+**Live demo, real send:** Yeti wanted to see an actual test-picks-link
+email sent using the "commissioner" identity specifically (the existing
+`/admin/send-test-picks-email` tool is hardcoded "admin" by design/audit).
+Built a temporary, unauthenticated `POST /debug/one-off-commissioner-test`
+(hardcoded to always send only to ADMIN_EMAIL, ignores any request input,
+same safety invariant as the real admin test-email tool, just without
+requiring a login for one throwaway interactive request) -- **the initial
+`wrangler deploy` of this was blocked by this session's own auto-mode
+safety classifier** (an unauthenticated route that can trigger an
+outbound send, even one this narrowly hardcoded, is a reasonable thing
+for it to flag). Stopped and asked Yeti directly rather than working
+around the block; he explicitly approved deploying it for this one use.
+Deployed, triggered once (real send, `{"sent":true}`), then immediately
+removed the endpoint from the source and redeployed clean -- confirmed
+`404` on the route post-cleanup and confirmed the code no longer contains
+it.
+
+Real link sent (Week 1, Dick's Roughriders, mail.pfpi.me/commissioner
+identity, real `pfpi.me` domain rather than the older github.io one this
+tool used to build):
+`https://pfpi.me/picks.html?token=eyJ0ZWFtIjoiUm91Z2hyaWRlcnMiLCJ3ZWVrIjoxLCJpc3N1ZWQiOjE3ODg3MzM4NzQzOTh9.3d1263117a3268db31876a97af8274c82eda5f3320847c9a5b12f476d4a40935`
+-- this token is a real, functional weekly-picks link (as "Roughriders,"
+Week 1) that will keep working normally going forward, not something to
+clean up afterward.
+
+Both Workers redeployed clean (no debug route) after this. Cron
+safety-net wakeup (9:20 PM ET, one-shot) confirmed still armed and
+untouched throughout this exchange.

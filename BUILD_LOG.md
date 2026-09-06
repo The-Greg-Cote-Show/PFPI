@@ -6173,3 +6173,203 @@ via `wrangler deploy` (pfpi-picks-worker and pfpi-scores-worker).
 (Resend email delivery to new real addresses) is logged, not silently
 worked around, and doesn't prevent the rest of either part from being real
 and usable tonight.
+
+## Overnight build: wire up mail.pfpi.me for all outbound email (2026-09-06, ~6:00 PM ET) -- DONE
+
+Yeti kicked this off and won't be watching; hard rules in effect (stop and
+log instead of guessing, never touch CoteCup, no real-money steps, no new
+credentials beyond Cloudflare Secrets, build the live-email flag OFF by
+default before anything else). A conditional resume wakeup was set for
+9:20 PM ET in case usage ran out mid-task -- not needed, finished in one
+pass.
+
+**Context:** mail.pfpi.me is now a verified Resend sending domain
+(DKIM/SPF/DMARC green, per Yeti). This replaces the old onboarding@resend.dev
+sender everywhere, which could only ever deliver to the Resend account
+owner's own address (yeti@yetiblanc.com) -- the hard limitation discovered
+and logged during the earlier training-picks session.
+
+### Full audit -- every real email call site, before changing anything
+
+Grepped every `sendPfpiEmail(`/raw-Resend-fetch call site across
+`shared.js`, `picks-worker.js`, and `worker.js` (read each function in full,
+not just the grep hit) rather than relying on the older "11 distinct
+emails" chat audit referenced in the task -- that count predates the
+training page (built 2026-09-05), so a fresh pass was needed anyway. Full
+list, with the sender identity assigned to each and why:
+
+| # | Function (file) | Subject | Identity | Why |
+|---|---|---|---|---|
+| 1 | `sendPicksEmail` (picks-worker.js) | "Week N picks are open" | commissioner | real weekly picks-open email to family, already branded "PFPI Commissioner" in existing code before tonight |
+| 2 | `handleConfirmPicks` -> ADMIN_EMAIL (picks-worker.js) | "submitted Week N picks" | admin | this is Yeti's own copy of the confirmation |
+| 3 | `handleConfirmPicks` -> GREG_EMAIL (picks-worker.js) | same subject as #2 | commissioner | this is Greg's own copy of the same confirmation |
+| 4 | `handleTrainingSubmitPicks` (picks-worker.js) | "[TRAINING] Sample picks submitted..." | commissioner | previews the real family-facing picks-confirmation experience |
+| 5 | `handleSendTestPicksEmail` (picks-worker.js) | "[TEST] PFPI Week N picks" | admin | Yeti's own ad-hoc test tool, always to ADMIN_EMAIL |
+| 6 | `handleSendCorrectionEmail` (picks-worker.js) | "[CORRECTION]..." | admin | Yeti's own admin tool |
+| 7 | `handleContactSupport` (picks-worker.js) | "PFPI support request from ..." | admin | explicitly named admin-side in the task |
+| 8 | `handleSendReminderEmail` (picks-worker.js) | "PFPI reminder: ... picks still needed" | commissioner | explicitly named commissioner-side in the task |
+| 9 | `flagPossibleBruteForce` (picks-worker.js) | "possible brute-force login attempt" | admin | security ops email, always to Yeti regardless of which login (admin or Greg's) was attacked |
+| 10 | `handleForgotPassword` kind=admin (picks-worker.js) | "PFPI admin password reset" | admin | AUTH_CONFIG.admin.senderIdentity |
+| 11 | `handleForgotPassword` kind=greg (picks-worker.js) | "PFPI Commissioner Portal password reset" | commissioner | AUTH_CONFIG.greg.senderIdentity |
+| 12 | `generateAndStoreDigest` (worker.js) | "Weekly Digest -- N Ready" | commissioner | explicitly named commissioner-side in the task |
+| 13 | `checkPendingBriefConfirmations` success (worker.js) | "brief is live" | commissioner | explicitly named commissioner-side in the task |
+| 14 | `checkPendingBriefConfirmations` stuck (worker.js) | "brief: still checking after 30 minutes" | commissioner | same flow as #13 |
+
+No email's identity was genuinely ambiguous once "which side does this
+conceptually belong to" was applied consistently -- #9 (brute-force) was
+the one that took a second look (it can fire from either the admin OR
+Greg login being attacked) but stayed admin-side since the recipient and
+purpose (security ops, always to Yeti) never changes regardless of which
+login triggered it.
+
+### What actually changed
+
+**`shared.js` (`sendPfpiEmail`)** -- rewritten as the single place all of
+the above now funnels through:
+- New `SENDER_IDENTITIES` map: `admin` -> `"PFPI Admin <admin@mail.pfpi.me>"`,
+  `commissioner` -> `"PFPI Commissioner <commissioner@mail.pfpi.me>"`.
+  `sendPfpiEmail(to, subject, text, env, cc, identity)` takes a 6th
+  argument now (defaults to `"admin"` only as a safety net -- every real
+  call site was updated to pass one explicitly, so the default should
+  never actually get exercised in practice).
+- Every send now gets a `Reply to Yeti: mailto:yeti@yetiblanc.com` or
+  `Reply to Greg: mailto:...` footer appended after a `---` separator,
+  since neither mail.pfpi.me address is a real monitored inbox. **These
+  are plain-text emails (this codebase has never sent HTML mail anywhere)
+  -- "link" here means a bare `mailto:` URI, which essentially every real
+  mail client (Gmail, Outlook, Apple Mail) auto-linkifies in plain text.
+  Adding an actual `<a href>` would mean sending HTML for the first time
+  ever in this codebase, which is a bigger change than "add a reply
+  link" -- flagging this interpretation rather than silently picking it.**
+- **Greg's real reply-to address: genuinely not found anywhere.** Grepped
+  this file and BUILD_LOG.md before writing anything -- `GREG_EMAIL` in
+  both Workers is still explicitly the yeti@yetiblanc.com placeholder
+  everywhere, and no other real address for Greg appears in either. Per
+  Yeti's own instruction not to invent a real-looking one, used
+  `greg-real-email-not-yet-provided@pfpi-placeholder.invalid` -- the
+  `.invalid` TLD is reserved by RFC 2606 specifically so a string like
+  this can never resolve to a real, deliverable address by accident.
+  **Flagging clearly: until this one string is swapped for Greg's real
+  address, "Reply to Greg" links in commissioner-identity emails will
+  bounce/fail to send if someone actually clicks them** -- this is a
+  known, intentional gap, not a bug, but it's real and worth Yeti's
+  attention before commissioner-identity emails go out to real people.
+  One string to change in `shared.js`'s `SENDER_IDENTITIES.commissioner.replyTo`
+  once his real address is known; nothing else needs to change.
+- **The real, explicit on/off flag**: `emailsLiveForEveryone(env)` reads
+  KV key `emails-live-for-everyone` -- `"true"` = on, anything else
+  (including absent) = off/default-safe. Chose KV over a Cloudflare
+  Secret specifically so Yeti can flip it himself with one command, no
+  redeploy: **`npx wrangler kv key put "emails-live-for-everyone" "true"
+  --namespace-id 3b5cd856fa7b40908601404f46b95456 --remote`** turns it ON
+  for everyone; the same command with `"false"` turns it back off. Seeded
+  explicitly to `"false"` tonight (not left absent) purely so the key is
+  discoverable via `wrangler kv key list`, not because absence wasn't
+  already safe.
+- The gate checks BOTH `to` and `cc` against `yeti@yetiblanc.com` -- not
+  just `to` -- since several real call sites (#2/#3, #4) put the real
+  recipient in `cc`. A blocked `to` redirects to Yeti; a blocked `cc` is
+  simply dropped (rather than duplicating Yeti's own address into both
+  fields); either way the real address(es) that got blocked are named in
+  a `[WOULD HAVE GONE TO: ...]` subject prefix, so a real send is never
+  visually indistinguishable from a redirected one in Yeti's own inbox.
+
+**`picks-worker.js`**: `sendPicksEmail()` refactored from its own raw
+Resend `fetch()` call to delegate through the shared `sendPfpiEmail`
+(identity `"commissioner"`) -- it predated the identity/reply-link/flag
+logic and was the only remaining site not already using the shared
+helper; this collapses that duplication instead of tripling the new logic
+across three sender implementations. Subject/body text is byte-identical
+to before. All 9 of this file's `sendPfpiEmail(...)` call sites (see
+table above) now pass an explicit identity; `AUTH_CONFIG.admin`/`.greg`
+each gained a `senderIdentity` field so `handleForgotPassword` picks the
+right one per `kind` without a separate branch.
+
+**`worker.js`**: all 3 call sites (see table) now pass `"commissioner"`
+explicitly. No new imports needed -- `sendPfpiEmail` was already imported.
+
+**Training page**: touched per the task's own instruction ("include if it
+needs updating to match this pattern") -- `handleTrainingSubmitPicks` now
+sends as `"commissioner"` identity and is now ALSO subject to the new
+live-email flag, on top of (not instead of) the earlier, separate
+Resend-domain-verification block that already existed on this exact path.
+**Flagging explicitly since it's a real behavior note, not silent**:
+Yeti's hard rule tonight was unconditional ("do not send to any real
+family/Greg address until Yeti explicitly turns this on") with no
+training-specific carve-out given, so training confirmations to the real
+family addresses (ccote215@gmail.com, etc.) now redirect to
+yeti@yetiblanc.com while the flag is off, same as every other real-family
+send -- a genuine change from Part 1's original "sends real email to real
+family addresses" design intent, superseded by tonight's blanket
+instruction. Once Yeti flips `emails-live-for-everyone` to `"true"`,
+training confirmations will reach the real family addresses again exactly
+as Part 1 originally intended, no code change needed.
+
+### Real, live verification -- not just code review
+
+1. Deployed both Workers (`wrangler deploy` for both
+   `wrangler.toml`/`wrangler-scores.toml`), then explicitly seeded
+   `emails-live-for-everyone` to `"false"` in the real KV namespace.
+2. **Real send #1**: `POST /contact-support` (public, unauthenticated,
+   admin identity, targets ADMIN_EMAIL directly) against the real
+   deployed Worker -- `{"sent":true}`, no Resend error in `wrangler tail`,
+   confirming `admin@mail.pfpi.me` is accepted by Resend as a real sender
+   today.
+3. **Real send #2**: `POST /training-submit-picks` for the real
+   `training-critters` token (commissioner identity, real recipient
+   `ccote215@gmail.com`, flag OFF) against the same deployed Worker --
+   `{"submitted":true}`.
+4. **Not satisfied with HTTP-level success alone** (a real send to the
+   ACTUAL family address would also return `{"submitted":true}`, since
+   mail.pfpi.me can now legitimately deliver to any recipient -- success
+   alone doesn't prove the redirect happened, and getting this wrong
+   would be a real hard-rule violation). Added one temporary
+   `console.log` right before the Resend `fetch()` in `sendPfpiEmail`,
+   redeployed, reran both sends, captured `wrangler tail` output, then
+   immediately removed the log line and redeployed clean again. Real,
+   captured proof:
+   - Send #1: `live=false identity=admin from=PFPI Admin
+     <admin@mail.pfpi.me> finalTo=yeti@yetiblanc.com finalCc=undefined
+     blocked=[]` -- correct, no redirect needed since target was already Yeti.
+   - Send #2: `live=false identity=commissioner from=PFPI Commissioner
+     <commissioner@mail.pfpi.me> finalTo=yeti@yetiblanc.com
+     finalCc=undefined blocked=["ccote215@gmail.com"]` -- **confirms the
+     real family address was genuinely intercepted and redirected to Yeti,
+     never reaching Resend as the actual recipient.**
+5. **Not independently verified live**: the `cc`-blocking branch
+   specifically (as opposed to the `to`-blocking branch just proven above)
+   -- `handleConfirmPicks`'s `cc` argument (`pickerEmail`) can only ever
+   resolve to `ADMIN_EMAIL` today since `FAMILY_MEMBERS` is still `[]`, so
+   there's no way to make a real, non-Yeti `cc` value flow through this
+   code path live without fabricating a fake `FAMILY_MEMBERS` entry, which
+   felt like more risk than it was worth for this one branch. The `cc`
+   logic is the same few lines as the already-proven `to` logic (same
+   `!== YETI_EMAIL` check, same redirect-vs-drop shape) -- resting on code
+   review for this one specific branch rather than a live test, flagged
+   here rather than silently treated as equally proven.
+6. Deleted the one test KV entry this created
+   (`training-picks:training-critters`) immediately after.
+
+### The exact instruction to flip the flag on for everyone, later
+
+```
+npx wrangler kv key put "emails-live-for-everyone" "true" --namespace-id 3b5cd856fa7b40908601404f46b95456 --remote
+```
+
+That's the entire flip -- no code change, no redeploy. To turn it back
+off: same command with `"false"` instead of `"true"`.
+
+### Open items flagged for Yeti (not blockers, just real gaps worth knowing)
+
+- **Greg's real reply-to address is still unknown** -- `SENDER_IDENTITIES.commissioner.replyTo`
+  in `shared.js` is the clearly-fake `.invalid` placeholder described
+  above. Update that one string once Greg's real address exists.
+- **`FAMILY_MEMBERS` is still `[]`** -- unrelated to tonight's task, but
+  worth repeating since it means most of the "commissioner" emails in the
+  table above still can't reach a real family inbox regardless of the new
+  live-email flag, until that list is populated. Once it is, flipping
+  `emails-live-for-everyone` to `"true"` is the one remaining step.
+- The `cc`-blocking branch of the live-email gate rests on code review,
+  not a live test (see item 5 above) -- logically identical to the
+  `to`-blocking branch that WAS live-tested, but flagging the distinction
+  honestly rather than overclaiming.

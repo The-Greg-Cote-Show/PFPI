@@ -133,19 +133,98 @@ export function isGameLocked(gameDeadlineISO) {
 // mail -- specifically the "brief is live" confirmation once a publish is
 // confirmed actually deployed (see worker.js's checkPendingBriefConfirmations).
 // Kept in one place so the two Workers can never drift on the sender/shape.
+//
+// mail.pfpi.me verified in Resend (DKIM/SPF/DMARC all green, 2026-09-06,
+// per Yeti) -- replaces the old onboarding@resend.dev sender everywhere.
+// Every real send now declares WHICH of two identities it's conceptually
+// from (see SENDER_IDENTITIES below); `sendPfpiEmail` picks the real
+// `from` address and reply-to footer from that, so no call site hardcodes
+// a sender string itself.
 // ============================================================
 
-export async function sendPfpiEmail(to, subject, text, env, cc) {
-  // These emails always go to a fixed PFPI-internal address (ADMIN_EMAIL or,
-  // for now, GREG_EMAIL) as the primary `to`, so they can use Resend's
-  // default sender: Resend allows onboarding@resend.dev to any recipient
-  // even with an unverified sending domain. The optional `cc` (added
-  // 2026-08-26 for the picks-confirmation email) is currently always a
-  // PFPI-internal address too, for the same unverified-domain reason.
-  // picks@thegregcoteshow.com stays in picks-worker.js's sendPicksEmail()
-  // since that goes to family members, but it stays broken until
-  // thegregcoteshow.com is verified at resend.com/domains (needs DNS
-  // console access neither Worker has).
+// The one real, monitored inbox this whole system is allowed to reach
+// while EMAILS_LIVE_FOR_EVERYONE (below) is off. Both Workers' own
+// ADMIN_EMAIL constants are already hardcoded to this same literal string;
+// kept here too (rather than imported from there) since shared.js has no
+// reason to depend on either Worker's own local constants.
+export const YETI_EMAIL = "yeti@yetiblanc.com";
+
+// Two real sender identities (2026-09-06, per Yeti) -- assign each real
+// email call site to whichever one it conceptually belongs to:
+//   - "admin": Yeti/admin-side (test tools, correction links, brute-force
+//     alerts, the public contact-support form).
+//   - "commissioner": Greg/commissioner-side (weekly picks-open email,
+//     picks-submission confirmations, missing-picks reminders, the Weekly
+//     Digest, and brief-is-live confirmations).
+// Neither admin@mail.pfpi.me nor commissioner@mail.pfpi.me is a real,
+// monitored inbox, so every email carries a "Reply to ___" mailto footer
+// pointing at the real human on that side instead.
+//
+// Greg's real personal email address was NOT found anywhere in this
+// codebase or BUILD_LOG.md (grepped both before writing this) -- GREG_EMAIL
+// in both Workers is still explicitly a yeti@yetiblanc.com placeholder, and
+// no other real address for Greg appears anywhere. Per Yeti's own
+// instruction not to invent a real-looking address, `commissioner`'s
+// replyTo below is a deliberately, obviously-non-deliverable placeholder
+// (the .invalid TLD is reserved by RFC 2606 for exactly this purpose) --
+// NOT a guess at Greg's real address, and NOT yeti@yetiblanc.com either
+// (so a reply attempt fails loudly/bounces rather than silently misrouting
+// to Yeti). Swap this one string for Greg's real address the moment it's
+// known; nothing else needs to change when that happens.
+const SENDER_IDENTITIES = {
+  admin: {
+    from: "PFPI Admin <admin@mail.pfpi.me>",
+    replyLabel: "Reply to Yeti",
+    replyTo: YETI_EMAIL,
+  },
+  commissioner: {
+    from: "PFPI Commissioner <commissioner@mail.pfpi.me>",
+    replyLabel: "Reply to Greg",
+    replyTo: "greg-real-email-not-yet-provided@pfpi-placeholder.invalid",
+  },
+};
+
+// Real, explicit on/off switch (2026-09-06, per Yeti's hard rule) -- a KV
+// value, not a Secret, specifically so Yeti can flip it himself with one
+// `wrangler kv key put` command, no redeploy needed (see BUILD_LOG.md for
+// the exact command). Defaults OFF via plain KV-miss (`null !== "true"`),
+// so no pre-seeding is required for the safe default to hold; explicitly
+// seeded to the literal string "false" at ship time anyway purely so the
+// key is discoverable via `wrangler kv key list`, not because absence
+// wouldn't already be safe.
+export async function emailsLiveForEveryone(env) {
+  return (await env.PFPI_KV.get("emails-live-for-everyone")) === "true";
+}
+
+export async function sendPfpiEmail(to, subject, text, env, cc, identity = "admin") {
+  const sender = SENDER_IDENTITIES[identity] || SENDER_IDENTITIES.admin;
+  const bodyWithReply = `${text}\n\n---\n${sender.replyLabel}: mailto:${sender.replyTo}`;
+
+  // Gate: while the flag is off, no send may reach any address other than
+  // YETI_EMAIL -- checked against BOTH `to` and `cc`, not just `to`, since
+  // several real call sites (picks-confirmation, training confirmations)
+  // put the real family address in `cc`. A blocked address is redirected
+  // to YETI_EMAIL (if it was the primary `to`) or simply dropped (if it
+  // was `cc` and `to` already resolves to Yeti) rather than silently
+  // vanishing -- either way it's named in a "[WOULD HAVE GONE TO: ...]"
+  // subject marker so a real send is never indistinguishable from a
+  // redirected one in Yeti's own inbox.
+  const live = await emailsLiveForEveryone(env);
+  let finalTo = to;
+  let finalCc = cc;
+  const blocked = [];
+  if (!live) {
+    if (to && to !== YETI_EMAIL) {
+      blocked.push(to);
+      finalTo = YETI_EMAIL;
+    }
+    if (cc && cc !== YETI_EMAIL) {
+      blocked.push(cc);
+      finalCc = undefined;
+    }
+  }
+  const finalSubject = blocked.length > 0 ? `[WOULD HAVE GONE TO: ${blocked.join(", ")}] ${subject}` : subject;
+
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -153,11 +232,11 @@ export async function sendPfpiEmail(to, subject, text, env, cc) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "PFPI <onboarding@resend.dev>",
-      to,
-      ...(cc ? { cc } : {}),
-      subject,
-      text,
+      from: sender.from,
+      to: finalTo,
+      ...(finalCc ? { cc: finalCc } : {}),
+      subject: finalSubject,
+      text: bodyWithReply,
     }),
   });
   if (!res.ok) {

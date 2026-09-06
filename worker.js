@@ -681,7 +681,7 @@ async function generateAndStoreDigest(env, weekKey, st, isFinal, titleOverride, 
     GREG_EMAIL,
     `PFPI Weekly Digest -- ${label} Ready`,
     `Dear PFPI Commissioner,\n\nYour Weekly Digest for ${label} has been generated and is ready for your report whenever you are ready.`,
-    env
+    env, undefined, "commissioner"
   );
   return entry;
 }
@@ -922,7 +922,7 @@ async function checkPendingBriefConfirmations(env) {
         pending.notifyEmail,
         `PFPI Week ${pending.week} brief is live`,
         `Week ${pending.week}'s brief just went live on the public site -- confirmed by reading it back from the real published page, not just that the save succeeded.\n\nhttps://the-greg-cote-show.github.io/PFPI/index.html`,
-        env
+        env, undefined, "commissioner"
       );
       await env.PFPI_KV.delete(key.name);
       continue;
@@ -937,7 +937,7 @@ async function checkPendingBriefConfirmations(env) {
         pending.notifyEmail,
         `PFPI Week ${pending.week} brief: still checking after 30 minutes`,
         `Week ${pending.week}'s brief was saved, but this Worker couldn't confirm it's actually live on the public site after 30 minutes of checking. It may still show up on its own (GitHub Pages can occasionally lag that long) -- worth a manual check, and flagging to Yeti if it's still missing.`,
-        env
+        env, undefined, "commissioner"
       );
       await env.PFPI_KV.delete(key.name);
     }

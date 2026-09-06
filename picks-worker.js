@@ -214,37 +214,19 @@ function formatWeekDeadlines(schedule) {
   return lines.join(" ");
 }
 
-// Sender display name "PFPI Commissioner" per Yeti (2026-08-27) -- and,
-// checked against what's actually verified before picking an address
-// rather than inventing one: `picks@thegregcoteshow.com` is NOT verified
-// in Resend (documented above and in shared.js's sendPfpiEmail -- still
-// broken, needs DNS console access nobody has). `onboarding@resend.dev`
-// IS the one proven to actually deliver, used by every other email in
-// this codebase (see sendPfpiEmail, shared.js). Using it here too, with
-// the new display name, rather than keeping a sender address that's
-// documented as non-functional -- this also happens to fix this specific
-// email actually being sendable at all, which it wasn't before. Swap the
-// address back to picks@thegregcoteshow.com once that domain is verified;
-// nothing else about this function needs to change when that happens.
+// Sender identity "commissioner" (mail.pfpi.me, verified 2026-09-06) --
+// this is the real weekly picks-open email, addressed to a real family
+// member once FAMILY_MEMBERS is populated, so it's squarely Greg/
+// commissioner-side, same category as the picks-confirmation and missing-
+// picks-reminder emails below. Delegates to the shared sendPfpiEmail
+// (2026-09-06) instead of its own raw Resend fetch -- was a standalone
+// fetch call only because it predates sendPfpiEmail's identity/reply-link/
+// live-flag logic; refactored so this gets all three for free instead of
+// tripling that logic here. Subject/body text is unchanged from before.
 async function sendPicksEmail(toEmail, name, week, link, deadlineSummary, env) {
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${env.RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: "PFPI Commissioner <onboarding@resend.dev>",
-      to: toEmail,
-      subject: `PFPI Week ${week} picks are open`,
-      text: `Hey ${name},\n\nYour Week ${week} picks are ready. Use this link any time this week, you can save and come back before each game's deadline:\n\n${link}\n\n${deadlineSummary}\n\nGood luck.`,
-    }),
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    console.error(`Failed to send picks email to ${toEmail}: ${res.status} ${body}`);
-  }
-  return res.ok;
+  const subject = `PFPI Week ${week} picks are open`;
+  const text = `Hey ${name},\n\nYour Week ${week} picks are ready. Use this link any time this week, you can save and come back before each game's deadline:\n\n${link}\n\n${deadlineSummary}\n\nGood luck.`;
+  return sendPfpiEmail(toEmail, subject, text, env, undefined, "commissioner");
 }
 
 // ============================================================
@@ -430,10 +412,18 @@ async function handleConfirmPicks(request, env) {
   // private notification, consistent with how admin/Greg account emails
   // already work elsewhere in this file. GREG_EMAIL is currently the same
   // placeholder as ADMIN_EMAIL (Greg's real address isn't in the system
-  // yet, see its definition above) — not invented here, just reused.
-  const sent = await sendPfpiEmail(ADMIN_EMAIL, subject, text, env, pickerEmail);
+  // yet, see its definition above) — not invented here, just reused. Each
+  // send now uses the sender identity matching WHO it's nominally for
+  // (2026-09-06) -- Yeti's own copy sends as "admin", Greg's own copy sends
+  // as "commissioner" -- even though both currently land in the same real
+  // inbox (yeti@yetiblanc.com) until GREG_EMAIL is a real, different
+  // address. `pickerEmail` (cc'd on both) is a real family address once
+  // FAMILY_MEMBERS is populated -- gated by sendPfpiEmail's own
+  // emails-live-for-everyone check either way, same as every other real
+  // send in this file.
+  const sent = await sendPfpiEmail(ADMIN_EMAIL, subject, text, env, pickerEmail, "admin");
   if (GREG_EMAIL !== ADMIN_EMAIL) {
-    await sendPfpiEmail(GREG_EMAIL, subject, text, env, pickerEmail);
+    await sendPfpiEmail(GREG_EMAIL, subject, text, env, pickerEmail, "commissioner");
   }
 
   if (!sent) {
@@ -560,9 +550,22 @@ async function handleTrainingSubmitPicks(request, env) {
     : "";
   const text = `${gracelinLine}This is a TRAINING/SAMPLE submission for ${fullTeamName(route.team)} -- it is not a real Week 1 pick and is not scored anywhere. Feel free to try it again as many times as you'd like before the real season starts.\n\n${lines.length > 0 ? lines.join("\n") : "(no picks made yet)"}`;
 
+  // "commissioner" identity (2026-09-06) -- this previews the real,
+  // family-facing picks-confirmation experience, same category as the real
+  // one in handleConfirmPicks above. Also now subject to sendPfpiEmail's
+  // own emails-live-for-everyone gate like every other real-address send in
+  // this codebase -- per Yeti's explicit, unconditional hard rule tonight
+  // ("do not send to any real family/Greg address until Yeti explicitly
+  // turns this on," no training-specific carve-out given) -- so until the
+  // flag is flipped on, these redirect to yeti@yetiblanc.com exactly like
+  // every other real-family send, on top of (not instead of) the earlier,
+  // separate Resend-domain-verification block on this exact path. Flagging
+  // this explicitly since it's a real behavior change from the original
+  // Part 1 spec's "sends real email to real family addresses" intent --
+  // tonight's blanket rule takes precedence; see BUILD_LOG.md.
   let sent = true;
   for (const to of route.emails) {
-    const ok = await sendPfpiEmail(to, subject, text, env);
+    const ok = await sendPfpiEmail(to, subject, text, env, undefined, "commissioner");
     sent = sent && ok;
   }
 
@@ -720,15 +723,16 @@ async function handleSendTestPicksEmail(request, env) {
 
   // Deliberately NOT sendPicksEmail() -- this is an ad-hoc admin tool with
   // its own distinct "[TEST]" subject/body, not the real weekly picks
-  // email. (sendPicksEmail also now sends from the same proven-working
-  // onboarding@resend.dev sender as of 2026-08-27 -- see its own comment
-  // -- so that's no longer the reason to keep these separate, just a
-  // genuinely different email.)
+  // email, and belongs to the "admin" sender identity rather than
+  // sendPicksEmail's "commissioner" one (both now route through the same
+  // shared sendPfpiEmail/mail.pfpi.me sender either way, as of 2026-09-06 --
+  // see shared.js -- so identity, not deliverability, is what still keeps
+  // these two separate).
   const sent = await sendPfpiEmail(
     ADMIN_EMAIL,
     `[TEST] PFPI Week ${week} picks — as ${fullTeamName(team)}`,
     `Test picks link for "${fullTeamName(team)}", Week ${week}.\n\nUse this link any time, you can save and come back before each game's deadline:\n\n${link}\n\n${deadlineSummary}\n\nThis is a test email triggered from admin.html, not a real weekly picks notification.`,
-    env
+    env, undefined, "admin"
   );
 
   if (!sent) {
@@ -776,7 +780,7 @@ async function handleSendCorrectionEmail(request, env) {
     ADMIN_EMAIL,
     `[CORRECTION] PFPI Week ${week} — ${fullTeamName(team)} — ${game.away} @ ${game.home}`,
     `One-time correction link for "${fullTeamName(team)}", Week ${week}, ${game.away} @ ${game.home}.\n\nThis link shows and unlocks ONLY that one game -- no other games from this week are shown or accessible on it, even if still open. It expires automatically at kickoff (${game.kickoffISO}), not on a flat timer, so it's impossible to use once the game has actually started. Forward it to whoever needs to fix their pick.\n\n${link}`,
-    env
+    env, undefined, "admin"
   );
 
   if (!sent) {
@@ -826,7 +830,7 @@ async function handleContactSupport(request, env) {
     ADMIN_EMAIL,
     `PFPI support request from ${email}`,
     `From: ${email}\n${context ? context + "\n" : ""}\nMessage:\n${message}`,
-    env
+    env, undefined, "admin"
   );
 
   if (!sent) {
@@ -877,11 +881,15 @@ async function handleSendReminderEmail(request, env) {
   }
 
   const lines = missing.map(g => `${g.away} @ ${g.home}`);
+  // "commissioner" identity (2026-09-06) -- this reminder is nominally to a
+  // real family member on Greg's behalf, same category as the real
+  // picks-open/picks-confirmation emails, even though it currently always
+  // targets ADMIN_EMAIL until real family addresses exist.
   const sent = await sendPfpiEmail(
     ADMIN_EMAIL,
     `PFPI reminder: ${fullTeamName(team)}, ${weekLabel} picks still needed`,
     `${fullTeamName(team)} is still missing ${weekLabel} picks for:\n\n${lines.join("\n")}\n\n(Test send -- real family email addresses aren't set up yet, so this went to Yeti's own address standing in for ${fullTeamName(team)}'s real recipient.)`,
-    env
+    env, undefined, "commissioner"
   );
 
   if (!sent) {
@@ -922,6 +930,7 @@ const AUTH_CONFIG = {
     resetKvPrefix: "admin-reset",
     resetPage: "admin.html",
     resetEmail: ADMIN_EMAIL,
+    senderIdentity: "admin",
     label: "admin",
     pageDescription: "the PFPI admin panel",
   },
@@ -934,6 +943,7 @@ const AUTH_CONFIG = {
     resetKvPrefix: "greg-reset",
     resetPage: "brief.html",
     resetEmail: GREG_EMAIL,
+    senderIdentity: "commissioner",
     // Matches brief.html's own established page name/description exactly
     // ("PFPI Commissioner Portal") -- these feed real user-facing email
     // text (password reset, brute-force alert), so they'd drifted from the
@@ -1008,7 +1018,7 @@ async function flagPossibleBruteForce(kind, ip, env) {
     ADMIN_EMAIL,
     `PFPI ${AUTH_CONFIG[kind].label}: possible brute-force login attempt`,
     `${LOGIN_FAIL_THRESHOLD} failed ${AUTH_CONFIG[kind].label} login attempts from IP ${ip} within ${LOGIN_FAIL_WINDOW_SECONDS / 60} minutes.\n\nThat IP is now locked out of that login for ${LOGIN_FAIL_WINDOW_SECONDS / 60} minutes. You won't get another alert for this IP for ${LOGIN_ALERT_COOLDOWN_SECONDS / 60} minutes even if it keeps trying.\n\nIf this wasn't you, no action is needed — the lockout is already in effect. If you're locked out yourself, wait for the cooldown or use "Forgot password?" from another network.`,
-    env
+    env, undefined, "admin"
   );
 }
 
@@ -1055,7 +1065,7 @@ async function handleForgotPassword(kind, request, env) {
     cfg.resetEmail,
     `PFPI ${cfg.label} password reset`,
     `A password reset was requested for ${cfg.pageDescription}.\n\nThis link is valid for 30 minutes and can only be used once:\n\n${link}\n\nIf you didn't request this, you can ignore this email.`,
-    env
+    env, undefined, cfg.senderIdentity
   );
 
   if (!sent) {

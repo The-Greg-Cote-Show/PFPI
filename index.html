@@ -1035,6 +1035,13 @@ function renderGames(realGames){
       // watching a game they might otherwise skip, which only works
       // before it's already over.
       const locked = isGameLocked(g);
+      // Part 2b (2026-09-05, per Yeti): the server now withholds `g.picks`
+      // entirely for a game until every real roster team has locked their
+      // pick for it or its deadline passes (buildWeekPublicJSON,
+      // worker.js) -- `picksRevealed` defaults true for older cached JSON
+      // that predates this field, so an existing/finished week doesn't
+      // suddenly render as "hidden" against stale data.
+      const picksRevealed = g.picksRevealed !== false;
       const pickCounts = {};
       if (locked && g.picks) {
         TEAMS.forEach(team => {
@@ -1047,10 +1054,14 @@ function renderGames(realGames){
         // Preseason games (Highlightly) DO carry a real picks object (added
         // 2026-08-27) -- guarded rather than assumed only because older
         // cached preseason data (from before that date) won't have it.
-        const pick = (g.picks && g.picks[team]) || null;
+        const pick = (picksRevealed && g.picks && g.picks[team]) || null;
         const correct = (pick && isFinal) ? pick === g.winner : null;
         const isUnique = locked && pick && pickCounts[pick] === 1;
         const color = TEAM_COLORS[team];
+        // "Hidden until..." is a genuinely different, honest state from "No
+        // pick yet" -- the latter would be a false claim for a game that
+        // HAS been picked but just isn't revealed to the public yet.
+        const pickText = picksRevealed ? (pick || "No pick yet") : "Picks hidden until reveal";
         const chip = document.createElement("div");
         chip.className = "pick-chip " + (correct === null ? "" : correct ? "correct" : "incorrect");
         chip.innerHTML = `
@@ -1058,7 +1069,7 @@ function renderGames(realGames){
           <div class="pick-info">
             <div class="pick-team-name">${TEAM_SHORT[team]}</div>
             <div class="pick-choice-row">
-              <div class="pick-choice ${correct === null ? "" : correct ? "correct-text" : "incorrect-text"}">${pick || "No pick yet"}</div>
+              <div class="pick-choice ${correct === null ? "" : correct ? "correct-text" : "incorrect-text"}">${pickText}</div>
               ${isUnique ? `<div class="pick-raccoon-icon" title="Unique pick">${raccoonSvg(16)}</div>` : ""}
             </div>
           </div>

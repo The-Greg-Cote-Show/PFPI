@@ -746,24 +746,51 @@ async function handleDigestRecompute(request, env) {
 // PER-WEEK PUBLIC JSON (games + picks, matches mockup's SCHEDULE shape)
 // ============================================================
 
+// Per-game public reveal gate (Part 2b, 2026-09-05 per Yeti): nobody should
+// see anyone's picks on the public site until every real roster team has
+// either locked their pick for THAT SPECIFIC game (see picks-worker.js's
+// lockGameIds — the permanent, submit-triggered lock added alongside this,
+// not the older per-game deadline lock) or that game's own deadline has
+// passed — a genuine per-game OR, whichever happens first. Deliberately
+// re-evaluated fresh on every publish tick rather than cached/one-shot:
+// both inputs (deadline-passed, the locked set) are monotonic-only-forward,
+// so a game can go hidden->revealed but never revealed->hidden.
 async function buildWeekPublicJSON(week, results, env) {
   // One KV read per team for the whole week, not per game.
   const picksByTeam = {};
+  const lockedByTeam = {};
   for (const team of TEAMS) {
     const picksRaw = await env.PFPI_KV.get(`picks:${week}:${team}`);
     picksByTeam[team] = picksRaw ? JSON.parse(picksRaw) : {};
+    const lockedRaw = await env.PFPI_KV.get(`locked-picks:${week}:${team}`);
+    lockedByTeam[team] = new Set(lockedRaw ? JSON.parse(lockedRaw) : []);
   }
 
   return results.map(g => {
+    const deadline = computeGameDeadline(g.kickoffISO);
+    const deadlinePassed = Date.now() > new Date(deadline).getTime();
+    const allTeamsLocked = TEAMS.every(team => lockedByTeam[team].has(g.id));
+    const picksRevealed = deadlinePassed || allTeamsLocked;
+
+    // The underlying data itself is withheld here (an empty object), not
+    // just hidden client-side -- so a public fetch of this JSON can never
+    // return a real pick before this game's own reveal condition is met.
     const picks = {};
-    for (const team of TEAMS) {
-      if (picksByTeam[team][g.id]) picks[team] = picksByTeam[team][g.id];
+    if (picksRevealed) {
+      for (const team of TEAMS) {
+        if (picksByTeam[team][g.id]) picks[team] = picksByTeam[team][g.id];
+      }
     }
+
     return {
       id: g.id, home: g.home, away: g.away,
       kickoffISO: g.kickoffISO, hasRealTime: !!g.hasRealTime, status: g.status,
       homeScore: g.homeScore, awayScore: g.awayScore,
       winner: g.winner, tie: !!g.tie, picks,
+      // Lets a frontend tell "hidden until reveal" apart from "nobody's
+      // picked this yet" -- an empty `picks` object alone is ambiguous
+      // between those two real, different states.
+      picksRevealed,
       // Always null for this path (Big Balls has no live-clock data at all
       // -- see normalizeGame's own note); this field is only ever
       // meaningful via the preseason/Highlightly path, which spreads the
@@ -774,7 +801,7 @@ async function buildWeekPublicJSON(week, results, env) {
       // a second deadline calculation, just exposed here too so a public
       // page (Greg's dashboard) can sort by urgency without needing an
       // authenticated per-team session.
-      deadline: computeGameDeadline(g.kickoffISO),
+      deadline,
     };
   });
 }

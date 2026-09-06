@@ -264,6 +264,9 @@ async function handleGetPicks(request, env) {
   const { team, week, correctionGameId } = tokenData;
   const schedule = await getWeekSchedule(week, env);
   const saved = await getSavedPicks(team, week, env) || {};
+  // A correction token unlocks its one named game unconditionally (see
+  // below), so its lock set is never consulted -- skip the KV read.
+  const lockedIds = correctionGameId ? new Set() : await getLockedGameIds(team, week, env);
 
   // A correction token (see handleSendCorrectionEmail) shows ONLY the one
   // game it names -- not the rest of that week's slate, locked or
@@ -275,15 +278,25 @@ async function handleGetPicks(request, env) {
   // payload, so `visibleSchedule` below is the full schedule as before.
   const visibleSchedule = correctionGameId ? schedule.filter(g => g.id === correctionGameId) : schedule;
 
-  const games = visibleSchedule.map(g => ({
-    id: g.id,
-    home: g.home,
-    away: g.away,
-    kickoffISO: g.kickoffISO,
-    deadline: g.deadline,
-    locked: g.id === correctionGameId ? false : isGameLocked(g.deadline),
-    pick: saved[g.id] || null,
-  }));
+  const games = visibleSchedule.map(g => {
+    // `submissionLocked` (Part 2a, 2026-09-05) is the new permanent,
+    // submit-triggered lock -- distinct from the pre-existing deadline lock
+    // below, so picks.html can tell a visitor WHY a game is locked ("you
+    // already submitted this" vs. "the deadline passed") instead of one
+    // generic label for both.
+    const submissionLocked = g.id !== correctionGameId && lockedIds.has(g.id);
+    const deadlineLocked = g.id === correctionGameId ? false : isGameLocked(g.deadline);
+    return {
+      id: g.id,
+      home: g.home,
+      away: g.away,
+      kickoffISO: g.kickoffISO,
+      deadline: g.deadline,
+      locked: submissionLocked || deadlineLocked,
+      submissionLocked,
+      pick: saved[g.id] || null,
+    };
+  });
 
   return jsonResponse({ team, week, games, isCorrection: !!correctionGameId }, 200, request);
 }
@@ -307,6 +320,7 @@ async function handleSubmitPicks(request, env) {
   const { team, week, correctionGameId } = tokenData;
   const schedule = await getWeekSchedule(week, env);
   const existing = await getSavedPicks(team, week, env) || {};
+  const lockedIds = correctionGameId ? new Set() : await getLockedGameIds(team, week, env);
 
   const rejected = [];
   for (const [gameId, pick] of Object.entries(picks || {})) {
@@ -317,11 +331,13 @@ async function handleSubmitPicks(request, env) {
     // or still open (per Yeti, 2026-08-27: without this, a correction
     // token could be used as a general submission link for the rest of
     // that week's still-open games, not just the one it was meant to fix).
-    // A normal weekly token (correctionGameId absent) keeps the original
-    // per-game deadline check unchanged.
+    // A normal weekly token (correctionGameId absent) is rejected on EITHER
+    // the pre-existing deadline lock OR the new permanent submission lock
+    // (Part 2a, 2026-09-05) -- a submitted pick is final immediately, not
+    // just once its deadline passes.
     if (correctionGameId) {
       if (gameId !== correctionGameId) { rejected.push(gameId); continue; }
-    } else if (isGameLocked(game.deadline)) {
+    } else if (isGameLocked(game.deadline) || lockedIds.has(gameId)) {
       rejected.push(gameId);
       continue;
     }
@@ -402,7 +418,7 @@ async function handleConfirmPicks(request, env) {
   const tally = `Picked: ${pickedCount} of ${totalGames} games. Still pending: ${pendingCount}.`;
 
   const subject = `PFPI: ${fullTeamName(team)} submitted Week ${week} picks`;
-  const text = `${fullTeamName(team)} submitted Week ${week} picks (${new Date().toISOString()}).\n\n${tally}\n\n${lines.join("\n")}`;
+  const text = `${fullTeamName(team)} submitted Week ${week} picks (${new Date().toISOString()}).\n\n${tally}\n\n${lines.join("\n")}\n\nThese picks are now permanently locked and can no longer be changed. Any game not listed above is still open and can be picked and submitted later, up until that game's own deadline.`;
   // CC's the picker themselves (per Yeti, 2026-08-26) so they have a copy
   // of exactly what they submitted. Real per-team emails for the 8 real
   // roster teams still aren't set up (Greg hasn't provided them yet), so
@@ -426,6 +442,133 @@ async function handleConfirmPicks(request, env) {
 
   await env.PFPI_KV.put(notifiedKey, JSON.stringify(current));
 
+  // Permanently lock every game that currently has a pick (Part 2a,
+  // 2026-09-05, per Yeti) -- ONLY the games actually picked as of this
+  // Submit click, not the whole week's schedule; anything left blank stays
+  // open for a future visit/submission. Deliberately placed after the
+  // `sent` check above (not before) -- only a submission that actually
+  // completed end-to-end should ever produce an irreversible lock; a failed
+  // send returns the 502 above and leaves every pick exactly as editable as
+  // before this request.
+  const lockedGameIds = Object.keys(current);
+  await lockGameIds(team, week, lockedGameIds, env);
+
+  return jsonResponse({ submitted: true, lockedGameIds }, 200, request);
+}
+
+// ============================================================
+// PART 1: TRAINING/SAMPLE PICKS PAGE (2026-09-05, per Yeti)
+// ============================================================
+// Genuinely separate from the real picks flow above -- separate frontend
+// (training-picks.html, not picks.html), separate endpoints (this section),
+// separate KV key prefix (`training-picks:{token}`) that the real scoring
+// engine (worker.js's computeStandings) and the real public JSON
+// (buildWeekPublicJSON) never read from -- both of those only ever read
+// `picks:{week}:{team}` for team in TEAMS, never anything under
+// `training-picks:`. This section reads the REAL Week 1 schedule (read-only
+// -- getWeekSchedule below is the same function the real flow uses; safe,
+// since the risk here is only ever on the WRITE side) but never reads or
+// writes `picks:1:{team}` or anything the real scoring/public pipeline
+// touches.  No deadline enforcement anywhere in this section -- training
+// picks are freely repeatable, on purpose.
+//
+// Tokens here are fixed, hand-assigned per real family member (routing-only
+// -- they determine which real address gets the confirmation email, nothing
+// more; nothing here is ever scored or tied to a real identity for scoring
+// purposes) rather than the real flow's signed/expiring HMAC tokens, since
+// there's no security property to protect: worst case someone else finds a
+// training link and submits fake sample picks, which has zero real
+// consequence by design.
+//
+// Real email addresses below are for THIS TRAINING PAGE ONLY -- explicitly
+// NOT added to shared.js's FAMILY_MEMBERS or any real-Week-1-facing
+// recipient list (that stays empty; see shared.js's own comment on why).
+const TRAINING_WEEK = 1;
+const TRAINING_ROUTES = {
+  "training-critters":    { team: "Critters",    emails: ["ccote215@gmail.com"] },
+  "training-ferraris":    { team: "Ferraris",    emails: ["christineiferrara@gmail.com"] },
+  "training-roughriders": { team: "Roughriders", emails: ["cote7714@gmail.com"] },
+  "training-maniacs":     { team: "Maniacs",     emails: ["lawyermom59@aol.com"] },
+  // Gracelin is a young child; both parents get her training confirmations
+  // on her behalf. The frontend (training-picks.html) also requires an
+  // explicit acknowledgment click before her picks form becomes usable --
+  // see that file. `isGracelin` drives both that page-side gate and the
+  // extra explicit "for Gracelin's Giraffes" framing in the email below.
+  "training-giraffes":    { team: "Giraffes", emails: ["cote7714@gmail.com", "christineiferrara@gmail.com"], isGracelin: true },
+  "training-lobos":       { team: "Lobos",       emails: ["upsetbird@aol.com"] },
+  "training-chickens":    { team: "Chickens",    emails: ["mcote0363@gmail.com"] },
+  "training-llamas":      { team: "Llamas",      emails: ["tati.capote92@gmail.com"] },
+};
+
+async function getTrainingPicks(token, env) {
+  const raw = await env.PFPI_KV.get(`training-picks:${token}`);
+  return raw ? JSON.parse(raw) : {};
+}
+
+async function handleTrainingGetPicks(request, env) {
+  const url = new URL(request.url);
+  const token = url.searchParams.get("token");
+  const route = token && TRAINING_ROUTES[token];
+  if (!route) return jsonResponse({ error: "Invalid training link." }, 401, request);
+
+  const schedule = await getWeekSchedule(TRAINING_WEEK, env);
+  const saved = await getTrainingPicks(token, env);
+
+  const games = schedule.map(g => ({
+    id: g.id, home: g.home, away: g.away, kickoffISO: g.kickoffISO,
+    pick: saved[g.id] || null,
+  }));
+
+  return jsonResponse({ team: route.team, isGracelin: !!route.isGracelin, games }, 200, request);
+}
+
+// One combined save+confirm action per Submit click, unlike the real flow's
+// separate silent-save/Submit split -- there is no locking or deadline
+// concept here to protect, so there's nothing that needs to happen ONLY
+// once per week. Every visit is freely repeatable, on purpose.
+async function handleTrainingSubmitPicks(request, env) {
+  const { token, picks } = await request.json();
+  const route = token && TRAINING_ROUTES[token];
+  if (!route) return jsonResponse({ error: "Invalid training link." }, 401, request);
+
+  const schedule = await getWeekSchedule(TRAINING_WEEK, env);
+  const existing = await getTrainingPicks(token, env);
+
+  for (const [gameId, pick] of Object.entries(picks || {})) {
+    const game = schedule.find(g => g.id === gameId);
+    if (!game) continue;
+    if (pick === null) delete existing[gameId];
+    else existing[gameId] = pick;
+  }
+
+  await env.PFPI_KV.put(`training-picks:${token}`, JSON.stringify(existing));
+
+  const lines = Object.entries(existing).map(([gameId, pick]) => {
+    const game = schedule.find(g => g.id === gameId);
+    const matchup = game ? `${game.away} @ ${game.home}` : gameId;
+    return `${matchup}: ${pick}`;
+  });
+
+  // Per Yeti (Part 1, 2026-09-05): every email for Gracelin's token must
+  // explicitly and unambiguously say "Gracelin's Giraffes" -- not just imply
+  // it via which link was used -- in both subject and body.
+  const subject = route.isGracelin
+    ? `[TRAINING] Sample picks submitted for Gracelin's Giraffes`
+    : `[TRAINING] Sample picks submitted -- ${fullTeamName(route.team)}`;
+  const gracelinLine = route.isGracelin
+    ? `These picks are for Gracelin's Giraffes, submitted on her behalf.\n\n`
+    : "";
+  const text = `${gracelinLine}This is a TRAINING/SAMPLE submission for ${fullTeamName(route.team)} -- it is not a real Week 1 pick and is not scored anywhere. Feel free to try it again as many times as you'd like before the real season starts.\n\n${lines.length > 0 ? lines.join("\n") : "(no picks made yet)"}`;
+
+  let sent = true;
+  for (const to of route.emails) {
+    const ok = await sendPfpiEmail(to, subject, text, env);
+    sent = sent && ok;
+  }
+
+  if (!sent) {
+    return jsonResponse({ error: "Saved, but the confirmation email could not be sent. Check Worker logs." }, 502, request);
+  }
   return jsonResponse({ submitted: true }, 200, request);
 }
 
@@ -498,6 +641,52 @@ async function handleClearWeekPicks(request, env) {
   await env.PFPI_KV.put(`override-log:${week}:${Date.now()}`, JSON.stringify(logEntry));
 
   return jsonResponse({ cleared: true, week, teamCount: allTeams.length }, 200, request);
+}
+
+// ============================================================
+// ADMIN/GREG: FULL, UNGATED WEEK PICKS (Part 2b, 2026-09-05 per Yeti)
+// ============================================================
+// The public data/week-N.json (worker.js's buildWeekPublicJSON) now hides a
+// game's `picks` entirely until that game's own reveal condition is met
+// (every real roster team has locked their pick for it, or its deadline has
+// passed -- see BUILD_LOG.md). Admin/commissioner-facing tools are
+// explicitly exempt from that rule and must keep showing real, live picks
+// at all times -- the Missing Picks tracker (admin.html + brief.html) reads
+// this endpoint instead of the public JSON for exactly that reason. Same
+// admin-or-Greg session gate as handleGetBriefHistory/handleSendReminderEmail
+// (both admin.html and brief.html host a Missing Picks tab).
+async function handleAdminWeekPicks(request, env) {
+  const sessionToken = request.headers.get("X-Session-Token");
+  const isGreg = await verifySessionToken("greg", sessionToken, env);
+  const isAdmin = !isGreg && (await verifySessionToken("admin", sessionToken, env));
+  if (!isGreg && !isAdmin) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const url = new URL(request.url);
+  const rawWeek = url.searchParams.get("week");
+  // "preseason-3" stays a valid value here too, matching every other
+  // Missing-Picks-adjacent endpoint (handleSendReminderEmail, etc.).
+  const week = rawWeek === "preseason-3" ? rawWeek : parseInt(rawWeek, 10);
+  if (week !== "preseason-3" && !Number.isInteger(week)) {
+    return jsonResponse({ error: "Invalid week." }, 400, request);
+  }
+
+  const schedule = await getWeekSchedule(week, env);
+  const picksByTeam = {};
+  for (const team of TEAMS) {
+    picksByTeam[team] = (await getSavedPicks(team, week, env)) || {};
+  }
+
+  const games = schedule.map(g => {
+    const picks = {};
+    for (const team of TEAMS) {
+      if (picksByTeam[team][g.id]) picks[team] = picksByTeam[team][g.id];
+    }
+    return { id: g.id, home: g.home, away: g.away, kickoffISO: g.kickoffISO, deadline: g.deadline, picks };
+  });
+
+  return jsonResponse({ week, games }, 200, request);
 }
 
 // ============================================================
@@ -1066,6 +1255,30 @@ async function savePicks(team, week, picks, env) {
   await env.PFPI_KV.put(`picks:${week}:${team}`, JSON.stringify(picks));
 }
 
+// ============================================================
+// PER-GAME PERMANENT SUBMISSION LOCKS (Part 2a, 2026-09-05 per Yeti)
+// Separate from the existing per-game DEADLINE lock (isGameLocked, shared.js)
+// -- this is a stronger, one-way lock that takes effect the moment a pick is
+// included in a Submit (handleConfirmPicks), regardless of how much time is
+// left before that game's own deadline. Stored as its own KV key (not baked
+// into the `picks:{week}:{team}` value) so every existing reader of that key
+// -- standings, buildWeekPublicJSON, admin overrides -- keeps working
+// unchanged against a plain gameId->pick string map. Monotonic: a gameId is
+// only ever added, never removed, through the normal picks flow (admin
+// override tooling bypasses this entirely, by design -- see
+// handleAdminOverride, which never checks this set).
+async function getLockedGameIds(team, week, env) {
+  const raw = await env.PFPI_KV.get(`locked-picks:${week}:${team}`);
+  return raw ? new Set(JSON.parse(raw)) : new Set();
+}
+
+async function lockGameIds(team, week, gameIds, env) {
+  if (!gameIds || gameIds.length === 0) return;
+  const existing = await getLockedGameIds(team, week, env);
+  gameIds.forEach(id => existing.add(id));
+  await env.PFPI_KV.put(`locked-picks:${week}:${team}`, JSON.stringify([...existing]));
+}
+
 async function getWeekSchedule(week, env) {
   // Reads the schedule cache written by the scores worker (pfpi-scores-worker,
   // see worker.js) into this same KV namespace. This Worker only reads it,
@@ -1114,6 +1327,12 @@ export default {
     if (url.pathname === "/contact-support" && request.method === "POST") {
       return handleContactSupport(request, env);
     }
+    if (url.pathname === "/training-my-picks" && request.method === "GET") {
+      return handleTrainingGetPicks(request, env);
+    }
+    if (url.pathname === "/training-submit-picks" && request.method === "POST") {
+      return handleTrainingSubmitPicks(request, env);
+    }
     if (url.pathname === "/admin/login" && request.method === "POST") {
       return handleLogin("admin", request, env);
     }
@@ -1128,6 +1347,9 @@ export default {
     }
     if (url.pathname === "/admin/clear-week-picks" && request.method === "POST") {
       return handleClearWeekPicks(request, env);
+    }
+    if (url.pathname === "/admin/week-picks" && request.method === "GET") {
+      return handleAdminWeekPicks(request, env);
     }
     if (url.pathname === "/admin/send-test-picks-email" && request.method === "POST") {
       return handleSendTestPicksEmail(request, env);

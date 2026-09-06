@@ -5776,3 +5776,151 @@ what keeps the centered score block from shifting per-row.
 Verified live (local server against the real, already-enriched
 `data/week-1.json`): every status column now renders on one line,
 row layout still reads cleanly, zero console errors.
+
+## Overnight build: training picks page + real picks locking/visibility (2026-09-05, started ~11:47 PM ET) -- IN PROGRESS
+
+Two-part task from Yeti, running overnight/unattended. Logging as I go per
+his explicit instruction. Full spec preserved in the conversation that
+kicked this off; summarizing decisions and reasoning here as each piece
+lands.
+
+### Architecture review before writing any code
+
+Read shared.js, picks-worker.js, worker.js (relevant sections), picks.html,
+admin.html, brief.html, index.html in full before changing anything, to
+understand the real current picks data model rather than guess at it:
+- Real picks stored at KV key `picks:{week}:{team}`, a plain
+  gameId->pickValue string map -- no lock metadata today, read by
+  buildWeekPublicJSON (worker.js, public JSON), computeStandings
+  (worker.js), and getSavedPicks (picks-worker.js).
+- Both Workers (pfpi-picks-worker, pfpi-scores-worker) share the SAME KV
+  namespace (id 3b5cd856fa7b40908601404f46b95456, confirmed by reading both
+  wrangler*.toml files) -- so a new key written by one is immediately
+  readable by the other, no new binding needed.
+- Real, confirmed pre-existing gap found before writing anything for
+  Part 2b: the public data/week-N.json (buildWeekPublicJSON) already
+  exposes every team's raw pick for every game, unconditionally, the
+  moment it is saved -- there was no reveal gating of any kind before this
+  session. index.html's own code comment even says so explicitly (that the
+  raw pick values are already publicly visible before a game locks, an
+  existing, unrelated design that earlier fix did not change). This
+  confirms Part 2b is a real, live gap, not a nice-to-have -- proceeding
+  with confidence rather than guessing.
+- Real architecture conflict found and resolved before writing code:
+  admin.html's and brief.html's Missing Picks tracker (renderMissingPicks
+  / fetchWeekGames) both read that SAME public data/week-N.json to
+  determine who has/hasn't picked. Once Part 2b gates the public JSON's
+  picks field, that tracker would itself start hiding real picks from
+  Yeti/Greg -- directly violating the explicit admin-tools-are-exempt
+  requirement. Resolved by adding a new authenticated endpoint
+  (GET /admin/week-picks, admin-or-Greg session) returning full, ungated
+  picks, and repointing ONLY renderMissingPicks in both files at it --
+  every other use of fetchWeekGames in those files (isWeekComplete
+  checks, the correction-game dropdown) only ever reads game
+  metadata/status, never picks, so those stay on the public JSON
+  unchanged. Not treating this as the genuinely-ambiguous stop-and-log
+  case -- the required end state was unambiguous (admin always sees real
+  data, public never sees ungated data before reveal), only the plumbing
+  to get there needed deciding, and there was exactly one clean way to do
+  it.
+
+### Part 2a: per-game permanent submission locking -- backend done, picks-worker.js
+
+- New KV key locked-picks:{week}:{team} (JSON array of gameIds), kept
+  fully separate from picks:{week}:{team} itself so every existing reader
+  of that key (standings, buildWeekPublicJSON, admin overrides) keeps
+  working against the same plain string map, unchanged.
+- getLockedGameIds/lockGameIds helpers (picks-worker.js). Monotonic --
+  only ever adds gameIds, never removes, through the normal picks flow.
+- handleGetPicks (GET /my-picks): added submissionLocked (new, separate
+  reason) alongside the existing deadline-based locked calc.
+  locked = submissionLocked || deadlineLocked so nothing downstream that
+  only checks locked breaks.
+- handleSubmitPicks (silent per-click save): now rejects a change to a
+  gameId if EITHER the deadline has passed OR it is in the locked-games set
+  -- same rejectedLockedGames mechanism as before, just a second
+  condition added.
+- handleConfirmPicks (the real Submit-button email flow): after a
+  successful send (deliberately AFTER, not before -- a failed send returns
+  the existing 502 and leaves every pick exactly as editable as before this
+  request, so a Resend outage can never silently produce an irreversible
+  lock nobody was told about), locks every gameId currently in current
+  (the picks actually saved as of this click) -- not the whole week's
+  schedule. Response now also returns lockedGameIds. Added one line to
+  the confirmation email plainly stating picks are now permanently locked
+  and that unpicked games stay open -- no mention of admin override
+  capability anywhere in this text, per the explicit instruction not to.
+- Correction-token path (handleSendCorrectionEmail/existing) and
+  handleAdminOverride are both UNCHANGED and untouched by any of the above
+  -- correction tokens already skip both the deadline AND (now) the
+  submission-lock check entirely (the correctionGameId branch never
+  reaches the lock check), and handleAdminOverride never checked locks in
+  the first place. This is exactly the required admin-override
+  preservation, achieved by NOT touching either path, not by adding a
+  bypass flag -- confirmed by reading both functions again after finishing
+  the lock logic, not assumed.
+
+### Part 2b: hide picks until per-game reveal -- backend done, worker.js + picks-worker.js
+
+- buildWeekPublicJSON (worker.js) now also reads locked-picks:{week}:{team}
+  for all 8 real roster teams (one extra KV read per team, same loop as the
+  existing picks read). Per game: revealed = deadlinePassed OR
+  everyRealTeamHasLockedThisGame. If not revealed, picks: {} is
+  published (the field is genuinely emptied, not just flagged -- so a
+  public API/JSON consumer can never fetch the real values before reveal,
+  not just have them hidden by client-side CSS/JS). Added an explicit
+  picksRevealed boolean per game so a frontend can render "hidden until
+  reveal" honestly rather than confusing it with "nobody's picked this
+  yet" (an empty picks object alone can't distinguish those two states).
+  This check re-runs fresh every publish tick, and both inputs
+  (deadline-passed, locked-set) are monotonic-only-forward, so a game can
+  never flip from revealed back to hidden.
+- Confirmed computeStandings (worker.js) needs NO changes: it only ever
+  reads results:week:{week} (finals-only) for scoring, and an unplayed
+  game contributes 0 to every team's tally regardless of what was picked --
+  there was no leak there to begin with, verified by re-reading the whole
+  function rather than assumed safe.
+- New GET /admin/week-picks?week=N (picks-worker.js) -- admin-or-Greg
+  session required, returns real ungated picks for every real roster team,
+  built from the exact same getWeekSchedule/getSavedPicks this Worker
+  already uses elsewhere (no new data path, no duplicated logic).
+
+### Part 1 backend (training-picks flow) -- written in the same picks-worker.js pass
+
+- New, fully isolated KV prefix training-picks:{token} (never read by
+  buildWeekPublicJSON, computeStandings, or any real-picks endpoint).
+- TRAINING_ROUTES hardcoded table mapping 8 fixed slug tokens
+  (training-critters, training-ferraris, training-roughriders,
+  training-maniacs, training-giraffes, training-lobos, training-chickens,
+  training-llamas) to the real addresses Yeti listed, for THIS TRAINING
+  PAGE ONLY -- explicitly NOT added to shared.js's FAMILY_MEMBERS (which
+  stays the empty array it already was) or any real-Week-1 recipient list.
+- GET /training-my-picks (reads real Week 1 schedule read-only via the
+  existing getWeekSchedule, plus that token's own training-picks KV entry;
+  never touches picks:1:*) and POST /training-submit-picks (single combined
+  save+email action per Submit click -- no separate silent-save/confirm
+  split like the real flow, since there is no locking or deadline concept
+  to protect here). No deadline enforcement anywhere in this section.
+- Gracelin's token (training-giraffes) routes to BOTH parent addresses
+  (two separate sendPfpiEmail calls, same "send twice, once per recipient"
+  pattern the real handleConfirmPicks already uses for
+  picker+Greg), and both the email subject and body explicitly say
+  "Gracelin's Giraffes" in plain text, not just implied by which token was
+  used.
+
+### Still to do (this same overnight session, see later log entries for what actually landed)
+
+- picks.html: per-game lock-reason messaging (submission-locked vs.
+  deadline-locked), rewritten Submit confirmation copy that clearly states
+  the permanent-lock behavior and lists exactly which games are about to
+  lock -- with NO mention of admin override capability anywhere in that
+  copy.
+- index.html: honor picksRevealed in the picks-breakdown panel (distinct
+  "hidden until reveal" state vs. "no pick yet").
+- admin.html + brief.html: repoint renderMissingPicks at the new
+  /admin/week-picks endpoint.
+- training-picks.html frontend, including the Gracelin acknowledgment gate.
+- Deploy both Workers, commit/push the frontend, and do REAL verification
+  (an actual test submission that locks only the intended games; a real
+  check that public JSON keeps picks hidden pre-reveal) before marking
+  Part 2 done -- code review alone is explicitly not enough for this part.

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PFPI Training Picks | The Greg Cote Show</title>
+<style>
+/* ============================================================
+   TRAINING/SAMPLE PICKS PAGE (Part 1, 2026-09-05, per Yeti)
+   Deliberately a separate page from picks.html (not a mode flag on it) --
+   see BUILD_LOG.md for the full isolation rationale. Styling copied from
+   picks.html's own dark theme for visual consistency, but this page's data
+   model is completely separate: it talks to /training-my-picks and
+   /training-submit-picks (picks-worker.js), which read/write ONLY
+   `training-picks:{token}` in KV -- never `picks:{week}:{team}`, which the
+   real scoring engine and public site actually use. No deadlines, no
+   locking -- every visit here is freely repeatable, on purpose.
+   ============================================================ */
+:root {
+  --bg:#080c14; --panel:#0f1623; --panel2:#141d2e; --panel3:#1a2540;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --gold:#e8b84b; --gold2:#f5d07a; --red:#e05252; --green:#3ecf74; --blue:#4a9eff;
+  --text:#eef2f7; --muted:#7a8ba8;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;font-size:14px;}
+.wrap{max-width:640px;margin:0 auto;padding:1.5rem 1.25rem 3rem;}
+.header{margin-bottom:1.25rem;}
+.title-main{font-size:1.3rem;font-weight:800;letter-spacing:-.02em;}
+.title-main span{color:var(--gold);}
+.subtitle{font-size:.8rem;color:var(--muted);margin-top:4px;}
+.banner{border-radius:10px;padding:.75rem 1rem;margin-bottom:1.25rem;font-size:.8rem;line-height:1.5;}
+.banner.info{background:rgba(74,158,255,.1);border:1px solid rgba(74,158,255,.3);color:var(--blue);}
+.banner.training{background:rgba(232,184,75,.12);border:1px solid rgba(232,184,75,.35);color:var(--gold2);}
+.banner.error{background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.3);color:var(--red);}
+.loading{color:var(--muted);font-size:.85rem;padding:2rem 0;text-align:center;}
+
+.game-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:1rem;margin-bottom:.75rem;}
+.game-teams{display:flex;align-items:center;justify-content:center;gap:1.1rem;margin-bottom:.5rem;}
+.team-slot{text-align:center;min-width:0;}
+.team-label{font-size:.6rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px;}
+.team-name{font-size:1.05rem;font-weight:800;}
+.at-sign{color:var(--muted);font-size:.8rem;font-weight:600;padding-top:1.1rem;}
+.kickoff-time{text-align:center;font-size:.7rem;color:var(--muted);margin-bottom:.75rem;}
+
+.pick-buttons{display:flex;gap:8px;}
+.pick-btn{flex:1;background:var(--panel2);border:1.5px solid var(--border2);color:var(--text);font-size:.85rem;font-weight:700;padding:.7rem .5rem;border-radius:8px;cursor:pointer;transition:all .15s;}
+.pick-btn:hover{border-color:var(--blue);}
+.pick-btn.selected{background:var(--blue);border-color:var(--blue);color:#08111f;}
+
+.hidden{display:none !important;}
+.submit-section{margin-top:1.5rem;text-align:center;}
+.submit-note{font-size:.72rem;color:var(--muted);line-height:1.5;margin-top:1.1rem;}
+.submit-btn{background:var(--gold);color:#1a1305;border:none;border-radius:8px;font-size:.9rem;font-weight:800;padding:.8rem 1.5rem;cursor:pointer;width:100%;}
+.submit-btn:hover:not(:disabled){background:var(--gold2);}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed;}
+.submit-status{font-size:.75rem;margin-top:.75rem;min-height:1em;text-align:center;}
+.submit-status.saved{color:var(--green);}
+.submit-status.rejected{color:var(--red);}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(4,6,10,.85);display:flex;align-items:center;justify-content:center;padding:1.25rem;z-index:200;}
+.modal-box{background:var(--panel);border:1px solid var(--border2);border-radius:14px;padding:1.5rem;max-width:420px;width:100%;max-height:85vh;overflow-y:auto;}
+.modal-title{font-size:1.1rem;font-weight:800;margin-bottom:.6rem;}
+.modal-text{font-size:.85rem;color:var(--text);line-height:1.6;margin-bottom:1rem;}
+.modal-check-row{display:flex;align-items:flex-start;gap:.5rem;margin-bottom:1.1rem;font-size:.82rem;line-height:1.5;}
+.modal-check-row input{margin-top:3px;width:16px;height:16px;flex-shrink:0;}
+.modal-btn{border:none;border-radius:8px;font-size:.85rem;font-weight:800;padding:.75rem 1rem;cursor:pointer;width:100%;background:var(--gold);color:#1a1305;}
+.modal-btn:hover:not(:disabled){background:var(--gold2);}
+.modal-btn:disabled{opacity:.45;cursor:not-allowed;}
+
+.footer-copyright{text-align:center;font-size:.68rem;color:var(--muted);margin-top:2.5rem;padding-top:1rem;border-top:1px solid var(--border);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="title-main">PFPI <span>Training Picks</span></div>
+    <div class="subtitle" id="subtitle">Loading...</div>
+  </div>
+  <div class="banner training">This is a TRAINING/SAMPLE picks page for real Week 1 games. Nothing you do here is scored, and it never touches the real Week 1 picks system -- try it as many times as you'd like.</div>
+  <div id="content"><div class="loading">Loading...</div></div>
+  <div class="submit-section hidden" id="submitSection">
+    <button class="submit-btn" id="submitBtn">Submit training picks</button>
+    <div class="submit-status" id="submitStatus"></div>
+    <div class="submit-note">This sends a sample confirmation email so you can see what a real submission looks like. You can come back and do this again as many times as you want -- nothing here is ever final.</div>
+  </div>
+  <div class="footer-copyright">&copy;ThatKindaThing Productions, LLC</div>
+</div>
+
+<!-- Gracelin-specific acknowledgment gate (Part 1, 2026-09-05, per Yeti) --
+     shown ONLY when the token in the URL is Gracelin's. Must be actively
+     dismissed via the checkbox + button below before the picks form
+     underneath becomes usable -- not persisted across visits, since this is
+     meant to be shown every time her link is opened, not just once ever. -->
+<div class="modal-overlay hidden" id="gracelinModal">
+  <div class="modal-box">
+    <div class="modal-title">These picks are for Gracelin's Giraffes</div>
+    <div class="modal-text">You're about to make training/sample picks on behalf of <strong>Gracelin's Giraffes</strong>. This is a practice page only -- nothing here is scored, and any confirmation email will clearly say it's for Gracelin's Giraffes.</div>
+    <label class="modal-check-row">
+      <input type="checkbox" id="gracelinAckCheckbox">
+      <span>Understood -- these picks are for Gracelin's Giraffes.</span>
+    </label>
+    <button class="modal-btn" id="gracelinAckBtn" type="button" disabled>Continue</button>
+  </div>
+</div>
+
+<script>
+const WORKER_BASE = "https://pfpi-picks-worker.yeti-f3c.workers.dev";
+const params = new URLSearchParams(window.location.search);
+const token = params.get("token");
+
+// Duplicated from shared.js's TEAM_SHORT (this is a plain static page with
+// no build step / shared import between it and the Workers, same pattern
+// admin.html and brief.html already use for their own copies) -- kept in
+// sync by hand, values must never drift.
+const TEAM_SHORT = {
+  Lobos: "Greg's Lobos", Roughriders: "Dick's Roughriders", Maniacs: "Mom's Maniacs", Critters: "Chris' Critters",
+  Chickens: "Mike's Chickens", Ferraris: "Christie's Ferraris", Llamas: "Tati's Llamas", Giraffes: "Gracelin's Giraffes",
+};
+
+function fmtKickoffTime(iso) {
+  return new Date(iso).toLocaleString("en-US", {
+    timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+  }) + " ET";
+}
+
+// gameId -> currently-selected team or null. Seeded from the server's saved
+// training picks on load, then mutated locally as buttons are clicked;
+// Submit sends this whole map in one shot (see doSubmit below).
+let currentPicks = {};
+let currentTeam = null;
+
+async function loadPicks() {
+  const content = document.getElementById("content");
+  const subtitle = document.getElementById("subtitle");
+  const submitSection = document.getElementById("submitSection");
+  submitSection.classList.add("hidden");
+
+  if (!token) {
+    subtitle.textContent = "";
+    content.innerHTML = `<div class="banner error">No token in this link. Use the training link Yeti sent you.</div>`;
+    return;
+  }
+
+  let res, data;
+  try {
+    res = await fetch(`${WORKER_BASE}/training-my-picks?token=${encodeURIComponent(token)}`);
+    data = await res.json();
+  } catch (e) {
+    content.innerHTML = `<div class="banner error">Could not reach the training server. Try again in a moment.</div>`;
+    return;
+  }
+
+  if (!res.ok) {
+    subtitle.textContent = "";
+    content.innerHTML = `<div class="banner error">${data.error || "This training link is invalid."}</div>`;
+    return;
+  }
+
+  currentTeam = data.team;
+  currentPicks = {};
+  data.games.forEach(g => { currentPicks[g.id] = g.pick || null; });
+
+  subtitle.textContent = `Training picks for ${TEAM_SHORT[data.team] || data.team} — real Week 1 games, sample only.`;
+  content.innerHTML = "";
+
+  if (data.games.length === 0) {
+    content.innerHTML = `<div class="banner info">No Week 1 games loaded yet. Check back soon.</div>`;
+    return;
+  }
+
+  const sorted = [...data.games].sort((a, b) => {
+    const diff = new Date(a.kickoffISO) - new Date(b.kickoffISO);
+    if (diff !== 0) return diff;
+    return `${a.away}@${a.home}`.localeCompare(`${b.away}@${b.home}`);
+  });
+
+  sorted.forEach(game => {
+    const card = document.createElement("div");
+    card.className = "game-card";
+    card.innerHTML = `
+      <div class="game-teams">
+        <div class="team-slot">
+          <div class="team-label">Away</div>
+          <div class="team-name">${game.away}</div>
+        </div>
+        <div class="at-sign">@</div>
+        <div class="team-slot">
+          <div class="team-label">Home</div>
+          <div class="team-name">${game.home}</div>
+        </div>
+      </div>
+      <div class="kickoff-time">${fmtKickoffTime(game.kickoffISO)}</div>
+      <div class="pick-buttons">
+        <button class="pick-btn" data-team="${game.away}">${game.away}</button>
+        <button class="pick-btn" data-team="${game.home}">${game.home}</button>
+      </div>
+    `;
+    const buttons = card.querySelectorAll(".pick-btn");
+    buttons.forEach(btn => {
+      if (btn.dataset.team === currentPicks[game.id]) btn.classList.add("selected");
+      btn.onclick = () => {
+        const clearing = btn.classList.contains("selected");
+        const newPick = clearing ? null : btn.dataset.team;
+        currentPicks[game.id] = newPick;
+        buttons.forEach(b => b.classList.toggle("selected", b.dataset.team === newPick));
+      };
+    });
+    content.appendChild(card);
+  });
+
+  submitSection.classList.remove("hidden");
+
+  // Gracelin's token specifically (Part 1, per Yeti): gate the whole picks
+  // form behind an explicit acknowledgment every time this link is opened.
+  if (data.isGracelin) {
+    document.getElementById("submitSection").querySelector("#submitBtn").disabled = true;
+    document.getElementById("gracelinModal").classList.remove("hidden");
+  }
+}
+
+document.getElementById("gracelinAckCheckbox").addEventListener("change", (e) => {
+  document.getElementById("gracelinAckBtn").disabled = !e.target.checked;
+});
+document.getElementById("gracelinAckBtn").onclick = () => {
+  document.getElementById("gracelinModal").classList.add("hidden");
+  document.getElementById("submitBtn").disabled = false;
+};
+
+async function doSubmit() {
+  const btn = document.getElementById("submitBtn");
+  const statusEl = document.getElementById("submitStatus");
+  btn.disabled = true;
+  btn.textContent = "Submitting...";
+  statusEl.textContent = "";
+  statusEl.className = "submit-status";
+
+  try {
+    const res = await fetch(`${WORKER_BASE}/training-submit-picks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, picks: currentPicks }),
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = "Submit training picks";
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Could not submit training picks.";
+      statusEl.className = "submit-status rejected";
+      return;
+    }
+    statusEl.textContent = "Sample confirmation email sent. Feel free to change picks and submit again any time.";
+    statusEl.className = "submit-status saved";
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = "Submit training picks";
+    statusEl.textContent = "Could not reach the server, try again.";
+    statusEl.className = "submit-status rejected";
+  }
+}
+document.getElementById("submitBtn").onclick = doSubmit;
+
+loadPicks();
+</script>
+</body>
+</html>

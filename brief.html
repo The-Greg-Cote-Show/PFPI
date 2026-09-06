@@ -753,6 +753,33 @@ async function fetchWeekGames(week) {
   }
 }
 
+// Authenticated, ungated counterpart to fetchWeekGames above -- used ONLY by
+// renderMissingPicks (Part 2b, 2026-09-05 per Yeti). The public
+// data/week-N.json now withholds a game's `picks` until every real roster
+// team has locked it or its deadline passes, which would otherwise make the
+// Missing Picks tracker itself start hiding real picks from Greg --
+// explicitly against the rule that admin/commissioner tools stay exempt.
+// Every OTHER use of fetchWeekGames in this file (isWeekComplete, etc.)
+// only ever reads game metadata/status, never `picks`, so those
+// intentionally stay on the public JSON, unchanged.
+const mpAdminGamesCache = {};
+async function fetchWeekPicksAdmin(week) {
+  if (mpAdminGamesCache[week] !== undefined) return mpAdminGamesCache[week];
+  try {
+    const res = await fetch(`${WORKER_BASE}/admin/week-picks?week=${encodeURIComponent(week)}`, {
+      headers: { "X-Session-Token": sessionToken },
+    });
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return null; }
+    if (!res.ok) { mpAdminGamesCache[week] = null; return null; }
+    const data = await res.json();
+    mpAdminGamesCache[week] = Array.isArray(data.games) ? data.games : null;
+    return mpAdminGamesCache[week];
+  } catch (e) {
+    mpAdminGamesCache[week] = null;
+    return null;
+  }
+}
+
 // Per Yeti (2026-08-26): a "Preseason" entry so the whole tracker can
 // actually be tested before real family emails/roster picks exist for a
 // real week -- preseason-3 is the same real-roster sandbox worker.js
@@ -809,7 +836,7 @@ async function renderMissingPicks() {
   statusEl.textContent = "Loading...";
   statusEl.className = "status show";
 
-  const games = await fetchWeekGames(week);
+  const games = await fetchWeekPicksAdmin(week);
   if (!games || games.length === 0) {
     statusEl.textContent = "No games published for this week yet.";
     statusEl.className = "status show";

@@ -7328,3 +7328,15 @@ both deployed Workers with `Origin: https://pfpi.me` -- both correctly
 answered `Access-Control-Allow-Origin: https://pfpi.me`, confirming the
 real, live origin still passes CORS after removing the dead duplicate
 entry from each allowlist.
+
+**Same-evening follow-up:** Yeti asked to also clean up the one stale
+comment flagged above (out of scope for the audit itself, since it
+never named the old domain, but noticed while in there). `picks-worker.js`'s
+comment directly above `ALLOWED_ORIGINS` said "Update once the real
+custom domain is live" -- no longer accurate now that `pfpi.me` is the
+live domain and already in the list. Rewrote it to state the current,
+real fact (pfpi.me is live; github.io origin is kept alongside it
+because GitHub Pages still serves the site there too, not as a
+leftover). `node --check` clean, deployed (`pfpi-picks-worker`, version
+`457291eb-cbd0-4f1b-8109-7317f856e260`), cron trigger confirmed intact.
+Comment-only change -- no behavior difference from the prior deploy.

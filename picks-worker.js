@@ -40,8 +40,10 @@ const ADMIN_EMAIL = "yeti@yetiblanc.com";
 // NOT make these actually land in Greg's inbox until Yeti flips that flag.
 const GREG_EMAIL = "upsetbird@aol.com";
 
-// Allowed frontend origins for CORS. Update once the real custom domain is
-// live; workers.dev origin kept for local/interim testing.
+// Allowed frontend origins for CORS. pfpi.me is the real, live custom
+// domain; github.io origin kept alongside it since GitHub Pages still
+// serves the site there too (pfpi.me is a CNAME on top of it, not a
+// replacement host).
 const ALLOWED_ORIGINS = [
   "https://pfpi.me",
   "https://the-greg-cote-show.github.io",

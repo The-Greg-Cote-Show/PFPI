@@ -480,11 +480,21 @@ const TRAINING_ROUTES = {
   "training-roughriders": { team: "Roughriders", emails: ["cote7714@gmail.com"] },
   "training-maniacs":     { team: "Maniacs",     emails: ["lawyermom59@aol.com"] },
   // Gracelin is a young child; both parents get her training confirmations
-  // on her behalf. The frontend (training-picks.html) also requires an
-  // explicit acknowledgment click before her picks form becomes usable --
-  // see that file. `isGracelin` drives both that page-side gate and the
-  // extra explicit "for Gracelin's Giraffes" framing in the email below.
-  "training-giraffes":    { team: "Giraffes", emails: ["cote7714@gmail.com", "christineiferrara@gmail.com"], isGracelin: true },
+  // on her behalf -- Chris Cote and Christine "Christie" Ferrara (the same
+  // real people/addresses as Chris' Critters and Christie's Ferraris
+  // above, not new addresses; they each also have their own team). The
+  // frontend (training-picks.html) also requires an explicit
+  // acknowledgment click before her picks form becomes usable -- see that
+  // file. `isGracelin` drives both that page-side gate and the extra
+  // explicit "for Gracelin's Giraffes" framing in the email below.
+  //
+  // CORRECTED 2026-09-07, per Yeti: the original pairing here
+  // (cote7714@gmail.com, i.e. Uncle Dick's Roughriders address, +
+  // christineiferrara@gmail.com) was wrong -- Yeti fed the wrong address
+  // for one of Gracelin's parents. Real pairing is ccote215@gmail.com
+  // (Chris) + christineiferrara@gmail.com (Christie); Dick's address never
+  // belonged here.
+  "training-giraffes":    { team: "Giraffes", emails: ["ccote215@gmail.com", "christineiferrara@gmail.com"], isGracelin: true },
   "training-lobos":       { team: "Lobos",       emails: ["upsetbird@aol.com"] },
   "training-chickens":    { team: "Chickens",    emails: ["mcote0363@gmail.com"] },
   "training-llamas":      { team: "Llamas",      emails: ["tati.capote92@gmail.com"] },
@@ -539,14 +549,22 @@ async function handleTrainingSubmitPicks(request, env) {
     return `${matchup}: ${pick}`;
   });
 
-  // Per Yeti (Part 1, 2026-09-05): every email for Gracelin's token must
-  // explicitly and unambiguously say "Gracelin's Giraffes" -- not just imply
-  // it via which link was used -- in both subject and body.
+  // Per Yeti (Part 1, 2026-09-05, reinforced 2026-09-07): every email for
+  // Gracelin's token must explicitly and unambiguously say "Gracelin's
+  // Giraffes" -- not just imply it via which link was used -- in both
+  // subject and body. Strengthened further 2026-09-07: since her token now
+  // shares BOTH recipient addresses with their own separate teams
+  // (ccote215@gmail.com also gets Critters' own emails, christineiferrara@
+  // gmail.com also gets Ferraris' own emails -- see TRAINING_ROUTES above),
+  // the team name is front-loaded in the subject (not buried at the end,
+  // where a mobile notification preview could truncate it) and the body's
+  // opening line explicitly contrasts "not your own team" rather than just
+  // naming Gracelin's team in isolation.
   const subject = route.isGracelin
-    ? `[TRAINING] Sample picks submitted for Gracelin's Giraffes`
+    ? `[TRAINING] GRACELIN'S GIRAFFES -- sample picks submitted`
     : `[TRAINING] Sample picks submitted -- ${fullTeamName(route.team)}`;
   const gracelinLine = route.isGracelin
-    ? `These picks are for Gracelin's Giraffes, submitted on her behalf.\n\n`
+    ? `THESE PICKS ARE FOR GRACELIN'S GIRAFFES -- submitted on her behalf, not for your own team.\n\n`
     : "";
   const text = `${gracelinLine}This is a TRAINING/SAMPLE submission for ${fullTeamName(route.team)} -- it is not a real Week 1 pick and is not scored anywhere. Feel free to try it again as many times as you'd like before the real season starts.\n\n${lines.length > 0 ? lines.join("\n") : "(no picks made yet)"}`;
 

@@ -6518,3 +6518,57 @@ than erroring. First real datapoint should be an actual live visitor now.
 
 No code changes, no redeploy needed -- this was purely a data reset
 against the existing, already-correct analytics pipeline.
+
+## Training routing fix: Gracelin's Giraffes had the wrong second parent address (2026-09-07, ~12:20 AM ET) -- DONE, no sends triggered
+
+Yeti caught his own error from the original Part 1 handoff: Gracelin's
+Giraffes' `TRAINING_ROUTES` entry had `cote7714@gmail.com` (Uncle Dick's
+Roughriders address) as one of her two recipients -- should have been
+`ccote215@gmail.com` (Chris' Critters' own address -- Chris Cote is
+apparently one of Gracelin's parents, alongside Christine "Christie"
+Ferrara, who was already correct). Fixed in `picks-worker.js`'s
+`TRAINING_ROUTES`:
+
+```
+"training-giraffes": { team: "Giraffes", emails: ["ccote215@gmail.com", "christineiferrara@gmail.com"], isGracelin: true }
+```
+
+Confirmed the other 7 teams already exactly match Yeti's original
+instruction from two nights ago -- no other changes needed there, this
+was the one real error.
+
+**Real consequence of the fix worth flagging explicitly**: both of
+Gracelin's addresses are now the SAME two addresses that also receive
+their own team's training emails (ccote215@gmail.com also gets Critters'
+own confirmations; christineiferrara@gmail.com also gets Ferraris' own).
+Per Yeti's explicit instruction tonight ("subject line and body need to
+be very up front that it's for Gracelin's picks"), strengthened the
+Gracelin-specific email content in `handleTrainingSubmitPicks`:
+- Subject now front-loads the team name in caps --
+  `[TRAINING] GRACELIN'S GIRAFFES -- sample picks submitted` -- instead of
+  burying "for Gracelin's Giraffes" at the end, where a mobile
+  notification preview could truncate exactly the part that matters most.
+- Body's opening line now explicitly contrasts "not your own team" --
+  `THESE PICKS ARE FOR GRACELIN'S GIRAFFES -- submitted on her behalf, not
+  for your own team.` -- rather than just naming her team in isolation,
+  since a recipient skimming could otherwise mistake it for their own
+  team's confirmation.
+- No other team's subject/body wording touched -- scoped exactly to
+  Gracelin's per Yeti's ask.
+
+Deployed (`pfpi-picks-worker`, wrangler). **No sends triggered** -- Yeti
+was explicit ("Don't send them anything yet... I'll send a command
+tomorrow"). Re-confirmed `emails-live-for-everyone` is still `"false"`
+as an extra belt-and-suspenders check even though nothing was sent this
+turn regardless. Full, corrected team -> email mapping, for reference:
+
+| Team | Email(s) |
+|---|---|
+| Chris' Critters | ccote215@gmail.com |
+| Christie's Ferraris | christineiferrara@gmail.com |
+| Dick's Roughriders | cote7714@gmail.com |
+| Mom's Maniacs | lawyermom59@aol.com |
+| **Gracelin's Giraffes** | **ccote215@gmail.com + christineiferrara@gmail.com (corrected)** |
+| Greg's Lobos | upsetbird@aol.com |
+| Mike's Chickens | mcote0363@gmail.com |
+| Tati's Llamas | tati.capote92@gmail.com |

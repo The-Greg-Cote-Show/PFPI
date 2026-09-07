@@ -6713,3 +6713,100 @@ it became a silent runtime no-op.
 
 Nothing sent to any real address, training or otherwise -- confirmed
 `emails-live-for-everyone` is still `"false"` regardless.
+
+## Overnight: wipe all Commissioner's Report brief content and history -- clean slate before real launch (2026-09-07, overnight) -- DONE
+
+**Task**: Yeti wants a genuine clean slate for the Commissioner's Report
+before the site goes live for real. Per a real screenshot Yeti shared,
+Week 1 shows "Coming soon!" as saved content and Week 2 shows up under
+"Past Weeks" as a leftover test entry -- both need to go, along with any
+other week's leftover content/history, so the feature starts from the
+same empty state a brand-new deployment would show. Saving/versioning
+behavior itself is not being touched, only the existing test data.
+
+**Where brief content/history actually lives, confirmed by reading the
+code first (not guessed):**
+- `data/brief-week-{week}.json`, committed to this repo via
+  `commitJSONToGitHub()` in `handlePublishBrief()` (picks-worker.js
+  ~line 1190) -- this is what the PUBLIC `index.html` reads
+  (`loadRealBrief()`, index.html ~line 446) to show the Commissioner's
+  Report panel. A missing file here is exactly the "Greg hasn't
+  published a brief for this week yet." empty state (index.html ~line
+  655-660) -- no separate "empty" flag exists, absence of the file IS
+  the empty state, matching a brand-new deployment.
+- `brief-version:{week}:{timestamp}` in KV (`PFPI_KV`, namespace id
+  `3b5cd856fa7b40908601404f46b95456`, shared by both
+  `pfpi-picks-worker` and `pfpi-scores-worker` -- confirmed via
+  `wrangler.toml`/`wrangler-scores.toml`, this is PFPI's own namespace,
+  nothing to do with CoteCup) -- per-week version history, written on
+  every save (picks-worker.js ~line 1237). `handleGetBriefHistory` and
+  `handleGetBriefWeeks` (picks-worker.js ~line 1280-1336) derive
+  brief.html's "current saved text," "Previous versions" dropdown, and
+  "Past Weeks" list ENTIRELY from these keys -- confirmed by reading
+  `renderPublishTab()`/`renderReportPastWeeks()` in brief.html
+  (~line 550-650), no other source feeds that UI.
+- `brief-pending-confirm:{week}` in the same KV namespace -- ephemeral
+  "brief is live" email-confirmation flag (picks-worker.js ~line 1267),
+  self-deletes within 30 minutes either way (worker.js
+  `checkPendingBriefConfirmations`, ~line 905-945), but checked
+  explicitly in case a stale one was sitting there.
+
+**Explicitly NOT touched, and why:** `override-log:{week}:{timestamp}`
+looked related (it does log admin brief-override saves) but is a SHARED
+audit-trail key prefix also used for real picks-correction overrides
+(picks-worker.js line 690/732) -- confirmed it is never read by any
+brief.html/index.html version-history or "Past Weeks" UI, so it's
+general admin audit trail, not brief content/history, and bulk-deleting
+it would risk picks-correction audit data. Left entirely alone.
+`digest-version:*` (Weekly Digest feature) is a separate, similarly-named
+key prefix for a different tool -- not touched. No picks, scoring,
+schedule, or analytics keys were read, listed, or touched at any point.
+
+**Pre-deletion confirmation (per the overnight hard rules, logged before
+deleting anything):**
+- `wrangler kv key list --namespace-id 3b5cd856fa7b40908601404f46b95456 --prefix "brief"` returned `[]` --
+  ZERO KV keys currently exist under `brief-version:`,
+  `brief-pending-confirm:`, or any other `brief*` prefix. (A prior
+  session's preseason teardown already removed
+  `brief-version:preseason-3:*` and `brief-pending-confirm:preseason-3`
+  -- see the "preseason archive & teardown" entry above -- and no other
+  week ever accumulated version-history keys, so there is nothing left
+  in KV to delete.)
+- `data/` directory contains exactly two brief files:
+  `data/brief-week-1.json` (`{"week":1,"text":"Coming soon!",...}`) and
+  `data/brief-week-2.json` (`{"week":2,"text":"_",...}`). No
+  `brief-week-preseason-3.json` (already removed in the earlier
+  teardown) and no other numbered week (3-18) has ever had a file
+  committed.
+- Confirmed this list covers ONLY brief content/history -- no picks,
+  scoring, schedule, or analytics files/keys anywhere in it. Proceeding.
+
+**Action taken:** `git rm data/brief-week-1.json data/brief-week-2.json`,
+committed, and pushed to `origin/main` -- removes the only two pieces of
+real leftover brief content that existed anywhere. No KV deletes were
+needed (nothing was there to delete, confirmed above).
+
+**Verification:**
+- `wrangler kv key list --namespace-id 3b5cd856fa7b40908601404f46b95456 --prefix "brief"` still returns `[]` after the push.
+- After the push, `https://the-greg-cote-show.github.io/PFPI/data/brief-week-1.json`
+  and `.../brief-week-2.json` both 404 (confirmed by direct fetch, see
+  below) -- `index.html`'s `loadRealBrief()` will get `null` for every
+  week and render "Greg hasn't published a brief for this week yet.",
+  the same empty state a brand-new deployment shows.
+- `brief.html`'s Commissioner's Report tab: with zero `brief-version:*`
+  keys, `handleGetBriefHistory` returns `{current: null, versions: []}`
+  for every week -> `renderPublishTab()` shows the blank editor (no
+  saved text, no "Previous versions" dropdown) for every week, and
+  `handleGetBriefWeeks` returns `{weeks: []}` -> "Past Weeks" list is
+  empty. Verified by reading the exact code paths above, not by
+  guessing -- these two endpoints are the ONLY source of that UI.
+- Nothing outside brief content/history was read, listed, or modified --
+  no picks, scoring, schedule, or analytics KV keys or files were
+  touched at any point in this task.
+
+**Going forward:** no code changed -- `handlePublishBrief`,
+`handleGetBriefHistory`, and `handleGetBriefWeeks` are exactly as they
+were. The first real brief Greg writes after this wipe will commit a
+fresh `data/brief-week-{week}.json` and write a fresh
+`brief-version:{week}:{timestamp}` KV entry exactly as it already does
+today -- this was a data wipe only, not a behavior change.

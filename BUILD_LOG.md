@@ -7226,3 +7226,105 @@ the next time either is used -- both were already fully wired with real
 recipients, this flag was the only thing standing between them and a
 real send. No code changed in this step; this was purely the config
 flag Yeti asked to flip.
+
+## Email inventory deck, dead-domain audit, and the `pfpi.me` swap (2026-09-07, interactive, same evening) -- DONE
+
+**Email inventory deck:** built `PFPI Email Inventory.pptx` (python-pptx,
+Python already available locally) and saved it to Yeti's Desktop --
+17 slides covering all 13 real emails currently wired in the system
+(training-page confirmations excluded per Yeti, "we're beyond that
+now"), each with From/To/Subject/a fully-rendered sample body/exact
+firing rules, sourced directly from the real `sendPfpiEmail` call sites
+in `picks-worker.js`/`worker.js`, not guessed. Verified structurally
+(every shape's bounding box checked against slide bounds
+programmatically, since no PowerPoint/LibreOffice was available here to
+render it visually) and verified the file's actual XML is valid UTF-8
+throughout with zero replacement characters -- an earlier scare where a
+diagnostic script's own console output showed garbled special
+characters turned out to be this Windows Python install's cp1252
+`stdout` encoding mangling the TERMINAL DISPLAY only; the real `.pptx`
+XML bytes were confirmed correct (`\xc2\xb7`, valid UTF-8 for a middot)
+the whole time.
+
+**Two real follow-up questions Yeti asked about the Weekly Picks Are
+Open template, answered from the actual code (not assumed), twice after
+a message-delivery hiccup lost the first answer:**
+1. The "Thursday's game(s) lock 2 hours before kickoff" line is NOT
+   hardcoded -- `formatWeekDeadlines()` (picks-worker.js) computes the
+   real weekday name per game from that week's actual `kickoffISO,`
+   America/New_York-converted. Checked against the REAL live Week 1
+   schedule (`pfpi.me/data/week-1.json`) to give a concrete answer
+   rather than a hypothetical: Week 1 has real games on both Wednesday
+   and Thursday, so the real generated line for Week 1 reads
+   "Wednesday's game(s) lock 2 hours before kickoff. Thursday's
+   game(s) lock 2 hours before kickoff." Also noted, unprompted: the
+   weekend line always says "Saturday, Sunday, and Monday" verbatim
+   even in a week (like Week 1) with no actual Saturday game --
+   technically still true, a deliberate simplification, not a bug, but
+   worth knowing while reviewing language.
+2. `FAMILY_MEMBERS` (`shared.js`) is still `[]`, confirmed fresh via
+   direct grep both times asked -- this email cannot reach anyone at
+   all right now, fully independent of the `emails-live-for-everyone`
+   gate being on. Its git history shows nothing has touched it since
+   the pre-season sandboxed-teams removal on 2026-08-29.
+
+**Dead-domain audit (`pfpi.thegregcoteshow.com` -> `pfpi.me`), reported
+before touching anything, per Yeti's explicit ask:** searched the
+entire repo, every file type, case-insensitive. Found in exactly 3
+files -- `picks-worker.js` (2 live occurrences), `worker.js` (3, one of
+which was comment-only), and `BUILD_LOG.md` (~10 mentions, all
+historical narrative of the original DNS/CNAME setup incident, not live
+config). Confirmed clean already: the repo's own `CNAME` file already
+says `pfpi.me`; none of the six frontend HTML pages hardcode either
+domain anywhere.
+
+**The swap, exactly as scoped and confirmed by Yeti (BUILD_LOG.md and
+"everything else already-clean" deliberately left alone):**
+- `picks-worker.js` `ALLOWED_ORIGINS`: removed the dead
+  `"https://pfpi.thegregcoteshow.com"` entry outright (not replaced --
+  `"https://pfpi.me"` was already present in the same array, so adding
+  it again would have just duplicated it).
+- `picks-worker.js` `handleWeeklyTrigger()`: the real link built into
+  the Weekly Picks Are Open email changed from
+  `https://pfpi.thegregcoteshow.com/picks.html?token=...` to
+  `https://pfpi.me/picks.html?token=...` -- the one occurrence that
+  was an actual literal replacement, not a duplicate-removal.
+- `worker.js` `ALLOWED_ORIGINS`: same duplicate-removal as
+  picks-worker.js's (pfpi.me was already present there too).
+- `worker.js` `PFPI_OWN_HOSTS` (analytics internal-traffic
+  classification): same duplicate-removal (`pfpi.me` was already in
+  the set).
+- `worker.js`: rewrote the one explanatory comment that named the dead
+  domain by name (`classifyReferrer`'s exact-match rationale) so it no
+  longer describes a domain-suffix collision scenario that literally
+  can't happen anymore now that PFPI's own host is `pfpi.me`, not a
+  `thegregcoteshow.com` subdomain.
+
+**Deliberately NOT touched, per Yeti's explicit instruction:**
+`BUILD_LOG.md`'s historical mentions (a record of what happened at the
+time, not live config -- rewriting them would falsify history), and
+everything already confirmed clean in the audit above (the `CNAME`
+file, all six frontend HTML pages). Also noticed but out of the
+confirmed scope, so left alone without asking: `picks-worker.js`'s
+comment directly above `ALLOWED_ORIGINS` still says "Update once the
+real custom domain is live" -- now stale (it is live), but this
+specific line was never part of what Yeti confirmed for tonight's swap
+since it doesn't contain the literal old-domain string, so it wasn't in
+the audit reported back to him.
+
+**Verified before deploying:** `grep -rn "pfpi\.thegregcoteshow\.com"
+picks-worker.js worker.js` -> zero matches (previously 5). `node
+--check` on both files -- clean.
+
+**Deployed both Workers** (`wrangler deploy --config wrangler.toml` for
+`pfpi-picks-worker`, version `5cf8bbf4-31cc-4ce5-8619-4a39cf3a187d`;
+`wrangler deploy --config wrangler-scores.toml` for
+`pfpi-scores-worker`, version `cb63d9e6-708a-4833-ad25-ea3f2515c96a`) --
+both confirmed their cron trigger survived the redeploy
+(`schedule: 0 * * * *` / `schedule: * * * * *`).
+
+**Verified live, no regression:** sent a real `OPTIONS` preflight to
+both deployed Workers with `Origin: https://pfpi.me` -- both correctly
+answered `Access-Control-Allow-Origin: https://pfpi.me`, confirming the
+real, live origin still passes CORS after removing the dead duplicate
+entry from each allowlist.

@@ -44,7 +44,6 @@ const GREG_EMAIL = "upsetbird@aol.com";
 // live; workers.dev origin kept for local/interim testing.
 const ALLOWED_ORIGINS = [
   "https://pfpi.me",
-  "https://pfpi.thegregcoteshow.com",
   "https://the-greg-cote-show.github.io",
 ];
 
@@ -174,7 +173,7 @@ async function handleWeeklyTrigger(env) {
 
   for (const member of FAMILY_MEMBERS) {
     const token = await generateWeeklyToken(member.team, currentWeek, env);
-    const link = `https://pfpi.thegregcoteshow.com/picks.html?token=${token}`;
+    const link = `https://pfpi.me/picks.html?token=${token}`;
     await sendPicksEmail(member.email, member.name, currentWeek, link, deadlineSummary, env);
   }
 

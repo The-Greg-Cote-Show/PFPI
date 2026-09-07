@@ -1150,7 +1150,7 @@ const ANALYTICS_ALL_PAGES = new Set(["index", "picks", "brief", "admin"]);
 // in-site navigation, not a real external discovery source, so it gets
 // its own "internal" bucket rather than being misclassified as an
 // external referral or lumped into the generic "other:" catch-all.
-const PFPI_OWN_HOSTS = new Set(["the-greg-cote-show.github.io", "pfpi.thegregcoteshow.com", "pfpi.me"]);
+const PFPI_OWN_HOSTS = new Set(["the-greg-cote-show.github.io", "pfpi.me"]);
 
 async function sha256Hex(text) {
   const data = new TextEncoder().encode(text);
@@ -1162,13 +1162,13 @@ async function sha256Hex(text) {
 // (not one opaque "other" bucket) so a real, unexpected source stays
 // visible and actionable instead of disappearing into noise. Exact
 // hostname match (after stripping a leading "www."), not endsWith --
-// deliberately avoids misclassifying pfpi.thegregcoteshow.com (PFPI's
-// OWN custom domain, checked first as "internal") as the separate
-// "thegregcoteshow" external bucket just because it shares a parent
-// domain suffix. A rare mobile-subdomain referrer (e.g. m.youtube.com)
-// falls into "other:m.youtube.com" instead of "youtube" -- an honest
-// miss, not a misattribution, and easy to widen later once real data
-// shows it's worth it.
+// PFPI_OWN_HOSTS is checked first as "internal" above, so pfpi.me never
+// falls through to the "thegregcoteshow" bucket below regardless; the
+// exact-match approach here just keeps every other bucket honest too
+// (e.g. a rare mobile-subdomain referrer like m.youtube.com falls into
+// "other:m.youtube.com" instead of "youtube" -- an honest miss, not a
+// misattribution, and easy to widen later once real data shows it's
+// worth it).
 function classifyReferrer(referrer) {
   if (!referrer) return "direct";
   let host;
@@ -1625,7 +1625,6 @@ async function handleAnalyticsRange(request, env) {
 // into pfpi-picks-worker; no new secret, no cross-Worker call needed.
 const ALLOWED_ORIGINS = [
   "https://pfpi.me",
-  "https://pfpi.thegregcoteshow.com",
   "https://the-greg-cote-show.github.io",
 ];
 

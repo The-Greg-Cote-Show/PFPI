@@ -7166,3 +7166,63 @@ is itself a small real improvement) until you flip
 not per-feature, so turning it on also starts real sends to any
 `FAMILY_MEMBERS`/roster address configured elsewhere in the system, not
 just to Greg.
+
+## `emails-live-for-everyone` flipped to true (2026-09-07, interactive, same evening) -- DONE
+
+Yeti asked to make it live. Before executing, surfaced the full real
+blast radius so the decision was informed, not just "flip the Greg
+flag": this switch is global, not per-brief-confirmation, so it also
+immediately arms two other already-wired, currently-redirecting
+features to send real mail --
+- **Training-page confirmations** (`training-picks.html` /
+  `TRAINING_ROUTES`): the next real submission emails Chris Cote,
+  Christine Ferrara, Dick, Mom, Mike, and Tati's real addresses (and
+  both of Gracelin's parents) for real -- no training-specific
+  carve-out exists in the code (confirmed by re-reading the
+  `handleSendTestPicksEmail` comment logged earlier tonight).
+- **"Email the whole league"** (`LEAGUE_ROSTER`, admin.html/brief.html):
+  the next real click sends to all 8 real family addresses for real.
+
+`FAMILY_MEMBERS` (real weekly picks-open/confirmation list) is still
+`[]`, so that specific path remains a no-op regardless.
+
+**Yeti then asked a direct, important question before deciding: does
+flipping the flag itself trigger a send?** Answered from actual code,
+not assumption: `emailsLiveForEveryone(env)` is a plain KV read inside
+`sendPfpiEmail` -- nothing calls `sendPfpiEmail` as a side effect of the
+KV value changing; a real send only happens the next time some other
+real action occurs (a publish, a picks submission, a password-reset
+request, a training submission, a league-email click). Also checked for
+anything already queued that could fire on the very next cron tick once
+it's on, since that's the one way a "silent" trigger could still exist
+without a fresh human action: `brief-pending-confirm:*` -> `[]` (nothing
+pending -- consistent with tonight's own brief wipe above),
+`digest:*` -> `[]` (no digest generated yet), and Week 1's own games
+haven't happened yet (deadlines are Sep 9-12), so the completion-
+triggered digest-generation cron path has nothing to trigger either.
+Confirmed flipping it now would send nothing tonight, only arm the
+system for tomorrow.
+
+**Action:** attempting the KV write myself
+(`wrangler kv key put "emails-live-for-everyone" "true" --namespace-id
+3b5cd856fa7b40908601404f46b95456 --remote`) was blocked by Claude Code's
+own auto-mode safety classifier -- a config write gating real sends to
+real people is exactly the kind of action that guardrail exists for,
+and per its own instructions this was not worked around. Gave Yeti the
+exact command to run himself via the session's `!` prefix; **he ran it
+directly.**
+
+**Verified immediately after, against the real remote namespace:**
+`wrangler kv key get "emails-live-for-everyone" --namespace-id
+3b5cd856fa7b40908601404f46b95456 --remote` -> `true`. Genuinely live,
+not just believed to be.
+
+**Net effect as of right now:** the brief-published confirmation,
+Greg's password reset, his picks-confirmation copy, and the Weekly
+Digest "ready" notice will all reach `upsetbird@aol.com` for real the
+next time each is triggered. Training-page confirmations and "email the
+whole league" also now send to the real family addresses listed above
+the next time either is used -- both were already fully wired with real
+recipients, this flag was the only thing standing between them and a
+real send. No code changed in this step; this was purely the config
+flag Yeti asked to flip.

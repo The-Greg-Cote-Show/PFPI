@@ -7002,3 +7002,73 @@ namespace rather than assumed).
 `token:*` key appears in it. Total remote KV key count right now (all
 prefixes): 164. After deleting these 11 and only these 11, the expected
 total is 153 -- checked as part of verification below. Proceeding.
+
+### Part 2: action taken and verification -- DONE
+
+**Deleted** the exact 11 keys listed above, and only those 11, via
+`wrangler kv bulk delete --namespace-id 3b5cd856fa7b40908601404f46b95456
+--remote --force` against a key-list file containing precisely that
+list (not a prefix-based delete, to remove any ambiguity about what
+could match) -- wrangler reported `Success!`.
+
+**Verified immediately after, against the real remote namespace:**
+- `wrangler kv key list --remote --prefix "brief"` -> `[]`. Genuinely
+  zero brief-related keys of any kind remain.
+- Total remote KV key count: **153** -- exactly 164 minus 11, confirming
+  nothing beyond the intended 11 keys was touched.
+- Spot-checked every other real prefix in the namespace immediately
+  after, to directly confirm none of it moved: `picks:` (1),
+  `digest-version:` (0, genuinely empty already -- no digest has been
+  versioned yet, unrelated to this task), `override-log:` (2),
+  `schedule:` (18), `analytics:` (98), `token:` (22) -- all present and
+  untouched.
+- Live site: `https://pfpi.me/data/brief-week-1.json` and
+  `brief-week-2.json` both still 404 (re-checked just now, post-KV-wipe).
+- **Real, authenticated live check of brief.html** (same
+  already-restored Greg session as Part 1's verification, no password
+  entered): `GET /greg/brief-weeks` -> `{"weeks":[]}`;
+  `GET /greg/brief-history?week=1` -> `{"current":null,"versions":[]}`;
+  same for week 2. Screenshot of the Commissioner's Report tab
+  (Week 1) confirms this visually: blank editor with the placeholder
+  text ("Write this week's PFPI brief..."), no "saved" view, no
+  "Previous versions" dropdown, "Publish brief" button (not the
+  saved-state "Edit" button), and an empty "Past Weeks" card with no
+  entries -- exactly the same empty state a brand-new deployment would
+  show, and exactly the same for Week 2.
+
+**Explicitly NOT touched anywhere in this task:** `picks:*`,
+`locked-picks:*`, `notified-picks:*`, `schedule:*`, `digest:*`,
+`digest-version:*`, `override-log:*`, `analytics:*`, `token:*` -- none
+of these were read, listed with intent to modify, or deleted at any
+point. Only `brief-version:1:*`, `brief-version:2:*` (KV) and
+`data/brief-week-1.json`, `data/brief-week-2.json` (repo files, deleted
+in the earlier session and re-confirmed still gone here) were removed.
+
+**Small, separate, pre-existing bug noticed but deliberately NOT
+fixed** (out of scope for both parts of tonight's task -- flagging
+rather than fixing unprompted): `renderReportPastWeeks()`'s empty-state
+message (`#reportPastWeeksEmpty`, "No past reports yet...") only ever
+gets `classList.remove("hidden")` when the list is empty, but the
+element's actual default class is `status` (not `hidden`) and
+`.status` alone is `display:none` in this file's CSS -- it needs
+`.status.show` to actually render, the same convention every other
+status message in this file already uses. Net effect: with zero past
+weeks, the "Past Weeks" card now correctly shows no entries (verified
+above), but the reassuring "No past reports yet..." explainer text
+never actually appears -- just an empty card under the "Past Weeks"
+label. Cosmetic only, pre-dates tonight's changes, and doesn't affect
+either task's correctness (Part 1's tab-scoping and Part 2's data wipe
+are both independently verified above via direct API responses, not
+by reading this message). Worth a one-line fix
+(`classList.add("show")` alongside `classList.remove("hidden")`)
+next time either file is touched, but left alone tonight per the scope
+Yeti actually asked for.
+
+**Going forward, unchanged (same as the original wipe attempt):**
+`handlePublishBrief`, `handleGetBriefHistory`, and `handleGetBriefWeeks`
+were not touched -- no code path was edited. The first real brief Greg
+publishes for any week will write a fresh
+`data/brief-week-{week}.json` and a fresh
+`brief-version:{week}:{timestamp}` KV entry exactly as it already does,
+and (thanks to Part 1) will show up correctly scoped to the Weekly
+Digest/Commissioner's Report tabs only.

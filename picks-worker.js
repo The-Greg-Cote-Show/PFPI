@@ -500,6 +500,76 @@ const TRAINING_ROUTES = {
   "training-llamas":      { team: "Llamas",      emails: ["tati.capote92@gmail.com"] },
 };
 
+// ============================================================
+// LEAGUE ROSTER -- real addresses for general league-wide email (2026-09-07,
+// per Yeti: "a way for us to send a message to the whole league").
+// ============================================================
+// Deliberately a SEPARATE table from TRAINING_ROUTES above, even though it
+// reuses the exact same real addresses -- TRAINING_ROUTES is explicitly
+// scoped to training/sample picks only (per the original Part 1 hard rule:
+// "do not add these to the real FAMILY_MEMBERS list or anything that feeds
+// live Week 1 picks"). This table exists for a different, new purpose (a
+// general broadcast tool), kept separate so the two concepts can never be
+// silently conflated even though today they hold identical real data.
+// Confirmed directly with Yeti before building this: reuse the real
+// addresses already on file, not FAMILY_MEMBERS (still `[]`) and not a
+// new/guessed list -- see BUILD_LOG.md.
+const LEAGUE_ROSTER = {
+  Critters:    ["ccote215@gmail.com"],
+  Ferraris:    ["christineiferrara@gmail.com"],
+  Roughriders: ["cote7714@gmail.com"],
+  Maniacs:     ["lawyermom59@aol.com"],
+  Giraffes:    ["ccote215@gmail.com", "christineiferrara@gmail.com"],
+  Lobos:       ["upsetbird@aol.com"],
+  Chickens:    ["mcote0363@gmail.com"],
+  Llamas:      ["tati.capote92@gmail.com"],
+};
+
+// admin.html (both its own Admin Portal AND its Commissioner Portal mirror
+// section) and brief.html all POST here -- identity in the body decides
+// "admin" (admin@mail.pfpi.me) vs. "commissioner" (commissioner@mail.pfpi.me).
+// One email per real team (never one email exposing every recipient to
+// every other recipient), each through the same sendPfpiEmail pipeline as
+// everything else -- same live-email gate (nothing reaches a real address
+// until Yeti flips emails-live-for-everyone on), same reply-to footer, same
+// automatic bcc to Yeti.
+async function handleSendLeagueEmail(request, env) {
+  const sessionToken = request.headers.get("X-Session-Token");
+  const isGreg = await verifySessionToken("greg", sessionToken, env);
+  const isAdmin = !isGreg && (await verifySessionToken("admin", sessionToken, env));
+  if (!isGreg && !isAdmin) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const { identity, subject, message } = await request.json();
+  if (identity !== "admin" && identity !== "commissioner") {
+    return jsonResponse({ error: "Invalid identity." }, 400, request);
+  }
+  // Greg's own session can only ever send as "commissioner" -- brief.html
+  // has no UI offering "admin" at all, but this blocks it server-side too,
+  // rather than trusting the frontend alone to never send that value.
+  if (identity === "admin" && !isAdmin) {
+    return jsonResponse({ error: "Only an admin session can send as admin." }, 403, request);
+  }
+
+  const trimmedSubject = (subject || "").trim();
+  const trimmedMessage = (message || "").trim();
+  if (!trimmedSubject || !trimmedMessage) {
+    return jsonResponse({ error: "Subject and message are required." }, 400, request);
+  }
+
+  let sentCount = 0;
+  let failedCount = 0;
+  for (const emails of Object.values(LEAGUE_ROSTER)) {
+    for (const to of emails) {
+      const ok = await sendPfpiEmail(to, trimmedSubject, trimmedMessage, env, undefined, identity);
+      if (ok) sentCount++; else failedCount++;
+    }
+  }
+
+  return jsonResponse({ sent: true, sentCount, failedCount }, 200, request);
+}
+
 async function getTrainingPicks(token, env) {
   const raw = await env.PFPI_KV.get(`training-picks:${token}`);
   return raw ? JSON.parse(raw) : {};
@@ -1378,6 +1448,9 @@ export default {
     }
     if (url.pathname === "/admin/week-picks" && request.method === "GET") {
       return handleAdminWeekPicks(request, env);
+    }
+    if (url.pathname === "/admin/send-league-email" && request.method === "POST") {
+      return handleSendLeagueEmail(request, env);
     }
     if (url.pathname === "/admin/send-test-picks-email" && request.method === "POST") {
       return handleSendTestPicksEmail(request, env);

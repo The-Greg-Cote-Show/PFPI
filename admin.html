@@ -30,6 +30,13 @@ button:hover{opacity:.9;}
 .status.ok{color:var(--green);}
 .status a{color:var(--blue);}
 .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-top:1.5rem;}
+/* Admin Portal's own textarea (2026-09-07, League Email panel) -- the
+   global input/select rule above never covered textarea, and
+   #commissionerTabs' own textarea styling is deliberately scoped away from
+   this section (see that block's own comment), so this needs its own rule
+   rather than silently inheriting either. */
+#adminPortalTab textarea{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);padding:.6rem .7rem;border-radius:8px;font-size:.85rem;font-family:inherit;min-height:140px;resize:vertical;line-height:1.5;}
+#adminPortalTab textarea:focus{outline:none;border-color:var(--blue);}
 /* !important (2026-08-28): without it, elements combining .hidden with
    .top-tabs (display:flex, declared later in this file) rendered visible
    anyway -- equal-specificity classes resolve by source order, not by
@@ -192,6 +199,7 @@ button:hover{opacity:.9;}
     <button class="top-tab-btn" data-tab="missing" type="button">Missing Picks</button>
     <button class="top-tab-btn" data-tab="digest" type="button">Weekly Digest</button>
     <button class="top-tab-btn" data-tab="publish" type="button">Commissioner's Report</button>
+    <button class="top-tab-btn" data-tab="league" type="button">League Email</button>
   </div>
 
   <!-- ============================================================
@@ -299,6 +307,28 @@ button:hover{opacity:.9;}
       <button id="clearPicksBtn" style="background:var(--red);">Clear all picks for this week</button>
       <div class="status" id="clearPicksStatus"></div>
     </div>
+
+    <!-- League Email (2026-09-07, per Yeti): "a way for us to send a
+         message to the whole league." Admin identity here -- the
+         Commissioner Portal mirror below (and brief.html itself) has the
+         same tool sending as "commissioner" instead. One email per real
+         team on LEAGUE_ROSTER (picks-worker.js), gated by the same
+         live-email switch as every other real send. -->
+    <div class="panel hidden" id="adminLeagueEmailPanel">
+      <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Email the whole league</div>
+      <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
+        Sends one email to every real team's on-file address, from the admin
+        identity (admin@mail.pfpi.me). Gated by the same live-email switch as
+        every other real send in this system — while it's off, every one of
+        these redirects to your own inbox instead of a real family address.
+      </div>
+      <label for="adminLeagueEmailSubject">Subject</label>
+      <input type="text" id="adminLeagueEmailSubject" placeholder="Subject line">
+      <label for="adminLeagueEmailMessage">Message</label>
+      <textarea id="adminLeagueEmailMessage" placeholder="Write your message to the whole league..."></textarea>
+      <button id="adminLeagueEmailBtn" type="button">Send to the whole league</button>
+      <div class="status" id="adminLeagueEmailStatus"></div>
+    </div>
   </div>
 
   <!-- ============================================================
@@ -376,6 +406,25 @@ button:hover{opacity:.9;}
       <div id="reportPastWeeksList" class="past-weeks-list"></div>
       <div class="status" id="reportPastWeeksEmpty">No past reports yet -- one appears here once you publish a week's Commissioner's Report.</div>
     </div>
+
+    <!-- League Email, Commissioner Portal mirror (2026-09-07, per Yeti) --
+         same tool as the Admin Portal's own League Email panel above, but
+         sends as "commissioner" (commissioner@mail.pfpi.me) instead of
+         "admin" -- lets Yeti send the whole-league broadcast from Greg's
+         side without needing to log into brief.html separately, same
+         reasoning as every other tool ported into this section. -->
+    <div class="card hidden" id="cpLeagueEmailTab">
+      <div class="field">
+        <label for="cpLeagueEmailSubject">Subject</label>
+        <input type="text" id="cpLeagueEmailSubject" placeholder="Subject line">
+      </div>
+      <div class="field">
+        <label for="cpLeagueEmailMessage">Message</label>
+        <textarea id="cpLeagueEmailMessage" placeholder="Write your message to the whole league..."></textarea>
+      </div>
+      <button class="btn" id="cpLeagueEmailBtn" type="button">Send to the whole league</button>
+      <div class="status" id="cpLeagueEmailStatus"></div>
+    </div>
   </div>
 
   <div class="footer-copyright" id="narrowFooter">&copy;ThatKindaThing Productions, LLC</div>
@@ -444,6 +493,7 @@ function showLoggedIn() {
   document.getElementById("correctionPanel").classList.remove("hidden");
   document.getElementById("triggerPollPanel").classList.remove("hidden");
   document.getElementById("clearPicksPanel").classList.remove("hidden");
+  document.getElementById("adminLeagueEmailPanel").classList.remove("hidden");
   document.getElementById("mainSectionTabs1").classList.remove("hidden");
   document.getElementById("mainSectionTabs2").classList.remove("hidden");
   document.getElementById("mainSectionTabs3").classList.remove("hidden");
@@ -467,6 +517,7 @@ function clearSession(message) {
   document.getElementById("correctionPanel").classList.add("hidden");
   document.getElementById("triggerPollPanel").classList.add("hidden");
   document.getElementById("clearPicksPanel").classList.add("hidden");
+  document.getElementById("adminLeagueEmailPanel").classList.add("hidden");
   document.getElementById("mainSectionTabs1").classList.add("hidden");
   document.getElementById("mainSectionTabs2").classList.add("hidden");
   document.getElementById("mainSectionTabs3").classList.add("hidden");
@@ -474,6 +525,7 @@ function clearSession(message) {
   document.getElementById("missingPicksTab").classList.add("hidden");
   document.getElementById("digestTab").classList.add("hidden");
   document.getElementById("publishTab").classList.add("hidden");
+  document.getElementById("cpLeagueEmailTab").classList.add("hidden");
   document.getElementById("analyticsPortalTab").classList.add("hidden");
   document.getElementById("narrowFooter").classList.remove("hidden");
   if (message) {
@@ -611,7 +663,7 @@ document.getElementById("resetForm").onsubmit = async (e) => {
 // ============================================================
 
 let activeMainSection = "admin"; // "admin" | "commissioner" | "analytics"
-let activeSubTab = "missing"; // "missing" | "digest" | "publish" -- remembered across section switches
+let activeSubTab = "missing"; // "missing" | "digest" | "publish" | "league" -- remembered across section switches
 
 function switchMainSection(section) {
   activeMainSection = section;
@@ -656,6 +708,7 @@ function updateSubTabVisibility() {
   document.getElementById("digestPastWeeksTab").classList.toggle("hidden", !(showSub && activeSubTab === "digest"));
   document.getElementById("publishTab").classList.toggle("hidden", !(showSub && activeSubTab === "publish"));
   document.getElementById("reportPastWeeksTab").classList.toggle("hidden", !(showSub && activeSubTab === "publish"));
+  document.getElementById("cpLeagueEmailTab").classList.toggle("hidden", !(showSub && activeSubTab === "league"));
   if (showSub && activeSubTab === "digest" && !digestInitialized) {
     digestInitialized = true;
     populateDigestWeeks(); // ends by calling renderDigest(), which itself refreshes the Past Weeks list
@@ -909,6 +962,71 @@ document.getElementById("clearPicksBtn").onclick = async () => {
     statusEl.className = "status error";
   }
 };
+
+// ============================================================
+// LEAGUE EMAIL (2026-09-07, per Yeti) -- "a way for us to send a message to
+// the whole league." Two panels, same backend (POST
+// /admin/send-league-email, picks-worker.js), same real per-team roster
+// (LEAGUE_ROSTER there) -- only the `identity` field differs. Shared helper
+// so the two click handlers below don't duplicate the fetch/error logic.
+//
+// Status class names are deliberately redundant across BOTH conventions
+// this page uses ("error"/"ok", always-visible -- the native Admin Portal
+// scope) and ("err"/"ok"/"show", hidden-until-.show -- the #commissionerTabs
+// scope ported from brief.html, see that block's own CSS comment): this one
+// helper drives status elements living in EITHER scope (adminLeagueEmailPanel
+// is native, cpLeagueEmailTab is inside #commissionerTabs), and each scope's
+// CSS simply ignores whichever classes it doesn't recognize.
+// ============================================================
+async function sendLeagueEmail(identity, subjectElId, messageElId, statusElId, sendBtnId) {
+  const subjectEl = document.getElementById(subjectElId);
+  const messageEl = document.getElementById(messageElId);
+  const statusEl = document.getElementById(statusElId);
+  const btn = document.getElementById(sendBtnId);
+
+  const subject = subjectEl.value.trim();
+  const message = messageEl.value.trim();
+  if (!subject || !message) {
+    statusEl.textContent = "Enter both a subject and a message first.";
+    statusEl.className = "status error err show";
+    return;
+  }
+  if (!confirm(`Send this to all 8 real teams, from the ${identity} identity?`)) {
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.textContent = "Sending...";
+  statusEl.className = "status show";
+  try {
+    const res = await fetch(`${WORKER_BASE}/admin/send-league-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Session-Token": sessionToken },
+      body: JSON.stringify({ identity, subject, message }),
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Could not send.";
+      statusEl.className = "status error err show";
+      return;
+    }
+    statusEl.textContent = `Sent to ${data.sentCount} recipient(s)${data.failedCount ? `, ${data.failedCount} failed` : ""}. While the live-email switch is off, these all redirect to your own inbox instead of real family addresses.`;
+    statusEl.className = "status ok show";
+  } catch (e) {
+    btn.disabled = false;
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "status error err show";
+  }
+}
+
+document.getElementById("adminLeagueEmailBtn").onclick = () => sendLeagueEmail(
+  "admin", "adminLeagueEmailSubject", "adminLeagueEmailMessage", "adminLeagueEmailStatus", "adminLeagueEmailBtn"
+);
+document.getElementById("cpLeagueEmailBtn").onclick = () => sendLeagueEmail(
+  "commissioner", "cpLeagueEmailSubject", "cpLeagueEmailMessage", "cpLeagueEmailStatus", "cpLeagueEmailBtn"
+);
 
 // ============================================================
 // MISSING-PICKS TRACKER -- ported verbatim from brief.html (2026-08-28).

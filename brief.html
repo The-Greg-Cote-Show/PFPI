@@ -76,7 +76,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .forgot-link{font-size:.75rem;text-align:center;margin-top:.85rem;}
 .forgot-link a{color:var(--blue);}
 
-#publishScreen,#resetScreen,#dashboardTabs,#missingPicksScreen,#digestScreen{display:none;}
+#publishScreen,#resetScreen,#dashboardTabs,#missingPicksScreen,#digestScreen,#leagueEmailScreen{display:none;}
 .hidden{display:none !important;}
 
 .char-count{font-size:.68rem;color:var(--muted);text-align:right;margin-top:.35rem;}
@@ -183,6 +183,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <button class="dash-tab-btn active" id="dashTabMissing" data-tab="missing">Missing Picks</button>
     <button class="dash-tab-btn" id="dashTabDigest" data-tab="digest">Weekly Digest</button>
     <button class="dash-tab-btn" id="dashTabPublish" data-tab="publish">Commissioner's Report</button>
+    <button class="dash-tab-btn" id="dashTabLeagueEmail" data-tab="league">League Email</button>
     <button class="dash-tab-btn" id="dashTabAnalytics" data-tab="analytics">Analytics</button>
   </div>
 
@@ -257,6 +258,26 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="status" id="reportPastWeeksEmpty">No past reports yet -- one appears here once you publish a week's Commissioner's Report.</div>
   </div>
 
+  <!-- League Email (2026-09-07, per Yeti): "a way for us to send a message
+       to the whole league." Sends as the commissioner identity
+       (commissioner@mail.pfpi.me) -- the same tool is mirrored into
+       admin.html's Commissioner Portal section (sending under the same
+       identity) and admin.html's own Admin Portal (sending as "admin"
+       instead) -- one shared backend (POST /admin/send-league-email,
+       picks-worker.js), one real per-team roster (LEAGUE_ROSTER there). -->
+  <div class="card" id="leagueEmailScreen">
+    <div class="field">
+      <label for="leagueEmailSubject">Subject</label>
+      <input type="text" id="leagueEmailSubject" placeholder="Subject line">
+    </div>
+    <div class="field">
+      <label for="leagueEmailMessage">Message</label>
+      <textarea id="leagueEmailMessage" placeholder="Write your message to the whole league..."></textarea>
+    </div>
+    <button class="btn" id="leagueEmailSendBtn" type="button">Send to the whole league</button>
+    <div class="status" id="leagueEmailStatus"></div>
+  </div>
+
   <div class="footer-copyright" id="narrowFooter">&copy;ThatKindaThing Productions, LLC</div>
 </div>
 
@@ -323,6 +344,7 @@ function clearSession(message) {
   document.getElementById("missingPicksScreen").style.display = "none";
   document.getElementById("digestScreen").style.display = "none";
   document.getElementById("publishScreen").style.display = "none";
+  document.getElementById("leagueEmailScreen").style.display = "none";
   document.getElementById("analyticsScreen").style.display = "none";
   document.getElementById("narrowFooter").style.display = "block";
   document.getElementById("gateScreen").style.display = "block";
@@ -1298,6 +1320,7 @@ document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(btn => {
     document.getElementById("digestPastWeeksScreen").style.display = tab === "digest" ? "block" : "none";
     document.getElementById("publishScreen").style.display = tab === "publish" ? "block" : "none";
     document.getElementById("reportPastWeeksScreen").style.display = tab === "publish" ? "block" : "none";
+    document.getElementById("leagueEmailScreen").style.display = tab === "league" ? "block" : "none";
     document.getElementById("analyticsScreen").style.display = tab === "analytics" ? "block" : "none";
     // The narrow wrap's own footer sits directly above the wide analytics
     // div in DOM order (that div lives outside `.wrap`) -- hide it while
@@ -1327,6 +1350,57 @@ document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(btn => {
 document.getElementById("gateForm").addEventListener("submit", tryUnlock);
 document.getElementById("briefText").addEventListener("input", updateCharCount);
 document.getElementById("publishBtn").addEventListener("click", publish);
+
+// ============================================================
+// LEAGUE EMAIL (2026-09-07, per Yeti) -- "a way for us to send a message to
+// the whole league." Sends as "commissioner" -- the same tool also lives in
+// admin.html (both as "admin" in its own Admin Portal, and as
+// "commissioner" in its Commissioner Portal mirror), all three hitting the
+// same backend (POST /admin/send-league-email, picks-worker.js) and the
+// same real per-team roster (LEAGUE_ROSTER there).
+// ============================================================
+document.getElementById("leagueEmailSendBtn").addEventListener("click", async () => {
+  const subjectEl = document.getElementById("leagueEmailSubject");
+  const messageEl = document.getElementById("leagueEmailMessage");
+  const statusEl = document.getElementById("leagueEmailStatus");
+  const btn = document.getElementById("leagueEmailSendBtn");
+
+  const subject = subjectEl.value.trim();
+  const message = messageEl.value.trim();
+  if (!subject || !message) {
+    statusEl.textContent = "Enter both a subject and a message first.";
+    statusEl.className = "status err show";
+    return;
+  }
+  if (!confirm("Send this to all 8 real teams, from the commissioner identity?")) {
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.textContent = "Sending...";
+  statusEl.className = "status show";
+  try {
+    const res = await fetch(`${WORKER_BASE}/admin/send-league-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Session-Token": sessionToken },
+      body: JSON.stringify({ identity: "commissioner", subject, message }),
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Could not send.";
+      statusEl.className = "status err show";
+      return;
+    }
+    statusEl.textContent = `Sent to ${data.sentCount} recipient(s)${data.failedCount ? `, ${data.failedCount} failed` : ""}. While the live-email switch is off, these all redirect to Yeti's inbox instead of real family addresses.`;
+    statusEl.className = "status ok show";
+  } catch (e) {
+    btn.disabled = false;
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "status err show";
+  }
+});
 </script>
 </body>
 </html>

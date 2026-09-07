@@ -6624,3 +6624,92 @@ proven today:**
   full live coverage. Worth a quick real check once the flag is flipped
   on tomorrow, to see an actual bcc land in Yeti's inbox alongside a real
   recipient for the first time.
+
+## General "email the whole league" tool -- admin, CP-in-admin mirror, and real Commissioner Portal (2026-09-07, ~1:15 AM ET) -- DONE, no sends triggered
+
+Yeti: "I need to add a general email section on the admin portal and the
+commissioner's portal (mirroring on the CP section of the admin portal as
+well). Just a way for us to send a message to the whole league in that
+capacity."
+
+**Clarified before building, since it materially changes real-world risk:**
+who "the whole league" actually is for this tool's recipient list. Asked
+directly rather than guess -- Yeti confirmed: reuse the same 8 real
+per-team addresses already on file (the ones from TRAINING_ROUTES), as a
+separate, clearly-named table, not the still-empty FAMILY_MEMBERS. Also
+explicit: no test send during this build -- he and Greg will test it
+themselves once he's reviewed templates.
+
+### Backend (picks-worker.js)
+
+- New `LEAGUE_ROSTER` constant -- team -> real email(s), same real
+  addresses as `TRAINING_ROUTES` (including the corrected Gracelin
+  pairing from earlier tonight) but a genuinely SEPARATE object, not a
+  reuse/import of `TRAINING_ROUTES` itself -- keeps "training only" and
+  "general broadcast" from ever silently drifting into the same concept,
+  per the original Part 1 hard rule that training addresses stay out of
+  anything real-Week-1-facing. Documented directly in the source that this
+  was a real, deliberate choice confirmed with Yeti, not a guess.
+- New `POST /admin/send-league-email` (`handleSendLeagueEmail`) -- accepts
+  `{identity, subject, message}`. Auth: admin OR Greg session (same
+  isGreg/isAdmin OR-pattern as handleSendReminderEmail/handlePublishBrief),
+  but `identity: "admin"` additionally requires a real admin session
+  specifically -- a Greg session can never send as "admin," enforced
+  server-side, not just left to the frontend (brief.html's UI never even
+  offers the option, but the backend doesn't trust that alone). One
+  `sendPfpiEmail` call PER real recipient (never one email exposing every
+  team's address to every other team), so this automatically inherits
+  everything already built tonight: the live-email gate (nothing reaches a
+  real address until the flag is on), the reply-to-Yeti/Greg footer, and
+  the automatic bcc to Yeti.
+
+### Frontend -- three entry points, one shared backend
+
+1. **admin.html, Admin Portal section** (`adminLeagueEmailPanel`) -- sends
+   `identity: "admin"`.
+2. **admin.html, Commissioner Portal mirror section** -- new 4th sub-tab
+   "League Email" alongside Missing Picks/Weekly Digest/Commissioner's
+   Report (`cpLeagueEmailTab`) -- sends `identity: "commissioner"`, using
+   the SAME admin session already logged in (matches the existing pattern
+   every other ported CP tool in this section already uses).
+3. **brief.html, real Commissioner Portal** -- new 5th dashboard tab
+   "League Email" (`leagueEmailScreen`) -- sends `identity:
+   "commissioner"`, using Greg's own session.
+
+All three: Subject input + Message textarea + Send button + a native
+`confirm()` dialog before actually sending ("Send this to all 8 real
+teams, from the ___ identity?") -- a real broadcast to real people
+deserves at least a lightweight speed bump, matching how this codebase
+already gates its other genuinely destructive/irreversible action
+("Clear all picks," admin.html). No content moderation/character limits
+beyond "both fields required" -- kept simple, matching the other ad-hoc
+send tools already in these files.
+
+**Real bug caught and fixed before shipping, not after**: admin.html has
+TWO different status-message CSS conventions running side by side -- the
+native Admin Portal scope (`.status.error`/`.status.ok`, always visible)
+and the `#commissionerTabs`-scoped one ported from brief.html
+(`.status.err`/`.status.ok`/`.status.show`, hidden until `.show` is
+added). The shared `sendLeagueEmail()` JS helper drives status elements
+living in BOTH scopes (`adminLeagueEmailStatus` is native,
+`cpLeagueEmailStatus` is inside `#commissionerTabs`) -- caught this before
+testing anything live by re-reading both CSS blocks side by side, and set
+every status update to carry both class-name conventions at once
+(`"status error err show"` etc.) so it's correct in either scope rather
+than silently invisible in one of them. Worth flagging since it would
+have been a real, easy-to-miss bug (the CP-mirror panel's status messages
+would never have appeared at all).
+
+### Verification -- no real or test sends, per Yeti's explicit instruction
+
+Deployed `pfpi-picks-worker`. Confirmed the new endpoint is live and
+correctly enforces auth (403 with no token, 403 with a bogus token) --
+deliberately did NOT go further and trigger an actual authenticated send,
+since Yeti was explicit about holding all sends until he and Greg test it
+themselves tomorrow. Verified every new HTML element ID referenced in the
+JS actually exists exactly once in its file (`grep -c` check across all
+three files) before deploying the frontend, to catch a typo'd id before
+it became a silent runtime no-op.
+
+Nothing sent to any real address, training or otherwise -- confirmed
+`emails-live-for-everyone` is still `"false"` regardless.

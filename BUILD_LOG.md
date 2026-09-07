@@ -6786,13 +6786,20 @@ committed, and pushed to `origin/main` -- removes the only two pieces of
 real leftover brief content that existed anywhere. No KV deletes were
 needed (nothing was there to delete, confirmed above).
 
-**Verification:**
+**Verification (all done live, after the push, not assumed):**
+- Pushed to `origin/main` (had to rebase first -- four unrelated
+  automated cron commits, `[automated]` picks/scores/standings updates,
+  landed on the remote in between; rebase was clean, no conflicts, and
+  none of those commits touched anything brief-related).
 - `wrangler kv key list --namespace-id 3b5cd856fa7b40908601404f46b95456 --prefix "brief"` still returns `[]` after the push.
-- After the push, `https://the-greg-cote-show.github.io/PFPI/data/brief-week-1.json`
-  and `.../brief-week-2.json` both 404 (confirmed by direct fetch, see
-  below) -- `index.html`'s `loadRealBrief()` will get `null` for every
-  week and render "Greg hasn't published a brief for this week yet.",
-  the same empty state a brand-new deployment shows.
+- Polled the real live site (`https://pfpi.me/data/brief-week-1.json`
+  and `.../brief-week-2.json`, cache-busted) every 30s: first check
+  still returned the old cached 200s (GitHub Pages' documented
+  rebuild lag), second check (~30s later) both returned a real 404.
+  `index.html` (also reconfirmed live, 200) will therefore have
+  `loadRealBrief()` return `null` for every week and render "Greg
+  hasn't published a brief for this week yet." -- the same empty state
+  a brand-new deployment shows.
 - `brief.html`'s Commissioner's Report tab: with zero `brief-version:*`
   keys, `handleGetBriefHistory` returns `{current: null, versions: []}`
   for every week -> `renderPublishTab()` shows the blank editor (no

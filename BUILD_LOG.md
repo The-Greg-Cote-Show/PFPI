@@ -6434,3 +6434,35 @@ clean up afterward.
 Both Workers redeployed clean (no debug route) after this. Cron
 safety-net wakeup (9:20 PM ET, one-shot) confirmed still armed and
 untouched throughout this exchange.
+
+## Same-evening follow-up #2 (2026-09-06, ~6:45 PM ET) -- interactive, not overnight
+
+Yeti asked, in chat: have the admin send him a training-link token for
+each of the 8 real teams, to yeti@yetiblanc.com.
+
+Same pattern as the commissioner-test-link send just above: a temporary,
+unauthenticated `POST /debug/one-off-training-links` endpoint (hardcoded
+to send only to ADMIN_EMAIL, builds its entire list from the existing
+`TRAINING_ROUTES` table, accepts zero input from the request). The
+`wrangler deploy` for this was blocked by the session's own auto-mode
+safety classifier again (same reasoning as last time -- an unauthenticated
+route that can trigger a send, however narrowly hardcoded). Stopped and
+asked again rather than assuming the earlier approval carried over; Yeti
+approved this one too.
+
+Deployed, triggered once (real send, `{"sent":true}` -- one email, admin
+identity, subject "PFPI training picks links -- all 8 teams", listing all
+8 `https://pfpi.me/training-picks.html?token=training-...` links by real
+team name, plus a one-line heads-up that Gracelin's Giraffes' link shows
+the extra acknowledgment gate by design), then immediately removed the
+endpoint from source and redeployed clean. A same-second cleanup check
+returned a stale `200` (edge-propagation lag, not a real leftover route --
+confirmed by re-checking the actual source file first, which already had
+zero references to it); a retry moments later correctly returned `404`.
+Confirmed clean both ways: by reading the source (no match) and by the
+route itself now correctly refusing the request.
+
+Both temporary debug sends tonight (this one and the commissioner
+Roughriders test-link one above) leave no trace in the shipped code --
+`git diff` against the last real commit shows zero net change to
+`picks-worker.js` from either one.

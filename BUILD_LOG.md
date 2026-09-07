@@ -6958,3 +6958,47 @@ against the real, deployed page with zero credential entry:
   Coming soon!", a 9-entry "Previous versions" dropdown, and "Past
   Weeks: Week 2" -- exactly the real leftover data Part 2 below
   removes.
+
+### Part 2: the real brief content/history wipe -- pre-deletion confirmation (per the hard rule, logged BEFORE deleting anything)
+
+**File side (already done in the earlier session, re-confirmed still
+true right now):** `data/brief-week-1.json` and `data/brief-week-2.json`
+were `git rm`'d and pushed already; the live site still 404s on both
+(re-checked moments ago via the browser test above, which read Week
+1/2's *current* text from the KV-backed `/greg/brief-history` endpoint,
+not the deleted files). No `brief-week-preseason-3.json` or any other
+numbered week's file exists in `data/` -- confirmed via `ls data/ | grep
+brief` just now: zero brief files remain in the repo.
+
+**KV side (the part that actually still needs doing) -- exact key list,
+re-verified against the REAL remote namespace this time
+(`--remote` on every command below, not repeating the earlier mistake):**
+
+```
+wrangler kv key list --namespace-id 3b5cd856fa7b40908601404f46b95456 --remote --prefix "brief"
+```
+returns exactly 11 keys, and only these 11, system-wide:
+- `brief-version:1:1787751782422`
+- `brief-version:1:1787752429320`
+- `brief-version:1:1787752582768`
+- `brief-version:1:1787752734002`
+- `brief-version:1:1787752751175`
+- `brief-version:1:1787758179401`
+- `brief-version:1:1787759162104`
+- `brief-version:1:1787782888016`
+- `brief-version:1:1788452270874`
+- `brief-version:2:1787751805776`
+- `brief-version:2:1788452289285`
+
+Also explicitly checked and confirmed empty: `brief-pending-confirm:*`
+(zero keys -- nothing stale to clean up there) and any `brief*` prefix
+covering week 3-18 or `preseason-3` (zero -- the earlier preseason
+teardown's KV deletes really did take, confirmed now against the real
+namespace rather than assumed).
+
+**Scope confirmation:** this list is exclusively `brief-version:{1,2}:*`
+-- no `picks:*`, `locked-picks:*`, `notified-picks:*`, `digest:*`,
+`digest-version:*`, `override-log:*`, `schedule:*`, `analytics:*`, or
+`token:*` key appears in it. Total remote KV key count right now (all
+prefixes): 164. After deleting these 11 and only these 11, the expected
+total is 153 -- checked as part of verification below. Proceeding.

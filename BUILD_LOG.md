@@ -6572,3 +6572,55 @@ turn regardless. Full, corrected team -> email mapping, for reference:
 | Greg's Lobos | upsetbird@aol.com |
 | Mike's Chickens | mcote0363@gmail.com |
 | Tati's Llamas | tati.capote92@gmail.com |
+
+## Wire in a blind copy to Yeti on every real send (2026-09-07, ~12:40 AM ET) -- DONE
+
+Yeti: "I need to be blind copied on all emails that are sent from the
+resend approach." Implemented once, centrally, in `shared.js`'s
+`sendPfpiEmail` (the single funnel every real send in this codebase goes
+through, per the earlier mail.pfpi.me audit) rather than per call site --
+covers all 11+ real email sites and the training page automatically, with
+no risk of a future new call site forgetting it.
+
+**Logic**: after the existing live-email gate resolves `finalTo`/`finalCc`,
+`finalBcc = YETI_EMAIL` UNLESS Yeti is already `finalTo` or `finalCc` --
+in which case bcc is skipped entirely (`undefined`, no `bcc` field sent to
+Resend at all) rather than bcc'ing the same address that's already a
+direct recipient, which would just duplicate the email in his own inbox
+rather than add real coverage. Added to the actual Resend request body as
+`bcc: finalBcc` (only included when truthy, same pattern as the existing
+optional `cc`).
+
+**What this means right now vs. later**: since the live-email flag is
+still off and every real address currently redirects to `finalTo =
+YETI_EMAIL` anyway (see the earlier mail.pfpi.me BUILD_LOG entry), the
+skip branch is the ONLY one that can actually fire today -- every send
+right now already has Yeti as the direct `to`, so no bcc is added
+(correctly -- there's nothing to duplicate). The bcc starts doing real
+work (a silent copy alongside the real recipient) the moment either the
+flag goes on or `FAMILY_MEMBERS`/`GREG_EMAIL` get real, non-Yeti
+addresses -- exactly the state Yeti is intentionally holding until
+tomorrow.
+
+**Real, live verification -- honest about what could and couldn't be
+proven today:**
+- **Verified live**: added a temporary debug log, redeployed, hit the
+  real public `/contact-support` endpoint (admin identity, `to` already
+  ADMIN_EMAIL), and confirmed via `wrangler tail`:
+  `finalTo=yeti@yetiblanc.com finalCc=undefined finalBcc=undefined` --
+  the skip-when-redundant branch behaves exactly as designed against the
+  real deployed code. Removed the debug log and redeployed clean
+  immediately after (both Workers, since `shared.js` is bundled into
+  each).
+- **NOT independently live-verified**: the "bcc actually gets added"
+  branch. There is currently no way to produce a real send where
+  `finalTo`/`finalCc` differ from Yeti without either flipping
+  `emails-live-for-everyone` on or giving `FAMILY_MEMBERS`/`GREG_EMAIL` a
+  real address -- both explicitly reserved for Yeti's own go-ahead
+  tomorrow, not something to trigger just to prove this one branch. Rests
+  on direct code review instead: `finalTo !== YETI_EMAIL && finalCc !==
+  YETI_EMAIL` is a single, simple boolean already re-read carefully
+  post-edit -- flagging the distinction honestly rather than claiming
+  full live coverage. Worth a quick real check once the flag is flipped
+  on tomorrow, to see an actual bcc land in Yeti's inbox alongside a real
+  recipient for the first time.

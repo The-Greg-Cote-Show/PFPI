@@ -222,6 +222,16 @@ export async function sendPfpiEmail(to, subject, text, env, cc, identity = "admi
   }
   const finalSubject = blocked.length > 0 ? `[WOULD HAVE GONE TO: ${blocked.join(", ")}] ${subject}` : subject;
 
+  // Yeti wants a blind copy of every email this system sends, full stop
+  // (2026-09-07). Skipped ONLY when he's already a direct recipient (`to`
+  // or `cc`) -- true for every send today, since the live-email flag above
+  // is still off and every real address currently redirects to him anyway
+  // -- specifically to avoid a literal duplicate landing in the same inbox
+  // twice. Once the flag is on and/or real family addresses exist, `to`/
+  // `cc` will actually differ from YETI_EMAIL and this starts doing real
+  // work: a silent copy of every real send, alongside the real recipient.
+  const finalBcc = (finalTo !== YETI_EMAIL && finalCc !== YETI_EMAIL) ? YETI_EMAIL : undefined;
+
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -232,6 +242,7 @@ export async function sendPfpiEmail(to, subject, text, env, cc, identity = "admi
       from: sender.from,
       to: finalTo,
       ...(finalCc ? { cc: finalCc } : {}),
+      ...(finalBcc ? { bcc: finalBcc } : {}),
       subject: finalSubject,
       text: bodyWithReply,
     }),

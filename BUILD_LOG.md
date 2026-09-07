@@ -6466,3 +6466,55 @@ Both temporary debug sends tonight (this one and the commissioner
 Roughriders test-link one above) leave no trace in the shipped code --
 `git diff` against the last real commit shows zero net change to
 `picks-worker.js` from either one.
+
+## Analytics reset -- start fresh at zero for the real launch (2026-09-07, ~12:10 AM ET) -- DONE
+
+Interactive request from Yeti: the site was just announced on the Greg
+Cote Show episode airing in ~7 hours, so all analytics should reset to
+genuinely zero right now, ahead of real live traffic.
+
+**Scope confirmed before touching anything:** every analytics KV key in
+this system uses the single `analytics:` prefix -- confirmed by grepping
+every `env.PFPI_KV.get/put/list` call in the analytics section of
+worker.js (handleTrack, handleAnalyticsData, handleAnalyticsGeo, the
+range endpoint) -- no analytics-related state lives under any other
+prefix, and no separate bot-filtering config/allowlist is KV-backed
+either (`isLikelyBot` is a pure UA-string heuristic, nothing to reset
+there).
+
+**What was wiped:** listed the full real key set first (`wrangler kv key
+list --prefix "analytics:"`) -- 268 real keys, spanning every family the
+dashboard reads: `stable-first-seen` (52), `geo-city`/`geo-region`
+day-buckets (41/39) plus their all-time counterparts, `pageviews` (20),
+`geo-country` (17) plus all-time, `referrer` (9) plus all-time,
+`daily-unique`/`new`/`repeat` per-day (8/8/5), `seen` (6),
+`bots-filtered` (3), the weekly/monthly/all-time running sums (2 each),
+and the single `first-event-date` marker. Bulk-deleted all 268 in one
+`wrangler kv bulk delete` call (`--force`, no interactive prompt since
+this runs headless) -- **not** a per-key loop, to keep this one clean,
+auditable action rather than 268 separate ones. Re-listed the same prefix
+immediately after: `[]` -- confirmed genuinely empty, not just believed
+to be.
+
+**Verified the dashboard won't break on an empty dataset, not assumed
+safe:** re-read `handleAnalyticsData`/`handleAnalyticsGeo` in full --
+every single value is read as `parseInt(x || "0", 10)`, and every
+list-based aggregation (referrers, geo) naturally returns `{}` when no
+keys exist -- no code path throws or shows garbage on a fully-empty KV
+namespace. `trackingSince` will correctly read `null` until the very
+first real tracked visit, at which point `handleTrack`'s own existing
+logic (`if (!firstEventDate) put analytics:first-event-date = today`)
+naturally re-bootstraps it to TODAY'S real date -- exactly the "starts
+counting from right now" behavior Yeti asked for, with no code change
+needed, just the data wipe.
+
+**Deliberately did NOT send a test /track hit to verify end-to-end** --
+doing so would have written the very first synthetic datapoint back into
+the freshly-zeroed counters, which defeats the point of a clean reset
+right before real traffic. Verification instead rests on (a) the KV
+listing directly confirming zero real data exists, and (b) code review
+confirming every consumer of that data degrades to an honest zero rather
+than erroring. First real datapoint should be an actual live visitor now.
+
+No code changes, no redeploy needed -- this was purely a data reset
+against the existing, already-correct analytics pipeline.

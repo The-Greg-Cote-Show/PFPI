@@ -7641,3 +7641,28 @@ pushed as a static file (no Worker deploy needed for it).
   on the real picks.html**, and confirmed (same live check) that no
   other team's flow is affected -- Critters' token came back
   `isGracelin: false` from the same real, deployed endpoint.
+
+### Item 14, additional: full live browser confirmation after deploy
+
+After both Workers deployed and `picks.html` propagated to the live
+site, wrote one more short-lived (10-min TTL) synthetic Giraffes token
+and actually loaded `https://pfpi.me/picks.html?token=...` in a real
+browser -- zero console errors on load, and a screenshot confirms the
+modal renders exactly as intended: real Week 1 games visible-but-dimmed
+underneath, "These picks are for Gracelin's Giraffes" modal on top,
+checkbox unchecked, "Continue" visibly disabled (dimmed gold). Then
+drove the actual DOM interaction end-to-end (never touching
+`/submit-picks` or `/confirm-picks`, so still zero real sends):
+checking the box flips `Continue` from disabled to enabled; clicking it
+hides the modal and enables `submitBtn`. Confirmed the exact before/
+after state at each step:
+```
+before:        { modalHidden: false, continueDisabled: true,  submitDisabled: true  }
+after check:    { continueDisabled: false }
+after continue: { modalHidden: true,  submitDisabled: false }
+```
+Deleted the synthetic token immediately after (confirmed gone via a
+follow-up `kv key get`, real 404). This is the strongest verification
+level the hard rules allowed without an actual real send -- real
+deployed code, real live page, real user-interaction sequence, only the
+token itself was synthetic.

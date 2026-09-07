@@ -6934,4 +6934,27 @@ not do that.
 
 **Verified live, without ever entering Greg's or admin's password**
 (per the hard rule against using credentials beyond what's already
-configured): [[TO BE FILLED IN AFTER LIVE CHECK]]
+configured) -- a Greg session was already restored from this browser's
+own saved localStorage token from earlier testing, so this was checked
+against the real, deployed page with zero credential entry:
+- `getComputedStyle(...).display` on page load (default "Missing
+  Picks" tab active): `reportPastWeeksScreen` and
+  `digestPastWeeksScreen` both `"none"`; `missingPicksScreen` `"block"`.
+- Clicked through every tab via `document.getElementById(...).click()`
+  and re-checked computed style each time: Weekly Digest ->
+  `digestPastWeeksScreen: "block"`, `reportPastWeeksScreen: "none"`;
+  Commissioner's Report -> `reportPastWeeksScreen: "block"`,
+  `digestPastWeeksScreen: "none"`; League Email and Analytics -> both
+  `"none"`. Clicking back to Missing Picks returns both to `"none"`.
+- Confirmed "structural, not cosmetic" directly: on the Missing Picks
+  tab, `reportPastWeeksList` (already populated with real "Week 2"
+  data from the live KV, see Part 2 below) has a
+  `getBoundingClientRect().height` of **0** -- genuinely not rendered
+  or occupying layout, not merely painted-over or offscreen.
+- Screenshots taken on the live page confirm this visually: Missing
+  Picks tab shows only the per-team missing-picks lists, no "Past
+  Weeks" anywhere on the page (scrolled to bottom to confirm); the
+  Commissioner's Report tab correctly shows "This week's brief (saved):
+  Coming soon!", a 9-entry "Previous versions" dropdown, and "Past
+  Weeks: Week 2" -- exactly the real leftover data Part 2 below
+  removes.

@@ -546,7 +546,7 @@ async function computeStandings(throughWeek, env) {
 // way admin edits to Greg's brief already are.
 // ============================================================
 const SEASON_YEAR = 2026;
-const GREG_EMAIL = "yeti@yetiblanc.com"; // same placeholder as picks-worker.js's GREG_EMAIL -- change together when Greg's real address is onboarded.
+const GREG_EMAIL = "upsetbird@aol.com"; // Greg's real address (2026-09-07, per Yeti) -- kept in sync with picks-worker.js's own GREG_EMAIL, change both together. Governs the Weekly Digest "ready" email below; still subject to sendPfpiEmail's emails-live-for-everyone gate (shared.js) like every other real address.
 
 // Same formatting rule as index.html/admin.html/brief.html's own fmtPct
 // (duplicated intentionally -- it's a formatting helper, not scoring

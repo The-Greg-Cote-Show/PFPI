@@ -7072,3 +7072,97 @@ publishes for any week will write a fresh
 `brief-version:{week}:{timestamp}` KV entry exactly as it already does,
 and (thanks to Part 1) will show up correctly scoped to the Weekly
 Digest/Commissioner's Report tabs only.
+
+## Wire Greg's real address into GREG_EMAIL (2026-09-07, interactive, ~2:20 PM ET) -- DONE, no real send triggered
+
+Yeti asked, live in chat: is there a confirmation email to Greg when his
+Commissioner's Report goes live, and does it actually go to his real
+address (upsetbird@aol.com)? Investigated before touching anything.
+
+**What already existed:** `checkPendingBriefConfirmations` (worker.js)
+already sends a real "PFPI Week N brief is live" email once a publish
+is confirmed live on the public site (mechanism fully built, see the
+"brief-pending-confirm" work earlier in this log) -- it sends to
+whatever `notifyEmail` was stored on that week's pending-confirm record,
+which `handlePublishBrief` (picks-worker.js) sets to `GREG_EMAIL`.
+
+**The actual gap:** `GREG_EMAIL` (declared separately in both
+picks-worker.js and worker.js, kept in sync by convention) was still
+the `yeti@yetiblanc.com` placeholder -- deliberately left that way in
+the 2026-09-06 session, which explicitly scoped Yeti's ask that night to
+just `shared.js`'s "Reply to Greg" link, not to redirecting real sends
+(logged explicitly at the time: "flagging the distinction so it's not
+conflated later"). Tonight's ask is exactly that follow-up. Confirmed
+Greg's real address is already established elsewhere in the codebase
+(`shared.js`'s `SENDER_IDENTITIES.commissioner.replyTo`, and
+`TRAINING_ROUTES`'/`LEAGUE_ROSTER`'s Lobos entries) as `upsetbird@aol.com`
+-- same address, reused, not re-entered from scratch.
+
+**Scope decision, flagged rather than assumed:** `GREG_EMAIL` is a
+single shared constant behind THREE send sites, not just the brief
+confirmation -- Greg's own password-reset link (`AUTH_CONFIG.greg
+.resetEmail`), his own copy of every picks-submission confirmation
+(`handleConfirmPicks`), and the Weekly Digest "ready" notification
+(`generateAndStoreDigest`, worker.js), in addition to the brief-is-live
+confirmation Yeti actually asked about. Fixed the shared constant
+rather than hardcoding the new address only at the brief call site --
+leaving the other two on the old Yeti-placeholder while the constant
+sitting right next to them says "Greg's real email" would be a more
+confusing, inconsistent state than fixing all three together, and none
+of those other two sends were ever intended to go anywhere but Greg
+either. Flagging this breadth explicitly rather than silently doing it,
+since it's a real behavior change beyond the one feature literally
+asked about.
+
+**Changed:** `GREG_EMAIL` in both `picks-worker.js` and `worker.js` from
+`"yeti@yetiblanc.com"` to `"upsetbird@aol.com"`,
+with both constants' comments rewritten to reflect the real address and
+point at `sendPfpiEmail`'s live-email gate rather than the old
+placeholder framing. Also updated one stale comment at the
+picks-submission send site (picks-worker.js, `handleConfirmPicks`) that
+described `GREG_EMAIL` as "currently the same placeholder as
+ADMIN_EMAIL" -- no longer true, and the `if (GREG_EMAIL !== ADMIN_EMAIL)`
+branch right below it now genuinely evaluates true for the first time.
+No other code path changed -- this is a data/config fix, not new
+functionality; the confirmation-email mechanism itself already existed
+and was already correct.
+
+**Verified before deploying:** `node --check` on both `picks-worker.js`
+and `worker.js` -- both parse clean. Grepped every remaining
+`GREG_EMAIL` reference in both files after editing to confirm no stale
+placeholder mention survived and no other call site needed a matching
+update.
+
+**Deployed both Workers** (`wrangler deploy --config wrangler.toml` for
+`pfpi-picks-worker`, version `69b15537-4258-4bad-9472-14163abb1429`;
+`wrangler deploy --config wrangler-scores.toml` for `pfpi-scores-worker`,
+version `016aea3d-b24d-487a-b8a1-54244f73145e`) -- both deploy outputs
+confirmed their cron trigger survived (`schedule: 0 * * * *` and
+`schedule: * * * * *` respectively), consistent with the `[triggers]`-
+in-wrangler.toml fix from the earlier cron-drift incident in this log.
+
+**Explicitly did NOT flip `emails-live-for-everyone` to `"true"`, and did
+NOT trigger a real test send to verify end-to-end** -- confirmed via
+`wrangler kv key get` that the flag is still the literal string
+`"false"` right now. This fix alone does NOT make the brief-published
+confirmation (or Greg's password reset, or his picks-confirmation copy)
+actually land in his real inbox yet: `sendPfpiEmail`'s gate (`shared.js`)
+redirects any `to` other than Yeti's own address to Yeti's inbox (with a
+`"[WOULD HAVE GONE TO: ...]"` subject marker) while that flag is off,
+by design -- this codebase's own explicit prior hard rule ("do not send
+to any real family/Greg address until Yeti explicitly turns this on,"
+logged earlier tonight in the training-confirmation section above)
+still applies, and nothing in tonight's ask changed it. Also did NOT
+manually publish a test brief to verify end-to-end, since doing so would
+re-create real content in the very system Part 2 above just wiped clean
+minutes earlier -- verification instead rests on code review (the send
+path is unchanged and already correct, only the target address changed)
+plus the successful clean deploy above. **Flagging for Yeti:** the
+brief-confirmation, password-reset, and picks-copy emails will keep
+redirecting to your own inbox (now visibly marked "[WOULD HAVE GONE TO:
+upsetbird@aol.com]" instead of indistinguishably landing there, which
+is itself a small real improvement) until you flip
+`emails-live-for-everyone` to `"true"` yourself -- that flag is global,
+not per-feature, so turning it on also starts real sends to any
+`FAMILY_MEMBERS`/roster address configured elsewhere in the system, not
+just to Greg.

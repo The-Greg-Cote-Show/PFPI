@@ -26,11 +26,19 @@ import {
 
 const ADMIN_EMAIL = "yeti@yetiblanc.com";
 
-// Greg doesn't have his own account/email wired up yet — his password reset
-// emails go to Yeti for now (per Yeti, 2026-08-24). Change this to Greg's
-// real address when he's actually onboarded; nothing else about the reset
-// flow needs to change.
-const GREG_EMAIL = "yeti@yetiblanc.com";
+// Greg's real personal email (2026-09-07, per Yeti -- same address he gave
+// on 2026-09-06 for shared.js's "Reply to Greg" link, and already used as
+// Greg's Lobos' training-page routing email). Until now this stayed the
+// yeti@yetiblanc.com placeholder deliberately -- the 2026-09-06 session
+// scoped Yeti's ask to just the reply-to link, not to redirecting real
+// sends here (see BUILD_LOG.md) -- but tonight's ask is specifically to
+// wire Greg up as a real send target, so this now governs his password
+// reset, his own copy of picks-submission confirmations, and the
+// brief-published confirmation (handlePublishBrief below) alike. Still
+// subject to sendPfpiEmail's emails-live-for-everyone gate like every
+// other real address in this file -- see shared.js -- so this alone does
+// NOT make these actually land in Greg's inbox until Yeti flips that flag.
+const GREG_EMAIL = "upsetbird@aol.com";
 
 // Allowed frontend origins for CORS. Update once the real custom domain is
 // live; workers.dev origin kept for local/interim testing.
@@ -410,17 +418,16 @@ async function handleConfirmPicks(request, env) {
   const pickerEmail = getPickerEmail(team);
   // Two separate sends (not one email with two recipients) so each stays a
   // private notification, consistent with how admin/Greg account emails
-  // already work elsewhere in this file. GREG_EMAIL is currently the same
-  // placeholder as ADMIN_EMAIL (Greg's real address isn't in the system
-  // yet, see its definition above) — not invented here, just reused. Each
-  // send now uses the sender identity matching WHO it's nominally for
-  // (2026-09-06) -- Yeti's own copy sends as "admin", Greg's own copy sends
-  // as "commissioner" -- even though both currently land in the same real
-  // inbox (yeti@yetiblanc.com) until GREG_EMAIL is a real, different
-  // address. `pickerEmail` (cc'd on both) is a real family address once
-  // FAMILY_MEMBERS is populated -- gated by sendPfpiEmail's own
-  // emails-live-for-everyone check either way, same as every other real
-  // send in this file.
+  // already work elsewhere in this file. Each send uses the sender identity
+  // matching WHO it's nominally for (2026-09-06) -- Yeti's own copy sends as
+  // "admin", Greg's own copy sends as "commissioner". GREG_EMAIL is now
+  // Greg's real address (2026-09-07, see its definition above), so this
+  // `if` is genuinely true and Greg's own copy really is attempted --
+  // still subject to sendPfpiEmail's emails-live-for-everyone gate like
+  // every other real send in this file, so it currently redirects to
+  // Yeti's inbox (with a "[WOULD HAVE GONE TO: ...]" marker) until that
+  // flag is flipped on. `pickerEmail` (cc'd on both) is a real family
+  // address once FAMILY_MEMBERS is populated -- same gate either way.
   const sent = await sendPfpiEmail(ADMIN_EMAIL, subject, text, env, pickerEmail, "admin");
   if (GREG_EMAIL !== ADMIN_EMAIL) {
     await sendPfpiEmail(GREG_EMAIL, subject, text, env, pickerEmail, "commissioner");

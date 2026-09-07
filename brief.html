@@ -76,7 +76,20 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .forgot-link{font-size:.75rem;text-align:center;margin-top:.85rem;}
 .forgot-link a{color:var(--blue);}
 
-#publishScreen,#resetScreen,#dashboardTabs,#missingPicksScreen,#digestScreen,#leagueEmailScreen{display:none;}
+#publishScreen,#resetScreen,#dashboardTabs,#missingPicksScreen,#digestScreen,#leagueEmailScreen,#digestPastWeeksScreen,#reportPastWeeksScreen{display:none;}
+/* digestPastWeeksScreen/reportPastWeeksScreen added 2026-09-07 -- these two
+   were the only screens NOT in this default-hidden list (unlike their
+   correctly-built admin.html Commissioner Portal mirror, where every tab
+   panel including these two starts with class="card hidden"). Since
+   enterDashboard() unconditionally runs renderPublishTab() on login
+   regardless of which tab is active, reportPastWeeksList gets populated
+   with real data immediately -- with no default-hide here, that meant
+   Commissioner's Report's own "Past Weeks" list rendered visible
+   underneath whichever tab happened to be active by default (Missing
+   Picks), confusing Greg with report/digest history on tabs where it has
+   no relevance. The existing per-tab click handler below already toggles
+   both of these correctly (tab === "digest" / "publish"); this default
+   only closes the gap before the first tab click ever fires. */
 .hidden{display:none !important;}
 
 .char-count{font-size:.68rem;color:var(--muted);text-align:right;margin-top:.35rem;}
@@ -343,7 +356,9 @@ function clearSession(message) {
   document.getElementById("dashboardTabs").style.display = "none";
   document.getElementById("missingPicksScreen").style.display = "none";
   document.getElementById("digestScreen").style.display = "none";
+  document.getElementById("digestPastWeeksScreen").style.display = "none";
   document.getElementById("publishScreen").style.display = "none";
+  document.getElementById("reportPastWeeksScreen").style.display = "none";
   document.getElementById("leagueEmailScreen").style.display = "none";
   document.getElementById("analyticsScreen").style.display = "none";
   document.getElementById("narrowFooter").style.display = "block";
@@ -1293,7 +1308,9 @@ document.getElementById("digestInsertBtn").addEventListener("click", () => {
   document.getElementById("dashTabPublish").classList.add("active");
   document.getElementById("missingPicksScreen").style.display = "none";
   document.getElementById("digestScreen").style.display = "none";
+  document.getElementById("digestPastWeeksScreen").style.display = "none";
   document.getElementById("publishScreen").style.display = "block";
+  document.getElementById("reportPastWeeksScreen").style.display = "block";
   if (weekChanged) {
     const label = digestWeek === PRESEASON_MP_KEY ? "Preseason" : "Week " + digestWeek;
     document.getElementById("publishStatus").textContent = `Week selector switched to ${label} to match the inserted digest.`;

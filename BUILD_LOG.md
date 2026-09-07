@@ -6817,3 +6817,121 @@ were. The first real brief Greg writes after this wipe will commit a
 fresh `data/brief-week-{week}.json` and write a fresh
 `brief-version:{week}:{timestamp}` KV entry exactly as it already does
 today -- this was a data wipe only, not a behavior change.
+
+### CORRECTION to the entry above -- the KV verification was wrong
+
+**Found during an interactive follow-up with Yeti, before any further
+destructive action was taken:** every `wrangler kv key list` check
+logged above was run **without `--remote`**. On this installed wrangler
+version, that silently targets wrangler's local/simulated KV store
+(always empty here, since nothing runs `wrangler dev`), not the real
+Cloudflare namespace -- so the `[]` results above were real, but they
+were checking the wrong store. The write-up above's "confirmed empty"
+and "no KV deletes were needed" claims are **incorrect**. Re-running the
+identical check with `--remote` added shows the real, live data was
+never touched:
+
+```
+wrangler kv key list --namespace-id 3b5cd856fa7b40908601404f46b95456 --remote --prefix "brief"
+```
+→ 11 real keys: `brief-version:1:*` (9 entries, Aug 26 -- Sep 3 2026)
+and `brief-version:2:*` (2 entries, Aug 26 & Sep 3 2026). Each
+timestamp lines up exactly with a real `/admin/publish-brief` call in
+git history (13 "Publish Week 1 brief [automated]" / 2 "Publish Week 2
+brief [automated]" commits, Aug 24 -- Sep 3) -- genuine leftover
+version history, not a fluke or test artifact.
+
+**What this means:** the two GitHub-committed files
+(`data/brief-week-1.json`, `data/brief-week-2.json`) really were
+deleted and really are gone from the live site (verified live in the
+entry above, that part stands) -- but the KV version-history half of
+the wipe never happened. `brief.html`'s "Previous versions" dropdown
+and "Past Weeks" list, which read exclusively from `brief-version:*`
+KV (confirmed by code, see the original write-up above), still have
+real Week 1/Week 2 data behind them right now. This also fully explains
+a second symptom Yeti separately reported (Week 2 showing under "Past
+Weeks" on the Missing Picks tab): that data is real, not phantom --
+see Part 1 below for the separate display bug that let it bleed onto
+the wrong tab.
+
+**No further action taken on this finding alone** -- Yeti asked for
+investigation and a report first, which was sent back before any
+correction or re-wipe was attempted. The real KV wipe is done properly
+in Part 2 below, this time verified against `--remote`.
+
+## Overnight, continued: scope "Past Weeks" to the right tabs + the REAL brief/KV wipe (2026-09-07, overnight #2)
+
+Second overnight task from Yeti, in two parts: (1) a real, structural
+bug fix so the "Past Weeks" panel only ever appears on the Weekly
+Digest and Commissioner's Report tabs, and (2) redo the brief
+content/history wipe above, this time against the real KV namespace
+(per the correction immediately above).
+
+### Part 1: Scope "Past Weeks" to Weekly Digest / Commissioner's Report only -- DONE
+
+**Root cause, confirmed by reading the code, not guessed:** `brief.html`
+has two "Past Weeks" cards -- `#digestPastWeeksScreen` (Weekly Digest's
+own history) and `#reportPastWeeksScreen` (Commissioner's Report's own
+history). Every other tab-scoped screen in this file
+(`#publishScreen`, `#missingPicksScreen`, `#digestScreen`,
+`#leagueEmailScreen`) is listed in one shared CSS rule that sets
+`display:none` by default; these two were the ONLY tab panels left out
+of that rule, and neither had a static `hidden` class either. The
+per-tab click handler (`#dashboardTabs .dash-tab-btn` listener) already
+correctly toggles both of them (`tab === "digest"` /
+`tab === "publish"`) -- so the gap was specifically the state BEFORE
+any tab is ever clicked. Since `enterDashboard()` (runs on every login)
+unconditionally calls `renderPublishTab()` regardless of which tab is
+active, and that function always populates and unhides
+`#reportPastWeeksList` with real data, the net effect was: the instant
+Greg logs in and lands on the default "Missing Picks" tab, Commissioner
+Report's own Past Weeks list -- fully populated with real data --
+renders visibly right underneath it. Confirmed this is brief.html-only:
+the admin.html Commissioner Portal mirror already builds every one of
+its tab panels, including its own `digestPastWeeksTab`/
+`reportPastWeeksTab`, with a static `class="card hidden"` -- the
+correct pattern brief.html should have matched from the start.
+
+**Fix (structural, not cosmetic -- `display:none`, the same mechanism
+every other tab panel in this file already uses, not opacity/visibility
+tricks that would leave it painted or hit-testable):**
+1. Added `#digestPastWeeksScreen,#reportPastWeeksScreen` to the shared
+   default-hidden CSS rule (brief.html, style block) -- closes the gap
+   before any tab is clicked.
+2. `clearSession()` was also missing explicit resets for these two
+   (every other screen -- missing/digest/publish/league/analytics -- was
+   already reset there) -- fixed, so a mid-visit session expiry (401/403
+   while, say, the Commissioner's Report tab was open) can't leave
+   "Past Weeks" visible behind the reappearing login gate.
+3. The "Insert into brief text" button (`digestInsertBtn`) programmatically
+   switches from the Digest tab to the Publish tab without going through
+   the shared tab-click handler -- it was never setting either Past
+   Weeks screen's display at all. Added `digestPastWeeksScreen = "none"`
+   / `reportPastWeeksScreen = "block"` there so this path lands in the
+   same correct state a real click on the Commissioner's Report tab
+   button would.
+
+All three of these are the ONLY places in the file that ever set a
+tab-screen's `.style.display` (grepped every `document.getElementById(...)
+.style.display` assignment in brief.html to confirm no fourth path was
+missed) -- the shared per-tab click handler was already correct and
+needed no change.
+
+**Explicitly why `display:none` counts as "structural, not cosmetic"
+here, not just relocated CSS**: with the CSS default in place and no
+inline override yet, the element is removed from layout, painting, hit
+testing, and the accessibility tree the same way `#missingPicksScreen`
+already correctly is on every OTHER tab -- there's no scenario where
+its data is fetchable/visible/focusable while its parent tab isn't
+active. The alternative some quick fixes reach for (`visibility:hidden`,
+`opacity:0`, z-index/overlap) would leave it in the page in a way a
+screen reader or a naive scrape could still reach -- deliberately did
+not do that.
+
+**Verified syntactically before deploying:** parsed every inline
+`<script>` block in the edited `brief.html` with Node
+(`new Function(source)`) -- all clean, no typo introduced.
+
+**Verified live, without ever entering Greg's or admin's password**
+(per the hard rule against using credentials beyond what's already
+configured): [[TO BE FILLED IN AFTER LIVE CHECK]]

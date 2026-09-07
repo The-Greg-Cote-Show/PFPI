@@ -921,7 +921,7 @@ async function checkPendingBriefConfirmations(env) {
       await sendPfpiEmail(
         pending.notifyEmail,
         `PFPI Week ${pending.week} brief is live`,
-        `Week ${pending.week}'s brief just went live on the public site -- confirmed by reading it back from the real published page, not just that the save succeeded.\n\nhttps://the-greg-cote-show.github.io/PFPI/index.html`,
+        `Week ${pending.week}'s brief just went live on the public site -- confirmed by reading it back from the real published page, not just that the save succeeded.\n\nhttps://pfpi.me/index.html`,
         env, undefined, "commissioner"
       );
       await env.PFPI_KV.delete(key.name);
@@ -932,11 +932,13 @@ async function checkPendingBriefConfirmations(env) {
     if (ageMs > BRIEF_CONFIRM_MAX_AGE_MS) {
       // Honest fallback: only ever claim "live" once actually confirmed
       // above, so this is a heads-up, not a fabricated confirmation --
-      // a genuinely stuck publish shouldn't just go silent forever.
+      // a genuinely stuck publish shouldn't just go silent forever. Body
+      // text simplified 2026-09-08, per Yeti's own wording -- the
+      // "robots" line is intentional, not a placeholder.
       await sendPfpiEmail(
         pending.notifyEmail,
         `PFPI Week ${pending.week} brief: still checking after 30 minutes`,
-        `Week ${pending.week}'s brief was saved, but this Worker couldn't confirm it's actually live on the public site after 30 minutes of checking. It may still show up on its own (GitHub Pages can occasionally lag that long) -- worth a manual check, and flagging to Yeti if it's still missing.`,
+        `Week ${pending.week}'s brief was saved, but our robots couldn't confirm it's actually live on the public site after 30 minutes of checking. It may still show up on its own, but it's worth contacting Yeti if it's still missing.`,
         env, undefined, "commissioner"
       );
       await env.PFPI_KV.delete(key.name);

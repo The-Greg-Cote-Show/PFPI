@@ -19,23 +19,56 @@ export const TEAM_SHORT = {
   Chickens: "Mike's Chickens", Ferraris: "Christie's Ferraris", Llamas: "Tati's Llamas", Giraffes: "Gracelin's Giraffes",
 };
 
-// FAMILY_MEMBERS' `.team` values (when any exist) are already full display
-// names on their own -- this only maps the bare mascot keys above, falling
-// back to the input unchanged for anything else (a FAMILY_MEMBERS entry, or
-// any already-full name passed in by mistake).
+// Falls back to the input unchanged for anything not in TEAM_SHORT above
+// (a bare mascot key it doesn't recognize, or an already-full name passed
+// in by mistake) -- an honest passthrough, not a guess.
 export function fullTeamName(team) {
   return TEAM_SHORT[team] || team;
 }
 
+// CORRECTED 2026-09-08, per Yeti -- populated with the real 8 team/email
+// pairs (the same addresses already on file for LEAGUE_ROSTER/
+// TRAINING_ROUTES in picks-worker.js), now that the Weekly Picks Are Open
+// and Picks Submitted Confirmation emails are being wired to actually use
+// it. `.team` is the BARE MASCOT KEY (e.g. "Critters"), matching TEAMS
+// above exactly -- NOT a full display name, despite what an earlier
+// comment here claimed (written for the old sandboxed test teams below,
+// whose invented names genuinely had no mascot-key form to begin with).
+// Confirmed by tracing every real consumer of `.team`: it's handed
+// straight into generateWeeklyToken() and the `picks:{week}:{team}` /
+// notified-picks:{week}:{team}` KV key patterns (picks-worker.js) --
+// exactly the same key space real teams' actual picks already live under
+// via TEAMS, so using anything other than the bare mascot key here would
+// silently generate tokens pointed at a team that doesn't exist anywhere
+// else in the system. `.name` is populated too, for readability, but
+// isn't actually read by the email code -- the real send derives its
+// greeting from `fullTeamName(member.team)` directly (picks-worker.js's
+// sendPicksEmail) so it can never drift from TEAM_SHORT above.
+// Gracelin's Giraffes' `.email` is deliberately an array of BOTH real
+// parents (matching the exact same pairing LEAGUE_ROSTER/TRAINING_ROUTES
+// already use for her) -- sendPfpiEmail/Resend both accept an array for
+// `to` and `cc` alike, verified by reading shared.js's own send function
+// below, not assumed.
+//
 // Sandboxed test teams ("Yeti's Big Feet", "Gentry's Neanderbrows") were
-// removed 2026-08-29, per Yeti -- no longer needed. Left as an empty array
-// (not deleted outright) since worker.js and picks-worker.js both spread
-// this into their real-roster team lists (`[...TEAMS, ...FAMILY_MEMBERS.
-// map(m => m.team)]`) rather than hardcoding the two test teams by name --
-// emptying this array here was the single-source-of-truth removal, no
-// other code changes were needed to fully retire them from every code path
-// (preseason picks merging, test-email team lists, missing-picks tracking).
-export const FAMILY_MEMBERS = [];
+// removed 2026-08-29, per Yeti -- no longer needed. worker.js and
+// picks-worker.js both still spread this into their real-roster team
+// lists (`[...TEAMS, ...FAMILY_MEMBERS.map(m => m.team)]`) -- now that
+// every entry here duplicates a team already in TEAMS, that spread just
+// produces a harmless duplicate per team (e.g. "Critters" appears twice
+// in the resulting list) rather than adding anything new; not worth
+// special-casing for the one read-only admin-log/clear-picks path that
+// touches it.
+export const FAMILY_MEMBERS = [
+  { team: "Lobos", email: "upsetbird@aol.com", name: "Greg's Lobos" },
+  { team: "Roughriders", email: "cote7714@gmail.com", name: "Dick's Roughriders" },
+  { team: "Maniacs", email: "lawyermom59@aol.com", name: "Mom's Maniacs" },
+  { team: "Critters", email: "ccote215@gmail.com", name: "Chris' Critters" },
+  { team: "Chickens", email: "mcote0363@gmail.com", name: "Mike's Chickens" },
+  { team: "Ferraris", email: "christineiferrara@gmail.com", name: "Christie's Ferraris" },
+  { team: "Llamas", email: "tati.capote92@gmail.com", name: "Tati's Llamas" },
+  { team: "Giraffes", email: ["ccote215@gmail.com", "christineiferrara@gmail.com"], name: "Gracelin's Giraffes" },
+];
 
 // Re-verified for the 2026 season (see BUILD_LOG.md). Week 1 runs from
 // kickoff through the following Tuesday morning, when the next week's picks

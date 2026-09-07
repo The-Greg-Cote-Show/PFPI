@@ -12,13 +12,13 @@
 // ============================================================
 
 import {
-  getEasternDateParts,
   computeGameDeadline,
   isGameLocked,
   computeCurrentWeekFromDate,
   commitJSONToGitHub,
   sendPfpiEmail,
   fullTeamName,
+  isTargetLocalTime,
   NUM_WEEKS,
   TEAMS,
   FAMILY_MEMBERS,
@@ -134,14 +134,20 @@ async function verifyToken(token, env) {
 // plain `wrangler deploy`).
 // ============================================================
 
-// Send-time floor (per Greg via Yeti, 2026-08-25): the weekly picks email
-// must never go out before 7:00 AM ET on the calendar day of that week's
-// actual first game -- computed fresh from the real schedule every tick,
-// not hardcoded, so 2026 Week 1's Wednesday-Sept-9 opener naturally floors
-// at Wednesday 7am while every other week (first game normally Thursday)
-// floors at Thursday 7am with no special case needed. This REPLACES the
-// old fixed "always Tuesday 7am" rule entirely.
+// Flat "Tuesday 7:00 AM ET, every week" (per Yeti, 2026-09-08) -- REPLACES
+// the first-game-day/7am-floor logic this used from 2026-08-25 through
+// tonight (that rule existed specifically for weeks whose first game
+// wasn't Thursday, e.g. 2026 Week 1's Wednesday opener; Yeti's since
+// decided the simpler, predictable flat Tuesday send is what he actually
+// wants going forward, restoring the ORIGINAL design this section's own
+// header comment above has said all along). Reuses
+// `isTargetLocalTime(7, 2, "America/New_York")` from shared.js -- the
+// exact DST-safe helper the original always-Tuesday design already had,
+// left in place as unused-but-intact dead code the whole time this was
+// floored instead, so this is a revert to proven code, not a rewrite.
 async function handleWeeklyTrigger(env) {
+  if (!isTargetLocalTime(7, 2, "America/New_York")) return; // 2 == Tuesday
+
   const currentWeek = await getCurrentWeek(env);
 
   // Never re-send once this week's email has gone out -- also a safety net
@@ -151,32 +157,19 @@ async function handleWeeklyTrigger(env) {
 
   const schedule = await getWeekSchedule(currentWeek, env);
   if (!schedule || schedule.length === 0) {
-    // Per Yeti: if the first game isn't known yet when the check fires,
-    // hold and log -- don't guess a floor and don't send prematurely.
-    console.error(`Weekly picks email: no real schedule cached yet for week ${currentWeek} -- holding, not sending until first-game data is available.`);
+    // Per Yeti: if the schedule isn't known yet when Tuesday 7am fires,
+    // hold and log -- don't guess a deadline summary and don't send
+    // without real per-game data.
+    console.error(`Weekly picks email: no real schedule cached yet for week ${currentWeek} -- holding, not sending until schedule data is available.`);
     return;
   }
-
-  const firstGameISO = schedule.reduce((earliest, g) =>
-    (!earliest || new Date(g.kickoffISO) < new Date(earliest)) ? g.kickoffISO : earliest, null);
-  const firstGameEastern = getEasternDateParts(new Date(firstGameISO));
-  const firstGameDateKey = `${firstGameEastern.year}-${firstGameEastern.month}-${firstGameEastern.day}`;
-
-  const nowEastern = getEasternDateParts(new Date());
-  const nowDateKey = `${nowEastern.year}-${nowEastern.month}-${nowEastern.day}`;
-
-  // Zero-padded YYYY-MM-DD from getEasternDateParts sorts correctly as a
-  // plain string -- no Date re-parsing needed for the day comparison.
-  const isOnOrAfterFirstGameDay = nowDateKey >= firstGameDateKey;
-  const isPastFloorHour = parseInt(nowEastern.hour, 10) >= 7;
-  if (!isOnOrAfterFirstGameDay || !isPastFloorHour) return;
 
   const deadlineSummary = formatWeekDeadlines(schedule);
 
   for (const member of FAMILY_MEMBERS) {
     const token = await generateWeeklyToken(member.team, currentWeek, env);
     const link = `https://pfpi.me/picks.html?token=${token}`;
-    await sendPicksEmail(member.email, member.name, currentWeek, link, deadlineSummary, env);
+    await sendPicksEmail(member.email, member.team, currentWeek, link, deadlineSummary, env);
   }
 
   // 30-day TTL: comfortably outlives a single week without growing forever.
@@ -231,10 +224,21 @@ function formatWeekDeadlines(schedule) {
 // (2026-09-06) instead of its own raw Resend fetch -- was a standalone
 // fetch call only because it predates sendPfpiEmail's identity/reply-link/
 // live-flag logic; refactored so this gets all three for free instead of
-// tripling that logic here. Subject/body text is unchanged from before.
-async function sendPicksEmail(toEmail, name, week, link, deadlineSummary, env) {
+// tripling that logic here.
+//
+// Body text amended 2026-09-08, per Yeti: greets by TEAM name, not a
+// personal first name (`fullTeamName(team)`, the same single source of
+// truth every other email in this file already uses -- deliberately not
+// a separate stored name on the FAMILY_MEMBERS entry, so this can never
+// drift from TEAM_SHORT), and adds an explicit "picks lock the moment
+// you submit, but you can still come back for the rest" paragraph Yeti
+// asked for. The link line and deadline summary are otherwise unchanged
+// from the original template -- only the domain changed (see
+// handleWeeklyTrigger's caller).
+async function sendPicksEmail(toEmail, team, week, link, deadlineSummary, env) {
+  const teamName = fullTeamName(team);
   const subject = `PFPI Week ${week} picks are open`;
-  const text = `Hey ${name},\n\nYour Week ${week} picks are ready. Use this link any time this week, you can save and come back before each game's deadline:\n\n${link}\n\n${deadlineSummary}\n\nGood luck.`;
+  const text = `Hi, ${teamName}\n\nYour Week ${week} picks are ready. You don't have to do them all at once, pick a few now and come back for the rest before each game's deadline.\n\nUse this link any time this week, you can save and come back before each game's deadline:\n\n${link}\n\nJust remember: once you click Submit, any games you've picked in that submission are locked in for good. You can still come back and submit picks for the games you haven't gotten to yet, right up until each one's own deadline, but a submitted pick can't be changed afterward.\n\n${deadlineSummary}\n\nGood luck.`;
   return sendPfpiEmail(toEmail, subject, text, env, undefined, "commissioner");
 }
 
@@ -289,7 +293,16 @@ async function handleGetPicks(request, env) {
     };
   });
 
-  return jsonResponse({ team, week, games, isCorrection: !!correctionGameId }, 200, request);
+  // `isGracelin` (2026-09-08, per Yeti): lets picks.html show the same
+  // "these picks are for Gracelin's Giraffes" acknowledgment gate
+  // training-picks.html already has for her sample-picks flow, now on
+  // the real, live picks page too -- this was a real gap, never carried
+  // over when the real flow was built. Computed the exact same way
+  // TRAINING_ROUTES' own `isGracelin` flag is (team === "Giraffes"),
+  // server-side, so the frontend never needs to hardcode a team name to
+  // detect this -- `false` for all 7 other real teams and any correction
+  // token, no other team's flow is affected.
+  return jsonResponse({ team, week, games, isCorrection: !!correctionGameId, isGracelin: team === "Giraffes" }, 200, request);
 }
 
 // ============================================================
@@ -411,28 +424,20 @@ async function handleConfirmPicks(request, env) {
   const subject = `PFPI: ${fullTeamName(team)} submitted Week ${week} picks`;
   const text = `${fullTeamName(team)} submitted Week ${week} picks (${new Date().toISOString()}).\n\n${tally}\n\n${lines.join("\n")}\n\nThese picks are now permanently locked and can no longer be changed. Any game not listed above is still open and can be picked and submitted later, up until that game's own deadline.`;
   // CC's the picker themselves (per Yeti, 2026-08-26) so they have a copy
-  // of exactly what they submitted. Real per-team emails for the 8 real
-  // roster teams still aren't set up (Greg hasn't provided them yet), so
-  // getPickerEmail() falls back to ADMIN_EMAIL for those -- same
-  // placeholder pattern used everywhere else in this file. Only the two
-  // sandboxed FAMILY_MEMBERS test teams have a real stored email today.
+  // of exactly what they submitted. Real per-team emails now come from
+  // FAMILY_MEMBERS (2026-09-08+, populated) via getPickerEmail() -- falls
+  // back to ADMIN_EMAIL for any team it doesn't cover.
   const pickerEmail = getPickerEmail(team);
-  // Two separate sends (not one email with two recipients) so each stays a
-  // private notification, consistent with how admin/Greg account emails
-  // already work elsewhere in this file. Each send uses the sender identity
-  // matching WHO it's nominally for (2026-09-06) -- Yeti's own copy sends as
-  // "admin", Greg's own copy sends as "commissioner". GREG_EMAIL is now
-  // Greg's real address (2026-09-07, see its definition above), so this
-  // `if` is genuinely true and Greg's own copy really is attempted --
-  // still subject to sendPfpiEmail's emails-live-for-everyone gate like
-  // every other real send in this file, so it currently redirects to
-  // Yeti's inbox (with a "[WOULD HAVE GONE TO: ...]" marker) until that
-  // flag is flipped on. `pickerEmail` (cc'd on both) is a real family
-  // address once FAMILY_MEMBERS is populated -- same gate either way.
-  const sent = await sendPfpiEmail(ADMIN_EMAIL, subject, text, env, pickerEmail, "admin");
-  if (GREG_EMAIL !== ADMIN_EMAIL) {
-    await sendPfpiEmail(GREG_EMAIL, subject, text, env, pickerEmail, "commissioner");
-  }
+  // Collapsed from two separate sends to one (2026-09-08, per Yeti --
+  // confirmed via code review first that the two copies were always
+  // identical subject/text with no functional difference, only sender
+  // branding, so nothing real is lost). To Greg (commissioner identity,
+  // since this is fundamentally Greg-facing), Cc the picker. Yeti no
+  // longer needs his own explicit "admin" copy here -- sendPfpiEmail's
+  // own "Bcc Yeti on every real send" behavior (2026-09-07) already puts
+  // him on every send where he isn't already the direct To/Cc, which is
+  // exactly this case, so he still gets it without a second email.
+  const sent = await sendPfpiEmail(GREG_EMAIL, subject, text, env, pickerEmail, "commissioner");
 
   if (!sent) {
     return jsonResponse({ error: "Could not send confirmation email. Check Worker logs." }, 502, request);
@@ -813,7 +818,7 @@ async function handleSendTestPicksEmail(request, env) {
   }
 
   const testToken = await generateWeeklyToken(team, week, env);
-  const link = `https://the-greg-cote-show.github.io/PFPI/picks.html?token=${testToken}`;
+  const link = `https://pfpi.me/picks.html?token=${testToken}`;
   const schedule = await getWeekSchedule(week, env);
   const deadlineSummary = formatWeekDeadlines(schedule);
 
@@ -870,7 +875,7 @@ async function handleSendCorrectionEmail(request, env) {
   }
 
   const correctionToken = await generateCorrectionToken(team, week, gameId, game.kickoffISO, env);
-  const link = `https://the-greg-cote-show.github.io/PFPI/picks.html?token=${correctionToken}`;
+  const link = `https://pfpi.me/picks.html?token=${correctionToken}`;
 
   const sent = await sendPfpiEmail(
     ADMIN_EMAIL,
@@ -940,12 +945,13 @@ async function handleContactSupport(request, env) {
 // ============================================================
 // MISSING-PICKS REMINDER (brief.html's "Send reminder" button)
 // ============================================================
-// Per Yeti (2026-08-25): real family email addresses still aren't wired up,
-// so every reminder -- regardless of which team it's "for" -- goes to
-// yeti@yetiblanc.com for now, same sandboxed-testing pattern as
-// handleSendTestPicksEmail. The list of that team's still-missing games is
-// pulled from the same real schedule + saved-picks data the tracker itself
-// reads, not a second/guessed source.
+// CORRECTED 2026-09-08, per Yeti: now that FAMILY_MEMBERS is populated,
+// this reaches the real missing team's own address via getPickerEmail()
+// -- the same helper handleConfirmPicks already uses -- instead of
+// always standing in with Yeti's own address. Falls back to ADMIN_EMAIL
+// for any team FAMILY_MEMBERS doesn't cover. The list of that team's
+// still-missing games is pulled from the same real schedule + saved-
+// picks data the tracker itself reads, not a second/guessed source.
 async function handleSendReminderEmail(request, env) {
   const sessionToken = request.headers.get("X-Session-Token");
   const isGreg = await verifySessionToken("greg", sessionToken, env);
@@ -979,12 +985,14 @@ async function handleSendReminderEmail(request, env) {
   const lines = missing.map(g => `${g.away} @ ${g.home}`);
   // "commissioner" identity (2026-09-06) -- this reminder is nominally to a
   // real family member on Greg's behalf, same category as the real
-  // picks-open/picks-confirmation emails, even though it currently always
-  // targets ADMIN_EMAIL until real family addresses exist.
+  // picks-open/picks-confirmation emails, and now genuinely reaches that
+  // real recipient via getPickerEmail() (2026-09-08) rather than standing
+  // in with Yeti's own address -- the stale "(Test send...)" disclaimer
+  // that used to be true is gone accordingly.
   const sent = await sendPfpiEmail(
-    ADMIN_EMAIL,
+    getPickerEmail(team),
     `PFPI reminder: ${fullTeamName(team)}, ${weekLabel} picks still needed`,
-    `${fullTeamName(team)} is still missing ${weekLabel} picks for:\n\n${lines.join("\n")}\n\n(Test send -- real family email addresses aren't set up yet, so this went to Yeti's own address standing in for ${fullTeamName(team)}'s real recipient.)`,
+    `${fullTeamName(team)} is still missing ${weekLabel} picks for:\n\n${lines.join("\n")}`,
     env, undefined, "commissioner"
   );
 
@@ -1156,7 +1164,7 @@ async function handleForgotPassword(kind, request, env) {
   const resetToken = await signPayload(resetPayload, env[cfg.sessionSecretEnvKey]);
   await env.PFPI_KV.put(`${cfg.resetKvPrefix}:${resetToken}`, "valid", { expirationTtl: 30 * 60 });
 
-  const link = `https://the-greg-cote-show.github.io/PFPI/${cfg.resetPage}?resetToken=${resetToken}`;
+  const link = `https://pfpi.me/${cfg.resetPage}?resetToken=${resetToken}`;
   const sent = await sendPfpiEmail(
     cfg.resetEmail,
     `PFPI ${cfg.label} password reset`,

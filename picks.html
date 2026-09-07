@@ -78,6 +78,9 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .modal-btn.primary:hover{background:var(--gold2);}
 .modal-btn.secondary{background:var(--panel2);border:1.5px solid var(--border2);color:var(--text);}
 .modal-btn.secondary:hover{border-color:var(--blue);}
+.modal-btn:disabled{opacity:.45;cursor:not-allowed;}
+.modal-check-row{display:flex;align-items:flex-start;gap:.5rem;margin-bottom:1.1rem;font-size:.82rem;line-height:1.5;color:var(--text);}
+.modal-check-row input{margin-top:3px;width:16px;height:16px;flex-shrink:0;}
 
 .contact-form textarea{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:.6rem .7rem;font-size:.85rem;font-family:inherit;resize:vertical;min-height:6rem;margin-top:.85rem;}
 .contact-form input[type=email]{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:.6rem .7rem;font-size:.85rem;font-family:inherit;margin-top:.5rem;}
@@ -129,6 +132,32 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   </div>
 
   <div class="footer-copyright">&copy;ThatKindaThing Productions, LLC</div>
+</div>
+
+<!-- Gracelin-specific acknowledgment gate (2026-09-08, per Yeti) -- the
+     real-picks equivalent of training-picks.html's own gate (same team,
+     same copy, adapted for the real page). Shown ONLY when `/my-picks`
+     reports `isGracelin: true` (server-computed from the token's real
+     team, picks-worker.js) -- every other real team's flow is completely
+     unaffected. Must be actively dismissed via the checkbox + button
+     below before the picks form underneath becomes usable -- not
+     persisted across visits, since this is meant to show every time her
+     link is opened, not just once ever. The full-screen overlay itself
+     already blocks every click on the page underneath (including the
+     per-game pick buttons, which save immediately on click, unlike
+     training's locally-held picks) -- disabling `submitBtn` below is a
+     deliberate belt-and-suspenders match to training's own pattern, not
+     the only thing standing in the way. -->
+<div class="modal-overlay hidden" id="gracelinModal">
+  <div class="modal-box">
+    <div class="modal-title">These picks are for Gracelin's Giraffes</div>
+    <div class="modal-text">You're about to make picks on behalf of <strong>Gracelin's Giraffes</strong>. Any confirmation email for this submission will clearly say it's for Gracelin's Giraffes.</div>
+    <label class="modal-check-row">
+      <input type="checkbox" id="gracelinAckCheckbox">
+      <span>Understood -- these picks are for Gracelin's Giraffes.</span>
+    </label>
+    <button class="modal-btn primary" id="gracelinAckBtn" type="button" disabled>Continue</button>
+  </div>
 </div>
 
 <div class="modal-overlay hidden" id="submitConfirmModal">
@@ -401,6 +430,18 @@ async function loadPicks() {
   // themselves; only clicking Submit (handleConfirmPicks server-side)
   // does that now.
   document.getElementById("submitSection").classList.remove("hidden");
+
+  // Gracelin's real token specifically (2026-09-08, per Yeti): gate the
+  // whole picks form behind an explicit acknowledgment every time this
+  // link is opened, same as training-picks.html's own gate. Disabling
+  // submitBtn is a deliberate extra safeguard -- the overlay itself
+  // already blocks every click on the page underneath, including the
+  // per-game pick buttons above (which save immediately, unlike
+  // training's locally-held picks).
+  if (data.isGracelin) {
+    document.getElementById("submitBtn").disabled = true;
+    document.getElementById("gracelinModal").classList.remove("hidden");
+  }
 }
 
 async function savePick(game, teamPicked, buttons, statusEl) {
@@ -551,6 +592,14 @@ document.getElementById("submitConfirmBackBtn").onclick = () => {
 document.getElementById("submitConfirmYesBtn").onclick = () => {
   document.getElementById("submitConfirmModal").classList.add("hidden");
   doSubmit();
+};
+
+document.getElementById("gracelinAckCheckbox").addEventListener("change", (e) => {
+  document.getElementById("gracelinAckBtn").disabled = !e.target.checked;
+});
+document.getElementById("gracelinAckBtn").onclick = () => {
+  document.getElementById("gracelinModal").classList.add("hidden");
+  document.getElementById("submitBtn").disabled = false;
 };
 
 // ============================================================

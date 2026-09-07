@@ -7340,3 +7340,304 @@ because GitHub Pages still serves the site there too, not as a
 leftover). `node --check` clean, deployed (`pfpi-picks-worker`, version
 `457291eb-cbd0-4f1b-8109-7317f856e260`), cron trigger confirmed intact.
 Comment-only change -- no behavior difference from the prior deploy.
+
+## Overnight: full email-template amendment batch, all 15 items (2026-09-08, overnight) -- DONE, nothing sent
+
+Big single handoff from Yeti covering every real email in the system plus
+one new real feature (Gracelin's gate on the real picks.html). Per the
+hard rules: no real send was triggered at any point, including a "final"
+test to Yeti's own address -- every verification below is either a
+static code check, a local dry-run with zero network sends, or a
+read-only live check via a synthetic KV token I wrote and deleted myself
+(same pattern this codebase has used before for exactly this reason).
+No CoteCup system was touched, no plan upgrade was needed, no credential
+beyond existing Secrets was required, and nothing here was genuinely
+ambiguous enough to warrant stopping -- one real structural question
+(what format FAMILY_MEMBERS' `.team` needed to be) came up and was
+resolved by tracing the actual consuming code end-to-end rather than
+guessing; documented in detail under Item 1 below since getting it wrong
+would have silently generated real, broken picks tokens.
+
+### Item 1: Weekly Picks Are Open -- DONE, armed for tomorrow, verified not to fire tonight
+
+**Trigger reverted to flat Tuesday 7am ET**, replacing the first-game-
+day/7am-floor logic entirely (`picks-worker.js`, `handleWeeklyTrigger`).
+Reused `isTargetLocalTime(7, 2, "America/New_York")` from `shared.js` --
+this was the ORIGINAL always-Tuesday design's own helper, left in the
+codebase completely unused (confirmed via grep -- zero call sites) the
+whole time the first-game-day floor was live, so this is a revert to
+already-existing, previously-shipped code, not new logic. Removed the
+now-dead `getEasternDateParts` import from `picks-worker.js` (confirmed
+via grep it had no other use left in that file; `worker.js` still uses
+it independently for unrelated features, untouched).
+
+**Verified this fires at the right time, without touching the live
+clock:** replicated `isTargetLocalTime`'s exact internal formula against
+explicit, known real timestamps (not the live `new Date()` the real
+function reads) -- confirmed 2026-09-08 11:00 UTC (= 7:00 AM EDT) on the
+real calendar really is a Tuesday, confirmed the formula matches exactly
+that hour+day and correctly rejects the hour before (6am) and the same
+hour on Monday/Wednesday. Also confirmed directly against the real,
+remote KV: `weekly-email-sent:*` is entirely empty (no stale guard could
+block tomorrow), and the real `current-week`/`schedule:week:1` data is
+already live and cached (confirmed via `pfpi.me/data/current.json` and
+`week-1.json`), so the "no schedule yet" hold-and-log branch won't fire
+either. Net result: the hourly cron will correctly do nothing on every
+tick tonight (today, 2026-09-07, is a Monday) and correctly fire exactly
+once at tomorrow's real Tuesday 7am ET tick.
+
+**`FAMILY_MEMBERS` populated in `shared.js`** with the real 8 team/email
+pairs already on file for `LEAGUE_ROSTER`/`TRAINING_ROUTES`
+(`picks-worker.js`) -- not re-asked of Yeti, located directly in the
+existing code. **One real structural finding, resolved by tracing code,
+not guessed:** an existing comment claimed FAMILY_MEMBERS' `.team`
+should be a full display name (e.g. "Chris' Critters") -- traced every
+real consumer of `.team` (`generateWeeklyToken`, the `picks:{week}:
+{team}` / `notified-picks:{week}:{team}` KV key patterns) and confirmed
+that's wrong for real roster teams: those keys already use the BARE
+MASCOT KEY (e.g. "Critters") everywhere real picks data lives, matching
+`TEAMS`. Using a full display name would have silently pointed a real
+family member's weekly token at a "team" whose real picks/schedule data
+doesn't exist anywhere else in the system. Populated `.team` as the bare
+mascot key, and corrected the misleading comment (it was accurate for
+the old, fully-invented sandboxed test-team names, just never applied to
+real roster teams). Gracelin's Giraffes' `.email` is deliberately an
+array of both real parents (matching the exact pairing already used for
+her in `LEAGUE_ROSTER`/`TRAINING_ROUTES`) -- confirmed by reading
+`sendPfpiEmail`/Resend's own `to`/`cc` handling that an array works
+correctly there, not assumed. `.name` is populated for readability but
+isn't actually read -- the real greeting derives from
+`fullTeamName(member.team)` directly so it can never drift from
+`TEAM_SHORT`. Noted, not fixed (out of scope): populating FAMILY_MEMBERS
+means `[...TEAMS, ...FAMILY_MEMBERS.map(m => m.team)]` (used by the
+admin "Clear all picks" tool) now has a harmless duplicate per team --
+doesn't affect correctness, just cosmetic redundancy in one admin log.
+
+**Body text replaced** with Yeti's exact amended wording (greeting by
+team name via `fullTeamName()`, the new "you don't have to do them all
+at once" / "once you click Submit... locked in for good" paragraphs).
+Kept the original link line and the dynamic `${deadlineSummary}` line
+exactly as before, just with the link's domain updated to `pfpi.me` per
+the standing instruction. **Flagging one minor, deliberate-per-
+instruction redundancy for Yeti's own language pass:** the first
+paragraph ("...come back for the rest before each game's deadline")
+and the link-line sentence right after it ("...you can save and come
+back before each game's deadline:") say almost the same thing back to
+back -- preserved exactly as instructed ("keep the link line exactly as
+already built") rather than smoothed over unprompted, but worth a look.
+
+**Verified via a real dry-run with zero network sends:** wrote a
+standalone script that fetches the real, live Week 1 schedule
+(`pfpi.me/data/week-1.json`, a public GET, not a send) and renders the
+exact real subject/body a real team would receive locally, with no
+`sendPfpiEmail`/Resend call anywhere in the script. Real output for
+Critters, Week 1:
+```
+SUBJECT: PFPI Week 1 picks are open
+
+Hi, Chris' Critters
+
+Your Week 1 picks are ready. You don't have to do them all at once, pick a few now and come back for the rest before each game's deadline.
+
+Use this link any time this week, you can save and come back before each game's deadline:
+
+https://pfpi.me/picks.html?token=EXAMPLE_TOKEN_NOT_REAL
+
+Just remember: once you click Submit, any games you've picked in that submission are locked in for good. You can still come back and submit picks for the games you haven't gotten to yet, right up until each one's own deadline, but a submitted pick can't be changed afterward.
+
+Wednesday's game(s) lock 2 hours before kickoff. Thursday's game(s) lock 2 hours before kickoff. Saturday, Sunday, and Monday games all lock Saturday, September 12 at 1:00 PM ET.
+
+Good luck.
+```
+(plus the "Reply to Greg" footer, auto-appended by `sendPfpiEmail`, not
+shown in this dry-run). Confirms the `{day}` placeholder really is
+correctly dynamic against the real Week 1 schedule, exactly as
+previously confirmed to Yeti.
+
+### Item 2: Picks Submitted Confirmation -- DONE, collapsed to one send
+
+`handleConfirmPicks` (picks-worker.js) now sends exactly once: To Greg
+(`GREG_EMAIL`), Cc the picker (`getPickerEmail(team)`, now resolving to
+real addresses via Item 1's FAMILY_MEMBERS population), "commissioner"
+identity. Removed the second, now-redundant admin-identity send to
+Yeti directly. **Confirmed via code review this doesn't lose real
+functionality:** the two prior sends always shared the exact same
+`subject`/`text` variables (verified by re-reading the pre-change code
+line by line) -- the only differences were sender branding, not
+content. Confirmed `sendPfpiEmail`'s existing "Bcc Yeti on every real
+send" behavior (added 2026-09-07, unrelated to tonight) still applies
+here unchanged: since neither `GREG_EMAIL` nor the real `pickerEmail`
+is Yeti's address, he's still Bcc'd automatically -- no new code needed
+for that part, exactly as the handoff expected. Body text untouched, as
+instructed.
+
+### Item 3: Send to the Whole League -- NO CHANGE, confirmed final
+
+Free-text by design, no template to amend. Left exactly as-is.
+
+### Item 4: [TEST] Admin Picks Link -- DONE, domain only
+
+Link in `handleSendTestPicksEmail` changed from
+`the-greg-cote-show.github.io/PFPI/picks.html` to
+`pfpi.me/picks.html`. No other change -- recipient (always Yeti),
+logic, and content all untouched, tool kept fully intact for future
+use as instructed.
+
+### Item 5: [CORRECTION] One-Time Pick Fix Link -- DONE, domain only
+
+Same domain-only fix in `handleSendCorrectionEmail`'s link. No other
+change.
+
+### Item 6: Support Request / "Contact Yeti" -- NO CHANGE, confirmed final
+
+### Item 7: Missing Picks Reminder -- DONE, real recipient + stale disclaimer removed
+
+`handleSendReminderEmail` now sends to `getPickerEmail(team)` (the same
+helper `handleConfirmPicks` uses) instead of always `ADMIN_EMAIL` --
+genuinely reaches the real missing team's own address now that
+FAMILY_MEMBERS is populated, falling back to `ADMIN_EMAIL` only for a
+team it doesn't cover. Removed the stale "(Test send -- real family
+email addresses aren't set up yet...)" parenthetical from the body
+entirely, since it would no longer be true. **One thing checked and
+found NOT applicable:** the handoff's standing domain instruction
+mentioned this email's "link," but re-reading the actual current body
+text confirmed there has never been a link in this email at all (it's
+just the missing-games list) -- nothing to update there, noting this
+rather than inventing a link that was never part of the design.
+
+### Item 8: Brute-Force Login Alert -- VERIFIED ALREADY DYNAMIC, no change made
+
+Traced `handleLogin(kind, ...)` -> `flagPossibleBruteForce(kind, ...)`
+-> the email's subject/body, both of which read
+`AUTH_CONFIG[kind].label`. Confirmed `kind` is genuinely `"admin"` or
+`"greg"` depending on which real login endpoint was hit (two separate,
+hardcoded call sites -- `handleLogin("admin", ...)` for admin.html's
+login, `handleLogin("greg", ...)` for brief.html's), and
+`AUTH_CONFIG[kind].label` resolves to `"admin"` or `"Commissioner
+Portal"` accordingly. This was ALREADY genuinely dynamic, not
+hardcoded -- the single "Commissioner Portal" example in the earlier
+email-inventory deck was just the one example chosen for that slide,
+not the only text this can ever produce. Per the handoff's own
+instruction for this case ("if it's already dynamic... no change
+needed"): left untouched.
+
+### Item 9 & 10: Admin / Commissioner Portal Password Reset -- DONE, domain only
+
+Both share one function (`handleForgotPassword`, `cfg.resetPage`
+distinguishes them) -- one edit covers both. Link changed to
+`pfpi.me/${cfg.resetPage}`. No other change to either.
+
+### Item 11: Weekly Digest Ready -- NO CHANGE, confirmed final
+
+### Item 12: Commissioner's Report Is Live -- DONE, domain only
+
+The link inside the email body (`worker.js`,
+`checkPendingBriefConfirmations`) changed to `pfpi.me/index.html`.
+**Deliberately did NOT touch** the separate internal `fetch(...)` call
+in the same function that polls the live site to confirm the brief is
+actually up -- that's server-side verification logic, not an email
+template link, out of the standing instruction's scope; changing a
+working, already-correct verification URL for no functional reason
+was more risk than the domain cleanup was worth.
+
+### Item 13: Commissioner's Report: Still Checking -- DONE, body replaced
+
+Body text in the same function replaced with Yeti's exact simplified
+wording, "robots" line kept intentionally. Week number substitution
+(`${pending.week}`) is unchanged -- still genuinely dynamic, this was a
+wording swap only. Recipient, trigger, and 30-minute fallback timing
+all untouched. No link in this email, so no domain change applicable
+here, matching the handoff's own note.
+
+### Item 14: Real picks.html -- Gracelin's Giraffes acknowledgment gate -- DONE, verified live (read-only), zero other teams affected
+
+**Backend:** added `isGracelin: team === "Giraffes"` to `/my-picks`'s
+JSON response (`handleGetPicks`, picks-worker.js) -- computed server-
+side, the exact same way `TRAINING_ROUTES`' own `isGracelin` flag
+already is, so the frontend never needs to hardcode a team name.
+`false` for every other real team and for a correction token on any
+other team.
+
+**Frontend (`picks.html`):** added a new `#gracelinModal` (same
+`.modal-overlay`/`.modal-box` classes this file already uses for its
+other modals -- no new visual language introduced), with real-picks-
+appropriate copy (dropped training's "practice page, nothing here is
+scored" framing since this is real). Added the two small CSS rules
+(`.modal-btn:disabled`, `.modal-check-row`) training-picks.html already
+had that picks.html didn't. Wired into the existing render flow inside
+`loadPicks()`: when `data.isGracelin` is true, disables `submitBtn` and
+shows the modal; the checkbox must be checked before "Continue" enables,
+matching training's exact interaction pattern. **Real architectural
+difference from training, reasoned through rather than copy-pasted**
+(per the handoff's own instruction not to copy-paste blindly): the real
+picks.html auto-saves each individual pick immediately on click
+(`savePick()` -> `/submit-picks`), unlike training's page which only
+holds picks locally until one final Submit -- so gating only the Submit
+button (training's approach) would NOT be enough here, since a
+real pick could otherwise be saved before ever seeing the modal.
+Confirmed the full-screen modal overlay (`position:fixed;inset:0;
+z-index:200`, already the highest z-index on the page) already blocks
+every click on the page underneath, including the per-game pick
+buttons, the moment it renders -- disabling `submitBtn` is a deliberate
+extra safeguard matching training's own belt-and-suspenders pattern,
+not the only thing preventing early interaction.
+
+**Verified live, read-only, zero sends:** `/my-picks` (`handleGetPicks`)
+is a pure GET with no send anywhere in it, confirmed by re-reading the
+function -- so it was safe to test directly against the real deployed
+Worker. Wrote two short-lived (10-minute TTL) synthetic `token:*` KV
+entries myself (`{"team":"Giraffes","week":1}` and
+`{"team":"Critters","week":1}`) -- `verifyToken()` only checks KV
+existence, not a live signature re-check, so this is a legitimate,
+established way to test a real endpoint without needing the real
+`FAMILY_TOKEN_SECRET` or triggering any actual token-issuing (and
+therefore email-sending) code path. Real responses confirmed:
+Giraffes -> `"isGracelin":true`; Critters -> `"isGracelin":false`.
+Deleted both synthetic tokens immediately after (confirmed gone via a
+follow-up `kv key get`, both real 404s) -- nothing left behind.
+`node --check` clean on all edited files; picks.html's inline script
+parsed clean via the same Node `new Function()` check this project
+already uses for its static pages.
+
+### Item 15: Documentation regeneration -- this entry itself
+
+Per the instruction, this write-up reflects the true, final state of
+all 13 emails after every change above -- not a hand-copy of the
+earlier email-inventory deck's "At a Glance" table (which is now stale
+in several rows: Item 1's trigger/body, Item 2's single-send design,
+Item 7's real recipient, Item 8's confirmed-dynamic status, Item 12/13's
+domain/wording). **Flagging for Yeti, not done automatically:** the
+`PFPI Email Inventory.pptx` deck on the Desktop from earlier tonight
+still reflects the OLD state of every item changed above -- worth a
+regenerate pass through that same script if a fresh copy is wanted; not
+regenerated here since Yeti didn't ask for the deck itself to be
+touched, only for BUILD_LOG.md's own summary to be accurate.
+
+### Deployed and verified
+
+`wrangler deploy --config wrangler.toml` (`pfpi-picks-worker`, version
+`4329f886-9871-4993-a688-6dc221affe3b`) and `--config
+wrangler-scores.toml` (`pfpi-scores-worker`, version
+`c9c71148-0a8f-49ea-b1e6-c6ffeba33605`) -- both cron triggers confirmed
+intact (`schedule: 0 * * * *` / `schedule: * * * * *`). `picks.html`
+pushed as a static file (no Worker deploy needed for it).
+
+### Explicit confirmations Yeti asked for by name
+
+- **FAMILY_MEMBERS is genuinely populated with real data**, not a
+  guess -- all 8 addresses sourced directly from `LEAGUE_ROSTER` in the
+  existing code, cross-checked against `TRAINING_ROUTES`' matching
+  entries too. See Item 1 above for the full `.team`-format reasoning.
+- **Item 1's trigger is wired to fire tomorrow (Tuesday 2026-09-08,
+  7am ET) and verifiably will not fire before then** -- see the
+  timestamp-based formula verification and the live KV checks above.
+- **Item 2's email collapse was verified via code review** to lose no
+  real functionality -- both prior sends were always identical content;
+  Yeti's Bcc copy is preserved via the existing, unrelated Bcc-everyone
+  behavior.
+- **Item 8: confirmed already dynamic** (portal name correctly reflects
+  whichever real login was attacked) -- no fix was needed, none applied.
+- **Item 14: confirmed live (read-only) that Gracelin's gate now exists
+  on the real picks.html**, and confirmed (same live check) that no
+  other team's flow is affected -- Critters' token came back
+  `isGracelin: false` from the same real, deployed endpoint.

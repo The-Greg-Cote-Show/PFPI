@@ -300,6 +300,64 @@ button:hover{opacity:.9;}
       <div class="status" id="clearPicksStatus"></div>
     </div>
 
+    <!-- Unlock all picks for a team/week (2026-09-09, per Yeti) -- a real
+         family member's link can end up stuck locked (deadline passed and/
+         or a leftover submission-lock) with nothing actually saved. Resets
+         LOCK STATE only for the chosen team/week -- never touches saved
+         pick values (see handleUnlockWeekPicks, picks-worker.js). No email
+         -- explicitly not wanted for this action right now. -->
+    <div class="panel hidden" id="unlockPicksPanel">
+      <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Unlock all picks for a team/week</div>
+      <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
+        For a real link that's stuck showing every game locked (deadline
+        already passed, or a leftover lock from testing) with nothing
+        actually entered yet. Resets every game's LOCK STATE for the team/
+        week below so it's freely editable again, regardless of real
+        deadlines already passed — never touches any pick VALUE already
+        saved for that team/week, those stay exactly as they are. No email
+        is sent for this action. Shows what was already saved (if
+        anything) before it runs, so you can confirm nothing changed.
+      </div>
+      <label for="unlockPicksTeam">Team</label>
+      <select id="unlockPicksTeam">
+        <optgroup label="Real roster">
+          <option value="Lobos">Greg's Lobos</option>
+          <option value="Roughriders">Dick's Roughriders</option>
+          <option value="Maniacs">Mom's Maniacs</option>
+          <option value="Critters">Chris' Critters</option>
+          <option value="Chickens">Mike's Chickens</option>
+          <option value="Ferraris">Christie's Ferraris</option>
+          <option value="Llamas">Tati's Llamas</option>
+          <option value="Giraffes">Gracelin's Giraffes</option>
+        </optgroup>
+      </select>
+      <label for="unlockPicksWeek">Week</label>
+      <select id="unlockPicksWeek"></select>
+      <label for="unlockPicksAdminName">Your name (for the audit log)</label>
+      <input type="text" id="unlockPicksAdminName" value="Yeti">
+      <button id="unlockPicksBtn">Unlock all picks for this team/week</button>
+      <div class="status" id="unlockPicksStatus"></div>
+    </div>
+
+    <!-- Missing Picks by Game (2026-09-09, per Yeti) -- a game-centric
+         re-grouping of the exact same real Missing Picks data the
+         Commissioner Portal tab already computes (fetchWeekPicksAdmin /
+         handleAdminWeekPicks below), so Yeti can test this view before
+         deciding whether to also add it there. Admin Portal only for now. -->
+    <div class="panel hidden" id="missingByGameCard">
+      <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Missing Picks by Game (test view)</div>
+      <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
+        Same real data as the Missing Picks tab (Acting Commissioner) —
+        just grouped by game instead of by team, so you can see at a
+        glance who still hasn't picked one specific matchup. Real 8-team
+        roster only.
+      </div>
+      <label for="mbgWeekSelect">Week</label>
+      <select id="mbgWeekSelect"></select>
+      <div id="mbgContent" style="margin-top:.75rem;"></div>
+      <div class="status" id="mbgStatus"></div>
+    </div>
+
     <!-- League Email (2026-09-07, per Yeti): "a way for us to send a
          message to the whole league." Admin identity here -- the
          Commissioner Portal mirror below (and brief.html itself) has the
@@ -485,6 +543,8 @@ function showLoggedIn() {
   document.getElementById("correctionPanel").classList.remove("hidden");
   document.getElementById("triggerPollPanel").classList.remove("hidden");
   document.getElementById("clearPicksPanel").classList.remove("hidden");
+  document.getElementById("unlockPicksPanel").classList.remove("hidden");
+  document.getElementById("missingByGameCard").classList.remove("hidden");
   document.getElementById("adminLeagueEmailPanel").classList.remove("hidden");
   document.getElementById("mainSectionTabs1").classList.remove("hidden");
   document.getElementById("mainSectionTabs2").classList.remove("hidden");
@@ -492,6 +552,8 @@ function showLoggedIn() {
   switchMainSection("admin");
   populateCorrectionWeeks();
   populateMissingPicksWeeks();
+  populateUnlockPicksWeeks();
+  populateMbgWeeks();
   populateWeeks();
   renderPublishTab();
 }
@@ -508,6 +570,8 @@ function clearSession(message) {
   document.getElementById("correctionPanel").classList.add("hidden");
   document.getElementById("triggerPollPanel").classList.add("hidden");
   document.getElementById("clearPicksPanel").classList.add("hidden");
+  document.getElementById("unlockPicksPanel").classList.add("hidden");
+  document.getElementById("missingByGameCard").classList.add("hidden");
   document.getElementById("adminLeagueEmailPanel").classList.add("hidden");
   document.getElementById("mainSectionTabs1").classList.add("hidden");
   document.getElementById("mainSectionTabs2").classList.add("hidden");
@@ -933,6 +997,120 @@ document.getElementById("clearPicksBtn").onclick = async () => {
     statusEl.className = "status error";
   }
 };
+
+// ============================================================
+// UNLOCK ALL PICKS FOR A TEAM/WEEK (2026-09-09, per Yeti)
+// ============================================================
+// Real weeks only, same "1..currentWeek" range as the correction tool's
+// own week dropdown -- no free-text week, matching the same typo-safety
+// principle as every other real-team-facing tool on this page.
+async function populateUnlockPicksWeeks() {
+  const sel = document.getElementById("unlockPicksWeek");
+  const currentWeek = await fetchCurrentWeek();
+  sel.innerHTML = "";
+  for (let w = 1; w <= currentWeek; w++) {
+    const opt = document.createElement("option");
+    opt.value = String(w);
+    opt.textContent = "Week " + w;
+    sel.appendChild(opt);
+  }
+  sel.value = String(currentWeek);
+}
+
+// Resets LOCK STATE only (handleUnlockWeekPicks, picks-worker.js) -- never
+// touches saved pick values. No confirm() popup: unlike "Clear all picks,"
+// nothing here is destroyed, only made editable again, and the response
+// itself shows exactly what (if anything) was already saved so Yeti can
+// see nothing changed.
+document.getElementById("unlockPicksBtn").onclick = async () => {
+  const team = document.getElementById("unlockPicksTeam").value;
+  const week = document.getElementById("unlockPicksWeek").value;
+  const adminName = document.getElementById("unlockPicksAdminName").value;
+  const statusEl = document.getElementById("unlockPicksStatus");
+
+  statusEl.textContent = "Unlocking...";
+  statusEl.className = "status";
+  try {
+    const res = await fetch(`${WORKER_BASE}/admin/unlock-week-picks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Admin-Token": sessionToken },
+      body: JSON.stringify({ team, week: parseInt(week, 10), adminName }),
+    });
+    const data = await res.json();
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Unlock failed.";
+      statusEl.className = "status error";
+      return;
+    }
+    const savedCount = Object.keys(data.previousSavedPicks || {}).length;
+    const lockedCount = (data.previousLockedGameIds || []).length;
+    statusEl.textContent = `Unlocked ${team}, Week ${week}. Pick values untouched (${savedCount} already saved). ${lockedCount} previously-locked game(s) reset to editable.`;
+    statusEl.className = "status ok";
+  } catch (e) {
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "status error";
+  }
+};
+
+// ============================================================
+// MISSING PICKS BY GAME (test view, 2026-09-09, per Yeti)
+// ============================================================
+// Deliberately reuses fetchWeekPicksAdmin() (defined above, for the
+// Missing Picks tab) rather than fetching or computing anything new --
+// same real roster/current-week/submission data, just grouped by game
+// instead of by team.
+async function populateMbgWeeks() {
+  const currentWeek = await fetchCurrentWeek();
+  const sel = document.getElementById("mbgWeekSelect");
+  sel.innerHTML = "";
+  for (let w = 1; w <= currentWeek; w++) {
+    const opt = document.createElement("option");
+    opt.value = w;
+    opt.textContent = "Week " + w;
+    sel.appendChild(opt);
+  }
+  sel.value = currentWeek;
+  await renderMissingByGame();
+}
+
+async function renderMissingByGame() {
+  const contentEl = document.getElementById("mbgContent");
+  const statusEl = document.getElementById("mbgStatus");
+  const week = document.getElementById("mbgWeekSelect").value;
+
+  contentEl.innerHTML = "";
+  statusEl.textContent = "Loading...";
+  statusEl.className = "status show";
+
+  const games = await fetchWeekPicksAdmin(week);
+  if (!games || games.length === 0) {
+    statusEl.textContent = "No games published for this week yet.";
+    statusEl.className = "status show";
+    return;
+  }
+  statusEl.textContent = "";
+  statusEl.className = "status";
+
+  const deadlineMs = g => { const t = new Date(g.deadline).getTime(); return isNaN(t) ? Infinity : t; };
+  const sorted = [...games].sort((a, b) => deadlineMs(a) - deadlineMs(b));
+
+  contentEl.innerHTML = sorted.map(g => {
+    const missingTeams = REAL_TEAMS.filter(team => !(g.picks && g.picks[team]));
+    const locked = isPastDeadline(g.deadline);
+    const teamsHtml = missingTeams.length === 0
+      ? `<span class="mp-all-picked">Everyone picked</span>`
+      : missingTeams.map(team => `<span class="mp-chip${locked ? " mp-chip-locked" : ""}">${TEAM_SHORT[team] || team}</span>`).join("");
+    return `
+      <div class="mp-row">
+        <div class="mp-row-header"><span class="mp-matchup">${g.away} @ ${g.home}${locked ? " — deadline passed" : " — " + fmtDeadline(g.deadline)}</span></div>
+        <div class="mp-chips">${teamsHtml}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+document.getElementById("mbgWeekSelect").addEventListener("change", renderMissingByGame);
 
 // ============================================================
 // LEAGUE EMAIL (2026-09-07, per Yeti) -- "a way for us to send a message to

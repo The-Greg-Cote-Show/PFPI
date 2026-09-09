@@ -262,6 +262,10 @@ async function handleGetPicks(request, env) {
   // A correction token unlocks its one named game unconditionally (see
   // below), so its lock set is never consulted -- skip the KV read.
   const lockedIds = correctionGameId ? new Set() : await getLockedGameIds(team, week, env);
+  // Admin-only team/week deadline-unlock bypass (handleUnlockWeekPicks) --
+  // see isDeadlineUnlocked's own comment. Never consulted for a correction
+  // token, same reasoning as lockedIds above.
+  const deadlineUnlocked = correctionGameId ? false : await isDeadlineUnlocked(team, week, env);
 
   // A correction token (see handleSendCorrectionEmail) shows ONLY the one
   // game it names -- not the rest of that week's slate, locked or
@@ -280,7 +284,7 @@ async function handleGetPicks(request, env) {
     // already submitted this" vs. "the deadline passed") instead of one
     // generic label for both.
     const submissionLocked = g.id !== correctionGameId && lockedIds.has(g.id);
-    const deadlineLocked = g.id === correctionGameId ? false : isGameLocked(g.deadline);
+    const deadlineLocked = g.id === correctionGameId || deadlineUnlocked ? false : isGameLocked(g.deadline);
     return {
       id: g.id,
       home: g.home,
@@ -325,6 +329,7 @@ async function handleSubmitPicks(request, env) {
   const schedule = await getWeekSchedule(week, env);
   const existing = await getSavedPicks(team, week, env) || {};
   const lockedIds = correctionGameId ? new Set() : await getLockedGameIds(team, week, env);
+  const deadlineUnlocked = correctionGameId ? false : await isDeadlineUnlocked(team, week, env);
 
   const rejected = [];
   for (const [gameId, pick] of Object.entries(picks || {})) {
@@ -341,7 +346,7 @@ async function handleSubmitPicks(request, env) {
     // just once its deadline passes.
     if (correctionGameId) {
       if (gameId !== correctionGameId) { rejected.push(gameId); continue; }
-    } else if (isGameLocked(game.deadline) || lockedIds.has(gameId)) {
+    } else if ((!deadlineUnlocked && isGameLocked(game.deadline)) || lockedIds.has(gameId)) {
       rejected.push(gameId);
       continue;
     }
@@ -707,6 +712,91 @@ async function handleAdminOverride(request, env) {
 }
 
 // ============================================================
+// DEADLINE OVERRIDE (picks.html, real-time admin-session-only tool)
+// ============================================================
+// Real scenario (2026-09-09, per Yeti): he opens a team's real picks link
+// himself (e.g. via "Resend picks link") to help them, and finds a game
+// already past its own deadline that still needs fixing/entering, right
+// there on picks.html -- rather than having to build a separate
+// correction link first (handleSendCorrectionEmail) for something he can
+// see and fix in the moment. Deliberately a DIFFERENT endpoint from
+// handleAdminOverride/`/admin/override-pick` above (which has no frontend
+// caller yet and no reason/email requirement) rather than changing that
+// one's contract -- this flow has two hard requirements neither
+// handleAdminOverride nor any other existing tool enforces:
+//   1. A real, non-empty reason is mandatory (picks.html's own UI also
+//      enforces this client-side, but the server never trusts that alone).
+//   2. It ALWAYS fires a real, named accountability email to Greg (Cc
+//      Yeti) -- this is a real security-boundary action (bypassing a
+//      lock a family member can't bypass themselves), not a quiet
+//      backend fix, so a durable record of who/what/why goes out every
+//      single time, unconditionally.
+// Authorization is the exact same server-verified admin-session check
+// every other /admin/* route uses (verifyAdminToken -> a real KV lookup
+// against a session token minted only by a real /admin/login) -- picks.html
+// itself only ever shows the override control after independently
+// confirming a valid admin session via GET /verify-session?kind=admin
+// (see that page's own comment), so a family member loading their own
+// exact same link never even sees the control, let alone could satisfy
+// this check without Yeti's real password.
+// Reuses the exact same override-log:{week}:{timestamp} audit trail
+// handleAdminOverride/handleClearWeekPicks already write to -- same
+// pattern, `action` field distinguishes this from those.
+async function handleDeadlineOverride(request, env) {
+  const adminToken = request.headers.get("X-Admin-Token");
+  const isValidAdmin = await verifyAdminToken(adminToken, env);
+  if (!isValidAdmin) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const { team, week, gameId, newPick, adminName, reason } = await request.json();
+
+  if (!TEAMS.includes(team)) {
+    return jsonResponse({ error: "team must be one of the real roster teams." }, 400, request);
+  }
+  if (!reason || !reason.trim()) {
+    return jsonResponse({ error: "A reason is required for a deadline override." }, 400, request);
+  }
+  if (!gameId || !newPick) {
+    return jsonResponse({ error: "gameId and newPick are required." }, 400, request);
+  }
+
+  const schedule = await getWeekSchedule(week, env);
+  const game = schedule.find(g => g.id === gameId);
+  if (!game) {
+    return jsonResponse({ error: `No game with id "${gameId}" found in week ${week}'s schedule.` }, 400, request);
+  }
+  if (game.home !== newPick && game.away !== newPick) {
+    return jsonResponse({ error: "newPick must be one of this game's two real teams." }, 400, request);
+  }
+
+  const existing = await getSavedPicks(team, week, env) || {};
+  const previousValue = existing[gameId] || null;
+  existing[gameId] = newPick;
+  await savePicks(team, week, existing, env);
+
+  const who = (adminName && adminName.trim()) || "Yeti";
+  const logEntry = {
+    timestamp: new Date().toISOString(),
+    action: "deadline-override",
+    adminName: who,
+    team, week, gameId,
+    previousValue, newValue: newPick,
+    reason,
+  };
+  await env.PFPI_KV.put(`override-log:${week}:${Date.now()}`, JSON.stringify(logEntry));
+
+  const sent = await sendPfpiEmail(
+    GREG_EMAIL,
+    `PFPI deadline override — ${fullTeamName(team)}, Week ${week}, ${game.away} @ ${game.home}`,
+    `${who} used the admin deadline-override tool on picks.html.\n\nTeam: ${fullTeamName(team)}\nWeek: ${week}\nGame: ${game.away} @ ${game.home}\nPick entered: ${newPick}\nPrevious saved value for this game: ${previousValue || "(none)"}\n\nReason given (verbatim):\n${reason}`,
+    env, ADMIN_EMAIL, "commissioner"
+  );
+
+  return jsonResponse({ saved: true, logged: true, emailed: sent }, 200, request);
+}
+
+// ============================================================
 // CLEAR ALL PICKS FOR A WEEK (admin.html "Clear all picks" tool)
 // ============================================================
 // Per Yeti (2026-08-26): a real destructive reset for a selected week's
@@ -745,6 +835,77 @@ async function handleClearWeekPicks(request, env) {
   await env.PFPI_KV.put(`override-log:${week}:${Date.now()}`, JSON.stringify(logEntry));
 
   return jsonResponse({ cleared: true, week, teamCount: allTeams.length }, 200, request);
+}
+
+// ============================================================
+// UNLOCK ALL PICKS FOR ONE TEAM/WEEK (admin.html "Admin Portal" only)
+// ============================================================
+// Real scenario (2026-09-09, per Yeti): Uncle Dick's real picks link was
+// showing every Week 1 game as locked, even though he believed he'd only
+// ever used the training link -- confirmed via a read-only KV check before
+// building this that his real `picks:1:Roughriders` (pick VALUES) doesn't
+// exist at all, while `locked-picks:1:Roughriders` (submission-lock STATE)
+// already listed all 16 of that week's games as locked -- a genuinely
+// orphaned lock with nothing behind it (every other real team's two keys
+// were consistent with each other; his weren't). This tool exists to reset
+// exactly that kind of stuck lock state for a team/week, WITHOUT ever
+// touching saved pick values.
+//
+// Two independent lock signals exist for a game (see isDeadlineUnlocked's
+// comment above for the second one): the permanent submission lock
+// (locked-picks:{week}:{team}, this function clears it outright) and the
+// real per-game deadline (isGameLocked(game.deadline), computed live from
+// the schedule every request, never stored -- can't be "cleared" the same
+// way, so this sets a persistent per-team/week bypass flag instead,
+// deadline-unlock:{week}:{team}, that handleGetPicks/handleSubmitPicks
+// both now check). Together these make every game for this team/week
+// freely editable again, regardless of real deadlines already passed,
+// while `picks:{week}:{team}` (the actual saved values) is never read for
+// writing here at all -- only read once, for the "before" snapshot logged
+// below, exactly so there's a real record that nothing was touched.
+//
+// No email -- explicitly not wanted for this action (per Yeti, 2026-09-09:
+// "Greg doesn't need an email about me unlocking someone's picks (I may
+// build that in later)"). Logged to the same override-log:{week}:{timestamp}
+// audit trail every other admin override/reset action already uses.
+async function handleUnlockWeekPicks(request, env) {
+  const adminToken = request.headers.get("X-Admin-Token");
+  const isValidAdmin = await verifyAdminToken(adminToken, env);
+  if (!isValidAdmin) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const { team, week, adminName } = await request.json();
+  if (!TEAMS.includes(team)) {
+    return jsonResponse({ error: "team must be one of the real roster teams." }, 400, request);
+  }
+  if (week === undefined || week === null || week === "") {
+    return jsonResponse({ error: "week is required." }, 400, request);
+  }
+
+  // "Before" snapshot, logged below -- proves (rather than assumes) that
+  // pick values are untouched by this action.
+  const previousSavedPicks = await getSavedPicks(team, week, env) || {};
+  const previousLockedGameIds = [...(await getLockedGameIds(team, week, env))];
+
+  await env.PFPI_KV.delete(`locked-picks:${week}:${team}`);
+  await env.PFPI_KV.put(`deadline-unlock:${week}:${team}`, "true");
+
+  const who = (adminName && adminName.trim()) || "Yeti";
+  const logEntry = {
+    timestamp: new Date().toISOString(),
+    action: "unlock-week-picks",
+    adminName: who,
+    team, week,
+    previousSavedPicks,
+    previousLockedGameIds,
+  };
+  await env.PFPI_KV.put(`override-log:${week}:${Date.now()}`, JSON.stringify(logEntry));
+
+  return jsonResponse({
+    unlocked: true, team, week,
+    previousSavedPicks, previousLockedGameIds,
+  }, 200, request);
 }
 
 // ============================================================
@@ -1408,6 +1569,19 @@ async function lockGameIds(team, week, gameIds, env) {
   await env.PFPI_KV.put(`locked-picks:${week}:${team}`, JSON.stringify([...existing]));
 }
 
+// Admin-set bypass for the real per-game DEADLINE lock (isGameLocked,
+// shared.js) -- separate from the above submission-lock set, since a real
+// deadline isn't stored state that can just be deleted; it's recomputed
+// live from the schedule's kickoffISO every request. Set by
+// handleUnlockWeekPicks (admin.html "Unlock all picks for a team/week")
+// when a family member's real link is stuck locked (all/most games past
+// their real deadline, nothing actually saved) -- persists (no TTL) until
+// an admin clears it, so the team stays freely editable for the rest of
+// that week, not just for one request.
+async function isDeadlineUnlocked(team, week, env) {
+  return (await env.PFPI_KV.get(`deadline-unlock:${week}:${team}`)) === "true";
+}
+
 async function getWeekSchedule(week, env) {
   // Reads the schedule cache written by the scores worker (pfpi-scores-worker,
   // see worker.js) into this same KV namespace. This Worker only reads it,
@@ -1476,6 +1650,12 @@ export default {
     }
     if (url.pathname === "/admin/clear-week-picks" && request.method === "POST") {
       return handleClearWeekPicks(request, env);
+    }
+    if (url.pathname === "/admin/unlock-week-picks" && request.method === "POST") {
+      return handleUnlockWeekPicks(request, env);
+    }
+    if (url.pathname === "/admin/deadline-override" && request.method === "POST") {
+      return handleDeadlineOverride(request, env);
     }
     if (url.pathname === "/admin/week-picks" && request.method === "GET") {
       return handleAdminWeekPicks(request, env);

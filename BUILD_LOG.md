@@ -7781,3 +7781,307 @@ re-diagnosing next time the user is on the wrong account for this repo.
 (Version ID `a7ee3056-67cb-460b-8241-cde18b2495dc`) and `admin.html` on
 GitHub Pages (commit `e0646e17`). The old test-email tool is fully gone
 from the live site, not just from the local working tree.
+
+## Overnight build (2026-09-09): admin deadline override, unlock-all-picks tool, missing-picks-by-game view
+
+Unattended overnight session per Yeti's written task doc (3 items + hard
+rules on stopping for anything destructive/ambiguous/costing money/
+emailing Greg for real during testing). Logging every significant step in
+order, per those rules.
+
+### Investigation before writing any code
+
+Read `picks-worker.js`, `shared.js`, `admin.html`, `picks.html` end to end
+for the pieces this touches:
+- **Admin session mechanism**: `verifyAdminToken` (picks-worker.js) is a
+  real KV lookup -- `admin-session:{token}` must equal the literal string
+  `"valid"`, written only by a real `/admin/login` with the correct
+  password, 4-hour TTL. `admin.html` stores that token in
+  `localStorage["pfpi-admin-session-token"]` and restores it across a
+  refresh via `GET /verify-session?kind=admin`. `picks.html` had **zero**
+  admin-awareness before tonight -- confirmed via a full grep, only one
+  unrelated comment mentioned "admin" at all.
+- **Lock-state data model** (for Item 2's hard requirement that values and
+  lock state be genuinely separable): confirmed real and separate --
+  `picks:{week}:{team}` (pick VALUES, `getSavedPicks`/`savePicks`) and
+  `locked-picks:{week}:{team}` (submission-LOCK STATE, a JSON array of
+  gameIds, `getLockedGameIds`/`lockGameIds`) are two independent KV keys.
+  A SECOND, separate lock signal also exists and matters for Item 2: the
+  real per-game DEADLINE lock (`isGameLocked(game.deadline)`,
+  shared.js) is computed live from the schedule every request, never
+  stored at all -- so "resetting lock state" for a deadline-passed game
+  needs a new bypass flag, not just clearing existing state (see Item 2
+  below).
+- **Existing but unused backend capability**: `handleAdminOverride`
+  (`POST /admin/override-pick`) already existed, built 2026-08-25,
+  bypasses all locks by design, and logs to
+  `override-log:{week}:{timestamp}` -- but grepped the whole repo and
+  confirmed **no frontend anywhere calls it**; it was backend-only,
+  tested once via raw HTTP and never revisited. Did NOT reuse/modify this
+  endpoint for Item 1 (see Item 1 below for why) -- built a dedicated one
+  instead, reusing only its audit-log pattern.
+- **Confirmed the live-email flag is genuinely ON in production** (`GET
+  emails-live-for-everyone` -> `"true"`, real remote KV, verified via
+  `wrangler kv key get ... --remote`) -- i.e. this system currently sends
+  REAL email to Greg's real inbox on a real trigger. This is exactly why
+  Item 1 could not be exercised end-to-end against the live deployed
+  Worker (see Item 1 verification below) -- confirmed this BEFORE writing
+  any override code, specifically to calibrate how much risk a live test
+  would carry.
+- **Uncle Dick's real Week 1 data, read-only, before touching anything**
+  (per the hard rule on Item 2): `wrangler kv key get` against the real
+  remote KV, no writes.
+  - `picks:1:Roughriders` -> **404, does not exist**. He has zero real
+    saved pick values for Week 1 -- consistent with "I only ever used the
+    training link."
+  - `locked-picks:1:Roughriders` -> **exists**, and lists **all 16** of
+    Week 1's real games as submission-locked.
+  - For comparison, surveyed all 8 real teams' Week 1 state the same
+    read-only way: every OTHER team has 0-2 games, and its `picks:1:*`
+    and `locked-picks:1:*` keys are mutually consistent (the same
+    gameIds appear in both, with real values). Roughriders is the only
+    team with this shape (locked-picks non-empty, picks entirely absent)
+    -- a genuinely orphaned lock, not a normal in-progress state.
+  - **Working theory, not confirmed, flagged for Yeti**: this looks
+    exactly like what would happen if "Clear all picks for a week"
+    (`handleClearWeekPicks`) were ever run against real Week 1 data after
+    Dick had submitted real picks -- that tool clears `picks:{week}:{team}`
+    for every team but was never written to also clear
+    `locked-picks:{week}:{team}`, so a team's submission-locks would
+    survive a clear intact while its values vanish. Not fixed tonight
+    (out of scope, not asked for) but worth knowing: if `handleClearWeekPicks`
+    is ever run again on a week where a real team has already submitted,
+    it can reproduce this same orphaned-lock state for that team.
+  - Also checked Week 2 for Roughriders (both keys) -- both absent,
+    nothing there yet, consistent with `current-week` KV / `data/current.json`
+    both genuinely reading `1` right now.
+
+### Item 1: Admin deadline override on picks.html -- DONE, deployed, verified synthetically only
+
+**Backend** (`picks-worker.js`): new `handleDeadlineOverride` /
+`POST /admin/deadline-override` -- a DIFFERENT endpoint from the existing
+unused `handleAdminOverride`/`/admin/override-pick`, deliberately, rather
+than changing that one's contract (nothing calls it today, but changing
+its behavior under a name that already appears in this file's own
+comments felt like the wrong place to bolt on a reason-required + always-
+emails contract). New endpoint:
+- Requires a valid admin session (`verifyAdminToken`, the same real
+  KV-backed check every other `/admin/*` route uses) -- 403 otherwise,
+  before touching anything.
+- Requires `team` to be one of the real 8 roster teams (`TEAMS`,
+  shared.js) -- 400 otherwise.
+- **Requires a real, non-empty `reason`** (`.trim()` checked) -- 400
+  otherwise, before any save or email.
+- Validates `gameId` exists in that week's real schedule and `newPick` is
+  one of that game's two real teams.
+- Saves the pick via the same `getSavedPicks`/`savePicks` every normal
+  flow uses (bypassing the lock entirely, same as the pre-existing
+  `handleAdminOverride`).
+- Logs to `override-log:{week}:{timestamp}` -- same audit trail
+  `handleAdminOverride`/`handleClearWeekPicks` already write to, with
+  `action: "deadline-override"`, before/after pick value, admin name, and
+  the reason verbatim.
+- **Always fires a real accountability email**: To Greg (`GREG_EMAIL`),
+  Cc Yeti (`ADMIN_EMAIL`) explicitly (not relying on `sendPfpiEmail`'s own
+  auto-Bcc, per the task doc's explicit ask), subject names team/week/
+  game, body includes who was overridden, the pick entered, the previous
+  value, and the reason typed, verbatim.
+
+**Frontend** (`picks.html`): this is the security-critical half.
+- `checkAdminSession()`: reads `localStorage["pfpi-admin-session-token"]`
+  -- the EXACT SAME key `admin.html` already uses for its own saved
+  session -- and if present, calls `GET /verify-session?kind=admin` with
+  it as `X-Session-Token`. Only a `{valid:true}` response (a real,
+  live KV lookup server-side) sets `isAdminSession = true`. Fails closed
+  (`false`) on: no stored token, a rejected/expired token, or any network
+  error -- identical failure-closed behavior to `admin.html`'s own
+  `restoreSessionIfSaved()`.
+- Kicked off in parallel with the real `/my-picks` fetch, but **awaited
+  before any card is rendered** -- so the override control is either
+  there from the first render or never added to the DOM at all; there is
+  no flash of "maybe visible" state.
+- The override control (`showOverrideControl` per-game) is computed as
+  `isAdminSession && game.locked && !game.submissionLocked` -- scoped
+  specifically to the DEADLINE-passed case, not an already-submitted
+  pick (that has its own existing fix path, the correction-link tool).
+  For any other visitor -- meaning `isAdminSession` is `false`, which is
+  every real family member on every real link, always -- this entire
+  block of HTML is never written into `card.innerHTML` at all. Not
+  `display:none`, not present in the DOM to inspect via devtools --
+  genuinely absent.
+- Clicking "Admin override" reveals a reason textarea; clicking a pick
+  button while that reason box is empty is refused client-side with a
+  visible message (server independently refuses it too, so this isn't
+  the only gate). A real reason lets the click go through to
+  `saveDeadlineOverride()`, which POSTs to the new endpoint using
+  `currentTeam`/`currentWeekLabel` (the server-verified values from this
+  token's own `/my-picks` response, never anything typed/guessed
+  client-side) plus the admin session token from `checkAdminSession()`.
+
+**Verification -- deliberately NEVER a real send to Greg, per the hard
+rule**, using two separate synthetic/local methods instead:
+1. **A local Node harness** (`test_overnight.mjs`, run from the scratchpad,
+   not committed) that imports the REAL, unmodified `picks-worker.js`
+   module directly, against an in-memory mock KV and a mocked
+   `global.fetch` that intercepts (never actually calls) the Resend API --
+   any attempt to reach a URL other than `api.resend.com` throws, so a
+   real network call would have failed loudly rather than silently
+   succeeding. 25 assertions, all passing, including: no-token request is
+   403 and sends zero emails/saves nothing; a valid session with a blank
+   (whitespace-only) reason is 400 and sends zero emails; a valid session
+   with a real reason saves the pick, writes the exact audit-log shape
+   expected, and "sends" exactly one email with `to: upsetbird@aol.com`
+   (Greg), `cc: yeti@yetiblanc.com` (Yeti), a subject naming the team/
+   week/game, and a body containing the typed reason verbatim; an unknown
+   team is rejected even with a valid session and reason.
+2. **A second local harness** (`test_admin_detect.mjs`) that extracts the
+   real `checkAdminSession()` function source directly out of the actual
+   `picks.html` file on disk (not a re-typed copy) and runs it under a
+   mocked `localStorage`/`fetch`. 7 assertions, all passing: no stored
+   token resolves `false` WITHOUT even calling the server; a stale token
+   the server rejects resolves `false`; a token the server confirms valid
+   resolves `true` (and confirmed the exact request shape -- right URL,
+   right header); a network error while checking fails closed to `false`.
+3. **Against the real deployed Worker** (after `wrangler deploy`,
+   Version ID `349be24f-d113-4885-b226-c339388d1b7e`): confirmed
+   `POST /admin/deadline-override` with no `X-Admin-Token` returns a real
+   `403` from production -- proves the route exists and is gated live,
+   with zero side effects (auth fails before any save/email code runs).
+   **Did not** attempt an authenticated end-to-end call against the real
+   Worker, since GREG_EMAIL/ADMIN_EMAIL are real addresses and the live-
+   email flag is confirmed on -- that would be a real send, exactly what
+   the hard rule forbids.
+
+**Conclusion on the one thing that mattered most**: the override control
+cannot be seen or triggered without a real, currently-valid admin session
+token that only a real `/admin/login` can mint. A family member loading
+their own real link has no such token in their browser's `localStorage`
+and the check fails closed on every other possible ambiguity (missing
+token, stale token, network error). Confirmed via code review + the two
+synthetic harnesses above, never via a real send.
+
+### Item 2: Unlock all picks for a team/week -- DONE, deployed, verified synthetically + against real (read-only) production data
+
+**Backend** (`picks-worker.js`): new `handleUnlockWeekPicks` /
+`POST /admin/unlock-week-picks`:
+- Admin-session gated (`verifyAdminToken`), `team` restricted to the real
+  8 roster teams, `week` required.
+- Reads (never writes) `getSavedPicks`/`getLockedGameIds` FIRST and
+  includes that "before" snapshot in both the audit-log entry and the
+  response, specifically so there's a real record proving nothing was
+  wiped.
+- **Only then**: deletes `locked-picks:{week}:{team}` (clears the
+  submission-lock STATE) and sets a new, persistent
+  `deadline-unlock:{week}:{team}` = `"true"` flag. `picks:{week}:{team}`
+  (pick VALUES) is never written to by this function at all -- only ever
+  read, for the snapshot.
+- The new `deadline-unlock` flag is checked by BOTH `handleGetPicks` and
+  `handleSubmitPicks` (both updated) alongside the existing
+  submission-lock/correction-token checks -- when set, a game's real
+  deadline (`isGameLocked`) is bypassed for that team/week, same as
+  `correctionGameId` already bypasses it for one game on a correction
+  link. This is what makes "regardless of each game's real deadline
+  having passed" actually true, not just the submission-lock half of it.
+- Logs to the same `override-log:{week}:{timestamp}` audit trail,
+  `action: "unlock-week-picks"`.
+- **No email** -- confirmed nothing in this function calls
+  `sendPfpiEmail`, per the explicit "not wanted right now."
+
+**Frontend** (`admin.html`): new "Unlock all picks for a team/week" panel
+in the Admin Portal (not Commissioner Portal, per Yeti) -- Team is the
+same real-8-team `<optgroup>` dropdown already used by Resend/Correction
+panels (no free text), Week is a real `1..currentWeek` dropdown (same
+pattern as the correction tool's own week dropdown). No `confirm()`
+popup, unlike "Clear all picks" -- nothing here is destroyed, and the
+status line after clicking shows exactly how many pick values were
+already saved (untouched) and how many games had their lock state reset,
+so the result is self-verifying at a glance.
+
+**Verification**:
+1. Same local Node harness as Item 1 (`test_overnight.mjs`), continued:
+   seeded a MOCK KV state mirroring the exact real shape found for
+   Roughriders (locked-picks present with 2 synthetic gameIds, picks
+   absent) and ran the real unlock handler against it. Confirmed:
+   `previousSavedPicks` came back empty (matching "nothing was ever
+   saved"), `previousLockedGameIds` listed both synthetic locked games,
+   `picks:1:Roughriders` (mock) stayed absent afterward (nothing created
+   out of nothing), `locked-picks:1:Roughriders` (mock) was cleared, the
+   `deadline-unlock` flag was set, and critically **the running email
+   count stayed at 1** (only Item 1's earlier test send) -- proving this
+   action sent zero emails. A second case seeded a team WITH a real
+   saved value (`Maniacs`, `TEST_GAME_1: "AWAY"`, locked) and confirmed
+   that value survived the unlock byte-for-byte while its lock state was
+   cleared.
+2. **Against real production data, read-only**: the actual `picks:1:*`
+   and `locked-picks:1:*` KV reads logged in the Investigation section
+   above ARE this verification -- performed before writing any code,
+   confirming Dick's real pick values are genuinely absent (so "don't
+   wipe an already-saved value" has nothing to accidentally wipe) and his
+   real lock state is genuinely the all-16-games-orphaned shape this tool
+   is built to fix.
+3. Against the real deployed Worker: `POST /admin/unlock-week-picks` with
+   no `X-Admin-Token` returns a real `403`, confirming the route is live
+   and gated with zero side effects.
+
+**Not done tonight, flagged for Yeti**: the actual fix for Uncle Dick's
+real Week 1 Roughriders data was NOT executed against production. This
+session has no way to authenticate as admin against the real deployed
+Worker -- minting a real admin session requires the real password (not
+available to this session), and writing a synthetic one directly into
+the REAL production KV is exactly the kind of action this session's own
+safety boundary blocks (forging a real admin-session token), same as
+noted in the standing project memory on this. **The tool is built,
+deployed, and tested -- the one remaining step is Yeti (or Greg, if he
+ever gets an admin credential) logging into `admin.html` and clicking
+"Unlock all picks for this team/week" for Roughriders, Week 1.** Nothing
+of Dick's will be lost by doing this -- confirmed above that
+`picks:1:Roughriders` has nothing in it to lose.
+
+### Item 3: Missing Picks by Game (Admin Portal, test view) -- DONE, deployed
+
+New "Missing Picks by Game (test view)" panel in `admin.html`'s Admin
+Portal only (NOT added to `brief.html`/Commissioner Portal, per Yeti --
+he wants to test it on his side first). No new backend endpoint and no
+new calculation: `renderMissingByGame()` calls the exact same
+`fetchWeekPicksAdmin(week)` (-> `GET /admin/week-picks`,
+`handleAdminWeekPicks`) the existing Missing Picks tab already uses, and
+the exact same `REAL_TEAMS`/`TEAM_SHORT`/`fmtDeadline`/`isPastDeadline`
+helpers already defined for that tab -- this file's own real roster,
+real current week, and real submission state, just grouped by game
+(`sorted.map(game => REAL_TEAMS.filter(team => no pick))`) instead of by
+team. Real 8-team roster only, same scope as the existing tab.
+
+### Deployment
+
+- `pfpi-picks-worker` deployed via `wrangler deploy` -- Version ID
+  `349be24f-d113-4885-b226-c339388d1b7e`. Both new routes
+  (`/admin/deadline-override`, `/admin/unlock-week-picks`) confirmed live
+  and returning real `403`s with no auth token, with zero side effects.
+- `admin.html`/`picks.html` frontend changes: committed and pushed to
+  GitHub Pages in this same session (see commit hash logged right after
+  this entry, once the push completes) -- both files pass `node --check`
+  on their extracted inline `<script>` blocks.
+
+### Status summary (all three items)
+
+- **Item 1 (deadline override)**: DONE, deployed, gated. Cannot be
+  triggered without a real, server-verified admin session -- confirmed
+  via code review + two local synthetic harnesses (25 + 7 assertions,
+  all passing) + a live no-auth-token 403 check against the real
+  deployed Worker. Never tested end-to-end against production, since
+  that would require a real email to Greg's real inbox (live-email flag
+  confirmed ON) -- exactly what the hard rules forbade.
+- **Item 2 (unlock-all-picks)**: DONE, deployed. Confirmed real,
+  separate KV keys for pick values vs. lock state; confirmed Uncle
+  Dick's actual real Week 1 data (values absent, lock state
+  orphaned-all-16) via read-only production checks BEFORE writing any
+  code; verified synthetically that the handler preserves saved values
+  byte-for-byte while clearing lock state, and sends no email. The
+  actual real-world fix for Dick still needs Yeti to click the new
+  button himself (or otherwise obtain a real admin session) -- this
+  session cannot authenticate as admin against production.
+- **Item 3 (missing-picks-by-game)**: DONE, deployed. Confirmed it reuses
+  the exact same `fetchWeekPicksAdmin`/`handleAdminWeekPicks` data source
+  as the existing Missing Picks tab -- no new calculation, no new
+  backend endpoint. Admin Portal only, not added to the Commissioner
+  Portal/`brief.html`.

@@ -7666,3 +7666,92 @@ follow-up `kv key get`, real 404). This is the strongest verification
 level the hard rules allowed without an actual real send -- real
 deployed code, real live page, real user-interaction sequence, only the
 token itself was synthetic.
+
+## Replaced "Send test picks email" with a real "Resend picks link" tool (2026-09-08)
+
+Now that real family members receive real weekly picks emails (confirmed
+via this morning's Tuesday 7am ET run), Yeti needed a way to resend
+someone's link if they lose it. The old "[TEST] Admin Picks Link" tool in
+`admin.html` was a stand-in built 2026-08-25, before real recipient
+emails existed -- it always sent to `ADMIN_EMAIL` (yeti@yetiblanc.com) by
+design, never the real team. **That entire panel and its backend handler
+are gone, not left dormant alongside the new one.**
+
+**Removed entirely:**
+- `admin.html`'s `#testEmailPanel` (team + week dropdowns, "Email me this
+  test link" button) -- replaced in place by `#resendPicksPanel`.
+- `populateTestEmailWeeks()` and every reference to `testEmailPanel`/
+  `testEmailTeam`/`testEmailWeek`/`testEmailBtn`/`testEmailStatus` (login
+  show/hide, click handler). Verified zero remaining references via a
+  repo-wide grep for `testEmail` after the edit -- only a stale comment
+  mentioning the old function name by name survived, in
+  `handleSendCorrectionEmail`'s header comment, and that's been reworded
+  too.
+- `picks-worker.js`'s `handleSendTestPicksEmail()` and the
+  `POST /admin/send-test-picks-email` route -- replaced by
+  `handleResendPicksLink()` on `POST /admin/resend-picks-link`.
+
+**New tool, `#resendPicksPanel` / `handleResendPicksLink()`:**
+- **Team: a dropdown of the real 8 roster teams**, same values as
+  `FAMILY_MEMBERS`/`LEAGUE_ROSTER` use elsewhere -- no free-text field, so
+  there's no typo path to the wrong real address.
+- **No week selector.** The handler calls `getCurrentWeek(env)` --the
+  exact same shared value `handleWeeklyTrigger` (the real Tuesday-7am
+  sender) already uses -- so it always resends for the current live week,
+  never a week the admin picks.
+- **Mints a fresh token** via the existing `generateWeeklyToken()` rather
+  than trying to recover the exact original signed token (there's no
+  reverse index from team/week back to a previously-issued token string --
+  `verifyToken` only ever maps token -> `{team, week}`). Confirmed by
+  tracing `handleGetPicks`/`handleSubmitPicks`: both derive deadlines,
+  already-saved picks, and lock state from `team`+`week` alone, never from
+  the token string itself, so a fresh token for the same team/week behaves
+  100% identically to the one already sent -- same deadlines, same
+  pre-filled picks, same per-game lock rules. Matches Yeti's own bar ("It
+  can be the original for all I care") without needing a lookup index that
+  doesn't exist today. The original token, if the recipient still has it,
+  keeps working too -- nothing is invalidated.
+- **Sends to the real team's address via `FAMILY_MEMBERS`**, not to Yeti --
+  the core behavior change from the old tool.
+- **Subject/body/sender identity reused unchanged**: calls the real
+  `sendPicksEmail()` (the same function `handleWeeklyTrigger` calls),
+  unmodified -- the current, already-amended Weekly Picks Are Open
+  template (`commissioner` identity), not a distinct "resend" wording.
+- Endpoint is admin-token gated identically to the old one
+  (`verifyAdminToken`), and rejects any `team` not found in
+  `FAMILY_MEMBERS` with a 400 before any email logic runs.
+
+**Verification before Yeti tries it live** (deliberately did NOT fire 8
+real emails to real family members to "test" this -- that would itself be
+an unwanted live send, the exact failure mode this task exists to avoid):
+- Deployed `pfpi-picks-worker` via `wrangler deploy` (Version ID
+  `a7ee3056-67cb-460b-8241-cde18b2495dc`).
+- Confirmed the endpoint is live and still auth-gated with zero side
+  effects: `POST /admin/resend-picks-link` with no `X-Admin-Token` against
+  the real deployed Worker returned real `403 {"error":"Not authorized."}`
+  -- proves the route exists and no email fires without a valid admin
+  session, without needing (or risking) a real send.
+- Resolution correctness for all 8 real teams verified directly against
+  the real `shared.js` `FAMILY_MEMBERS` export (the exact same array the
+  deployed handler imports and reads), iterating the same 8 team keys the
+  dropdown offers:
+  ```
+  Lobos -> "upsetbird@aol.com"
+  Roughriders -> "cote7714@gmail.com"
+  Maniacs -> "lawyermom59@aol.com"
+  Critters -> "ccote215@gmail.com"
+  Chickens -> "mcote0363@gmail.com"
+  Ferraris -> "christineiferrara@gmail.com"
+  Llamas -> "tati.capote92@gmail.com"
+  Giraffes -> ["ccote215@gmail.com","christineiferrara@gmail.com"]
+  ```
+  All 8 resolved to a real member (`FAMILY_MEMBERS.find` count matched
+  `dropdown count: 8 FAMILY_MEMBERS count: 8`, no `NOT FOUND`), each
+  address matching what's already on file -- no fallback to `ADMIN_EMAIL`
+  for any real team.
+- `picks-worker.js` passed `node --check` after the edit.
+
+**Not done, on purpose:** a real end-to-end send to one live family
+address, since that's a real, visible action affecting someone outside
+this session and wasn't asked for -- Yeti can fire the first real resend
+himself once he sees this log.

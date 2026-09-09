@@ -794,58 +794,73 @@ async function handleAdminWeekPicks(request, env) {
 }
 
 // ============================================================
-// AD-HOC TEST PICKS EMAIL (admin.html "Send test picks email")
+// RESEND PICKS LINK (admin.html "Resend picks link")
 // ============================================================
-// Per Yeti (2026-08-25): a self-service way to get a picks link emailed
-// to himself on demand, as ANY team -- not just the two sandboxed
-// FAMILY_MEMBERS test entries -- so he can see how a real roster team
-// (e.g. "Roughriders") looks and behaves, and test repeatedly without
-// needing a manual KV token seed each time. Reuses generateWeeklyToken()
-// and formatWeekDeadlines() unchanged -- no second token or deadline
-// logic. Always sends to ADMIN_EMAIL regardless of what's requested,
-// never accepts a recipient from the request, so this can never become a
-// way to email a real, uninvolved address.
-async function handleSendTestPicksEmail(request, env) {
+// Replaces the old ad-hoc "[TEST] Admin Picks Link" tool entirely
+// (2026-09-08, per Yeti) now that real family members are actually
+// receiving real weekly picks emails. That old tool was a stand-in built
+// before real recipient emails existed, and always sent to ADMIN_EMAIL by
+// design -- this is a real tool for the real use case it names: "resend
+// someone's link if they lose the original email."
+//
+// Team is restricted to FAMILY_MEMBERS (the real 8 roster teams) -- no
+// free-typed recipient, no arbitrary team string -- so this can never
+// reach anyone but the real person already on file for that team, exactly
+// like handleWeeklyTrigger's own real send below. Week is never taken
+// from the request either: this always resends for the current real week
+// (getCurrentWeek(), the same shared value handleWeeklyTrigger uses), per
+// Yeti -- "resend their current, real, already-issued weekly link", not a
+// pick-a-week tool.
+//
+// Mints a FRESH token via generateWeeklyToken() rather than trying to
+// recover the exact original signed token (there's no reverse index from
+// team/week back to the token string handleWeeklyTrigger originally
+// issued -- verifyToken only maps token -> {team, week}). This is
+// functionally identical to the original, not just "close enough": every
+// downstream read (handleGetPicks/handleSubmitPicks) derives deadlines,
+// already-saved picks, and lock state from `team`+`week` alone, never
+// from the token string itself, so a new token for the same team/week
+// behaves 100% the same as the one already sent -- same deadlines, same
+// pre-filled picks, same per-game lock rules. Per Yeti: "It can be the
+// original for all I care" -- this satisfies that without needing a
+// token-lookup index that doesn't exist today. The old token, if the
+// recipient still has it, keeps working too (nothing is invalidated).
+//
+// Reuses sendPicksEmail() UNCHANGED -- the real Weekly Picks Are Open
+// subject/body/sender identity ("commissioner"), not a distinct "resend"
+// template -- so this reads exactly like the original email they already
+// got, per Yeti's explicit ask.
+async function handleResendPicksLink(request, env) {
   const adminToken = request.headers.get("X-Admin-Token");
   const isValidAdmin = await verifyAdminToken(adminToken, env);
   if (!isValidAdmin) {
     return jsonResponse({ error: "Not authorized." }, 403, request);
   }
 
-  const { team, week } = await request.json();
-  if (!team || !week) {
-    return jsonResponse({ error: "team and week are required." }, 400, request);
+  const { team } = await request.json();
+  const member = FAMILY_MEMBERS.find(m => m.team === team);
+  if (!member) {
+    return jsonResponse({ error: `"${team}" is not a real roster team.` }, 400, request);
   }
 
-  const testToken = await generateWeeklyToken(team, week, env);
-  const link = `https://pfpi.me/picks.html?token=${testToken}`;
+  const week = await getCurrentWeek(env);
   const schedule = await getWeekSchedule(week, env);
   const deadlineSummary = formatWeekDeadlines(schedule);
+  const token = await generateWeeklyToken(team, week, env);
+  const link = `https://pfpi.me/picks.html?token=${token}`;
 
-  // Deliberately NOT sendPicksEmail() -- this is an ad-hoc admin tool with
-  // its own distinct "[TEST]" subject/body, not the real weekly picks
-  // email, and belongs to the "admin" sender identity rather than
-  // sendPicksEmail's "commissioner" one (both now route through the same
-  // shared sendPfpiEmail/mail.pfpi.me sender either way, as of 2026-09-06 --
-  // see shared.js -- so identity, not deliverability, is what still keeps
-  // these two separate).
-  const sent = await sendPfpiEmail(
-    ADMIN_EMAIL,
-    `[TEST] PFPI Week ${week} picks — as ${fullTeamName(team)}`,
-    `Test picks link for "${fullTeamName(team)}", Week ${week}.\n\nUse this link any time, you can save and come back before each game's deadline:\n\n${link}\n\n${deadlineSummary}\n\nThis is a test email triggered from admin.html, not a real weekly picks notification.`,
-    env, undefined, "admin"
-  );
-
+  const sent = await sendPicksEmail(member.email, team, week, link, deadlineSummary, env);
   if (!sent) {
     return jsonResponse({ error: "Email could not be sent. Check Worker logs." }, 502, request);
   }
-  return jsonResponse({ sent: true, link }, 200, request);
+  return jsonResponse({ sent: true, week, email: member.email, link }, 200, request);
 }
 
 // Per Yeti (2026-08-25): "a way for me as the admin to send a correction
-// form... much better than me making the changes." Always sends to
-// ADMIN_EMAIL, same as handleSendTestPicksEmail — Yeti's explicit call,
-// since real family emails aren't in the system yet. He forwards it
+// form... much better than me making the changes." Still always sends to
+// ADMIN_EMAIL (unlike handleResendPicksLink above, which does send to the
+// real team address) -- real family emails weren't in the system yet when
+// this was built, and it hasn't been revisited since. He forwards it
 // himself once ready; this endpoint never accepts or looks at a recipient
 // in the request.
 async function handleSendCorrectionEmail(request, env) {
@@ -1468,8 +1483,8 @@ export default {
     if (url.pathname === "/admin/send-league-email" && request.method === "POST") {
       return handleSendLeagueEmail(request, env);
     }
-    if (url.pathname === "/admin/send-test-picks-email" && request.method === "POST") {
-      return handleSendTestPicksEmail(request, env);
+    if (url.pathname === "/admin/resend-picks-link" && request.method === "POST") {
+      return handleResendPicksLink(request, env);
     }
     if (url.pathname === "/admin/send-correction-email" && request.method === "POST") {
       return handleSendCorrectionEmail(request, env);

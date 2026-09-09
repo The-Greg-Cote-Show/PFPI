@@ -206,25 +206,19 @@ button:hover{opacity:.9;}
        TAB: ADMIN PORTAL
        ============================================================ -->
   <div id="adminPortalTab">
-    <div class="panel hidden" id="testEmailPanel">
-      <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Send test picks email</div>
+    <div class="panel hidden" id="resendPicksPanel">
+      <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Resend picks link</div>
       <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
-        Emails a real, working picks link to your own admin address
-        (yeti@yetiblanc.com) as whichever team you pick below — always your
-        inbox, never a real family member, no matter what's selected.
-        Preseason (the old safe-to-test-against sandbox week) was retired
-        2026-09-03 — every week below is a real numbered week, so picks
-        saved against it plug straight into real standings and DO appear
-        on the Commissioner Portal's Missing Picks tracker. If you're using
-        this to hand someone a link to practice with (e.g. a family member
-        who wants to get comfortable with the site before real picks
-        matter), clear their test picks afterward with "Clear all picks
-        for a week" below — read that panel's own note first, since it
-        clears the WHOLE week for every team, not just one.
+        Resends this team's real current-week picks link to their actual
+        real address on file — the same Weekly Picks Are Open email they
+        already got, with whatever picks they've already saved still
+        showing, same deadlines, same lock rules. Always the current live
+        week — there's no way to pick a different week here, since this is
+        for "I lost my email," not for testing.
       </div>
-      <label for="testEmailTeam">Team (testing as)</label>
-      <select id="testEmailTeam">
-        <optgroup label="Real roster (counts toward real standings)">
+      <label for="resendPicksTeam">Team</label>
+      <select id="resendPicksTeam">
+        <optgroup label="Real roster">
           <option value="Lobos">Greg's Lobos</option>
           <option value="Roughriders">Dick's Roughriders</option>
           <option value="Maniacs">Mom's Maniacs</option>
@@ -235,10 +229,8 @@ button:hover{opacity:.9;}
           <option value="Giraffes">Gracelin's Giraffes</option>
         </optgroup>
       </select>
-      <label for="testEmailWeek">Week</label>
-      <select id="testEmailWeek"></select>
-      <button id="testEmailBtn">Email me this test link</button>
-      <div class="status" id="testEmailStatus"></div>
+      <button id="resendPicksBtn">Resend picks link</button>
+      <div class="status" id="resendPicksStatus"></div>
     </div>
 
     <div class="panel hidden" id="correctionPanel">
@@ -489,7 +481,7 @@ let digestInitialized = false;
 // did that at all, unlike brief.html).
 function showLoggedIn() {
   document.getElementById("loginPanel").classList.add("hidden");
-  document.getElementById("testEmailPanel").classList.remove("hidden");
+  document.getElementById("resendPicksPanel").classList.remove("hidden");
   document.getElementById("correctionPanel").classList.remove("hidden");
   document.getElementById("triggerPollPanel").classList.remove("hidden");
   document.getElementById("clearPicksPanel").classList.remove("hidden");
@@ -498,7 +490,6 @@ function showLoggedIn() {
   document.getElementById("mainSectionTabs2").classList.remove("hidden");
   document.getElementById("mainSectionTabs3").classList.remove("hidden");
   switchMainSection("admin");
-  populateTestEmailWeeks();
   populateCorrectionWeeks();
   populateMissingPicksWeeks();
   populateWeeks();
@@ -513,7 +504,7 @@ function clearSession(message) {
   sessionToken = null;
   localStorage.removeItem(SESSION_STORAGE_KEY);
   document.getElementById("loginPanel").classList.remove("hidden");
-  document.getElementById("testEmailPanel").classList.add("hidden");
+  document.getElementById("resendPicksPanel").classList.add("hidden");
   document.getElementById("correctionPanel").classList.add("hidden");
   document.getElementById("triggerPollPanel").classList.add("hidden");
   document.getElementById("clearPicksPanel").classList.add("hidden");
@@ -727,19 +718,19 @@ document.querySelectorAll("#commissionerSubTabs .top-tab-btn").forEach(btn => {
 });
 
 // ============================================================
-// SEND TEST PICKS EMAIL
+// RESEND PICKS LINK
 // ============================================================
+// Replaces the old "Send test picks email" tool (2026-09-08, per Yeti) --
+// no week selector (server always resends for the real current week), and
+// sends to the team's real address on file, not to Yeti.
 
-document.getElementById("testEmailBtn").onclick = async () => {
-  const statusEl = document.getElementById("testEmailStatus");
-  const body = {
-    team: document.getElementById("testEmailTeam").value,
-    week: document.getElementById("testEmailWeek").value,
-  };
+document.getElementById("resendPicksBtn").onclick = async () => {
+  const statusEl = document.getElementById("resendPicksStatus");
+  const body = { team: document.getElementById("resendPicksTeam").value };
   statusEl.textContent = "Sending...";
   statusEl.className = "status";
   try {
-    const res = await fetch(`${WORKER_BASE}/admin/send-test-picks-email`, {
+    const res = await fetch(`${WORKER_BASE}/admin/resend-picks-link`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Admin-Token": sessionToken },
       body: JSON.stringify(body),
@@ -751,7 +742,7 @@ document.getElementById("testEmailBtn").onclick = async () => {
       statusEl.className = "status error";
       return;
     }
-    statusEl.textContent = "Sent to yeti@yetiblanc.com. Link: " + data.link;
+    statusEl.textContent = `Sent to ${data.email} (Week ${data.week}). Link: ${data.link}`;
     statusEl.className = "status ok";
   } catch (e) {
     statusEl.textContent = "Could not reach the server.";
@@ -775,26 +766,6 @@ function fmtCorrectionKickoff(iso) {
   return new Date(iso).toLocaleString("en-US", {
     timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
   }) + " ET";
-}
-
-// Added 2026-09-03, per Yeti -- this used to be a free-text input
-// hardcoded to default to "preseason-3", which stopped existing once
-// preseason was retired that same day (see BUILD_LOG.md), leaving Yeti
-// with a field defaulting to a week that no longer resolves to anything.
-// Same 1..currentWeek dropdown pattern as populateCorrectionWeeks()/
-// populateMissingPicksWeeks() above, defaulting to the real shared
-// current-week value.
-async function populateTestEmailWeeks() {
-  const sel = document.getElementById("testEmailWeek");
-  const currentWeek = await fetchCurrentWeek();
-  sel.innerHTML = "";
-  for (let w = 1; w <= currentWeek; w++) {
-    const opt = document.createElement("option");
-    opt.value = String(w);
-    opt.textContent = "Week " + w;
-    sel.appendChild(opt);
-  }
-  sel.value = String(currentWeek);
 }
 
 async function populateCorrectionWeeks() {

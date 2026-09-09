@@ -21,6 +21,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .banner{border-radius:10px;padding:.75rem 1rem;margin-bottom:1.25rem;font-size:.8rem;line-height:1.5;}
 .banner.info{background:rgba(74,158,255,.1);border:1px solid rgba(74,158,255,.3);color:var(--blue);}
 .banner.error{background:rgba(224,82,82,.1);border:1px solid rgba(224,82,82,.3);color:var(--red);}
+.banner.warn{background:rgba(232,184,75,.12);border:1px solid rgba(232,184,75,.3);color:var(--gold);}
 .loading{color:var(--muted);font-size:.85rem;padding:2rem 0;text-align:center;}
 
 /* Date group -- one per calendar kickoff date, chronological, games within
@@ -52,19 +53,6 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .save-status{font-size:.68rem;color:var(--muted);margin-top:.5rem;min-height:1em;text-align:center;}
 .save-status.saved{color:var(--green);}
 .save-status.rejected{color:var(--red);}
-
-/* Admin-only deadline override (see picks.html script's checkAdminSession
-   comment) -- never rendered at all unless a real, server-verified admin
-   session is present, so this block simply doesn't exist in a family
-   member's DOM, not just visually hidden. */
-.admin-override{margin-bottom:.6rem;border-top:1px dashed var(--border2);padding-top:.6rem;}
-.admin-override-toggle{background:none;border:1px solid var(--gold);color:var(--gold2);font-size:.68rem;font-weight:700;padding:.35rem .7rem;border-radius:6px;cursor:pointer;}
-.admin-override-form{margin-top:.5rem;}
-.admin-override-reason{width:100%;background:var(--panel2);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:.5rem .6rem;font-size:.78rem;font-family:inherit;resize:vertical;min-height:3.5rem;}
-.admin-override-hint{font-size:.66rem;color:var(--muted);line-height:1.45;margin-top:.35rem;}
-.admin-override-status{font-size:.68rem;margin-top:.4rem;min-height:1em;}
-.admin-override-status.saved{color:var(--green);}
-.admin-override-status.rejected{color:var(--red);}
 
 .hidden{display:none !important;}
 .submit-section{margin-top:1.5rem;text-align:center;}
@@ -136,6 +124,15 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     <div class="title-main">PFPI <span>Picks</span></div>
     <div class="subtitle" id="subtitle">Loading your picks...</div>
   </div>
+  <!-- Persistent reminder (2026-09-09, per Yeti -- see BUILD_LOG.md's
+       "Saved" UX fix): a real family member (Christie) read the per-pick
+       "Saved." confirmation as "I'm done" and never clicked Submit.
+       Lives outside #content (not wiped by its innerHTML reset on every
+       loadPicks()/render) and is kept in sync by updateUnsubmittedBanner()
+       -- shown whenever any picked, not-yet-locked game exists, hidden
+       otherwise. Purely a visibility aid; changes nothing about what a
+       pick-button click itself saves. -->
+  <div class="banner warn hidden" id="unsubmittedBanner"></div>
   <div id="content"><div class="loading">Loading...</div></div>
   <div class="submit-section hidden" id="submitSection">
     <button class="submit-btn" id="submitBtn">Submit picks</button>
@@ -249,50 +246,6 @@ const params = new URLSearchParams(window.location.search);
 const token = params.get("token");
 
 // ============================================================
-// ADMIN DEADLINE OVERRIDE (Yeti-only -- see picks-worker.js's own comment
-// on handleDeadlineOverride for the full picture of this feature)
-// ============================================================
-// Real scenario (2026-09-09, per Yeti): he opens a team's real picks link
-// himself to help them and finds a game already past its deadline that
-// still needs fixing -- this lets him save it right here, with a
-// mandatory reason and an accountability email to Greg (Cc him), instead
-// of building a separate correction link first.
-//
-// Detection is airtight by construction, not by convention: it's the
-// EXACT same localStorage key admin.html already uses for its own saved
-// session (ADMIN_SESSION_STORAGE_KEY there), checked against the real,
-// server-side admin-session KV entry via GET /verify-session?kind=admin
-// (a real KV lookup done by verifyAdminToken -- not "a string exists").
-// A family member's browser, loading this exact same link, has never
-// logged into admin.html and so has no such localStorage entry at all --
-// `isAdminSession` stays false and every override control below is never
-// added to the DOM, not just hidden by CSS. Fails closed on ANY
-// ambiguity (missing token, network error, or a rejected/expired token),
-// same as admin.html's own restoreSessionIfSaved().
-const ADMIN_SESSION_STORAGE_KEY = "pfpi-admin-session-token";
-let isAdminSession = false;
-let adminSessionToken = null;
-
-async function checkAdminSession() {
-  let saved = null;
-  try { saved = localStorage.getItem(ADMIN_SESSION_STORAGE_KEY); } catch (e) {}
-  if (!saved) return false;
-  try {
-    const res = await fetch(`${WORKER_BASE}/verify-session?kind=admin`, {
-      headers: { "X-Session-Token": saved },
-    });
-    const data = await res.json();
-    if (data && data.valid) {
-      adminSessionToken = saved;
-      return true;
-    }
-  } catch (e) {
-    // Network error -- fail closed, exactly like admin.html.
-  }
-  return false;
-}
-
-// ============================================================
 // DATE/TIME FORMATTING
 // ============================================================
 // The deadline itself is computed exactly once, server-side, by
@@ -350,13 +303,6 @@ async function loadPicks() {
     return;
   }
 
-  // Kicked off in parallel with the real /my-picks fetch below, not
-  // awaited until just before rendering -- so an admin session check
-  // never adds a visible delay, and (more importantly) so the override
-  // controls are never added to the DOM and then removed a beat later;
-  // by the time any card is built, this has already resolved.
-  const adminCheckPromise = checkAdminSession();
-
   let res, data;
   try {
     res = await fetch(`${WORKER_BASE}/my-picks?token=${encodeURIComponent(token)}`);
@@ -393,8 +339,6 @@ async function loadPicks() {
   if (data.isCorrection) {
     content.innerHTML = `<div class="banner info">This is a one-time correction link for one game only — no other games from this week are shown on it. It expires automatically at kickoff.</div>`;
   }
-
-  isAdminSession = await adminCheckPromise;
 
   // Chronological by kickoff, then grouped by kickoff calendar date (ET) --
   // games within a group are already in kickoff order since the full list
@@ -437,15 +381,6 @@ async function loadPicks() {
       card.className = "game-card" + (game.locked ? " locked" : "");
       card.dataset.away = game.away;
       card.dataset.home = game.home;
-      // Admin override only ever applies to the DEADLINE-passed lock, not
-      // the permanent post-submission lock -- an already-submitted pick
-      // has its own dedicated fix path (the correction-link tool,
-      // handleSendCorrectionEmail), and this real-time control is
-      // specifically for "the deadline passed but nothing was ever
-      // submitted." Also requires isAdminSession, so this is `false` for
-      // literally every visitor except one with a real, just-verified
-      // admin session (see checkAdminSession above).
-      const showOverrideControl = isAdminSession && game.locked && !game.submissionLocked;
       card.innerHTML = `
         <div class="game-teams">
           <div class="team-slot">
@@ -460,32 +395,12 @@ async function loadPicks() {
         </div>
         <div class="kickoff-time">${fmtKickoffTime(game.kickoffISO)}</div>
         ${game.locked ? `<div class="locked-tag">${game.submissionLocked ? "Submitted — locked in" : "Locked"}</div>` : ""}
-        ${showOverrideControl ? `
-          <div class="admin-override">
-            <button class="admin-override-toggle" type="button">Admin override</button>
-            <div class="admin-override-form hidden">
-              <textarea class="admin-override-reason" placeholder="Reason for this override (required) -- emailed to Greg verbatim"></textarea>
-              <div class="admin-override-hint">Pick a team below to save with this reason. Bypasses this one game's deadline and emails Greg (Cc Yeti).</div>
-              <div class="admin-override-status"></div>
-            </div>
-          </div>
-        ` : ""}
         <div class="pick-buttons">
           <button class="pick-btn" data-team="${game.away}">${game.away}</button>
           <button class="pick-btn" data-team="${game.home}">${game.home}</button>
         </div>
         <div class="save-status"></div>
       `;
-
-      if (showOverrideControl) {
-        const toggleBtn = card.querySelector(".admin-override-toggle");
-        const formEl = card.querySelector(".admin-override-form");
-        toggleBtn.onclick = () => {
-          const opening = formEl.classList.contains("hidden");
-          formEl.classList.toggle("hidden", !opening);
-          toggleBtn.textContent = opening ? "Cancel override" : "Admin override";
-        };
-      }
 
       const buttons = card.querySelectorAll(".pick-btn");
       buttons.forEach(btn => {
@@ -500,27 +415,6 @@ async function loadPicks() {
         // they've made up their mind.
         btn.onclick = () => {
           if (game.locked) {
-            // An admin with the override form open on this exact card
-            // saves via the override endpoint instead of hitting the
-            // normal locked popup -- but ONLY once a real reason is
-            // typed; a required-but-empty box still refuses to submit,
-            // enforced here (not just by graying out the button) since
-            // the server independently enforces it too either way.
-            if (showOverrideControl) {
-              const formEl = card.querySelector(".admin-override-form");
-              if (!formEl.classList.contains("hidden")) {
-                const reasonEl = card.querySelector(".admin-override-reason");
-                const overrideStatusEl = card.querySelector(".admin-override-status");
-                const reason = reasonEl.value.trim();
-                if (!reason) {
-                  overrideStatusEl.textContent = "A reason is required before saving an override.";
-                  overrideStatusEl.className = "admin-override-status rejected";
-                  return;
-                }
-                saveDeadlineOverride(game, btn.dataset.team, reason, buttons, card.querySelector(".save-status"), overrideStatusEl);
-                return;
-              }
-            }
             // Two distinct, real reasons a game can be locked (Part 2a,
             // 2026-09-05): it was already submitted (permanent, regardless
             // of time left), or its deadline simply passed. Different
@@ -559,6 +453,28 @@ async function loadPicks() {
     document.getElementById("submitBtn").disabled = true;
     document.getElementById("gracelinModal").classList.remove("hidden");
   }
+
+  updateUnsubmittedBanner();
+}
+
+// Per Yeti (2026-09-09): a real family member (Christie) read the
+// per-pick "Saved." confirmation as meaning her week was complete, and
+// never clicked Submit -- so her genuinely-picked games never got
+// notified/locked (see BUILD_LOG.md's "submitted-vs-saved" fix). Shown
+// whenever ANY currently-visible game has a selected pick that isn't
+// locked yet -- i.e. picked but not yet submitted -- hidden the moment
+// that's no longer true (nothing picked yet, or everything picked has
+// been submitted). Purely a visibility aid: changes nothing about what a
+// pick-button click itself saves, and nothing about what Submit does.
+function updateUnsubmittedBanner() {
+  const bannerEl = document.getElementById("unsubmittedBanner");
+  const hasUnsubmittedPick = !!document.querySelector(".game-card:not(.locked) .pick-btn.selected");
+  if (hasUnsubmittedPick) {
+    bannerEl.textContent = "You have picks that are saved but not yet submitted -- they won't count until you click \"Submit picks\" below.";
+    bannerEl.classList.remove("hidden");
+  } else {
+    bannerEl.classList.add("hidden");
+  }
 }
 
 async function savePick(game, teamPicked, buttons, statusEl) {
@@ -592,57 +508,18 @@ async function savePick(game, teamPicked, buttons, statusEl) {
       // between render and click (Submit is a separate, deliberate action).
       showLockedModal(game, "deadline");
     } else {
-      statusEl.textContent = teamPicked ? "Saved." : "Cleared.";
+      // Per Yeti (2026-09-09): "Saved." alone read as "you're done" to a
+      // real family member, who never went on to click Submit -- this
+      // can no longer be mistaken for completion. `updateUnsubmittedBanner()`
+      // below is the second, harder-to-miss layer of the same fix.
+      statusEl.textContent = teamPicked ? "Saved -- don't forget to hit Submit when you're done." : "Cleared.";
       statusEl.className = "save-status saved";
     }
   } catch (e) {
     statusEl.textContent = "Could not save, try again.";
     statusEl.className = "save-status rejected";
   }
-}
-
-// Only ever called from a card that already passed BOTH gates above:
-// isAdminSession (a real, server-verified admin session) AND a non-empty
-// typed reason. `team`/`week` come from `currentTeam`/`currentWeekLabel`
-// -- the server-verified values this token's own /my-picks response
-// already carried, never anything typed or guessed client-side -- and
-// the server (handleDeadlineOverride, picks-worker.js) independently
-// re-checks the admin session, the real roster, and the reason anyway,
-// so nothing here is trusted on faith.
-async function saveDeadlineOverride(game, teamPicked, reason, buttons, statusEl, overrideStatusEl) {
-  overrideStatusEl.textContent = "Saving override...";
-  overrideStatusEl.className = "admin-override-status";
-  try {
-    const res = await fetch(`${WORKER_BASE}/admin/deadline-override`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Admin-Token": adminSessionToken },
-      body: JSON.stringify({
-        team: currentTeam,
-        week: currentWeekLabel,
-        gameId: game.id,
-        newPick: teamPicked,
-        adminName: "Yeti",
-        reason,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      overrideStatusEl.textContent = data.error || "Override failed.";
-      overrideStatusEl.className = "admin-override-status rejected";
-      return;
-    }
-    buttons.forEach(b => b.classList.toggle("selected", b.dataset.team === teamPicked));
-    game.pick = teamPicked;
-    statusEl.textContent = "Saved via admin override.";
-    statusEl.className = "save-status saved";
-    overrideStatusEl.textContent = data.emailed
-      ? "Override saved -- emailed to Greg (Cc Yeti)."
-      : "Override saved, but the email may not have sent -- check Worker logs.";
-    overrideStatusEl.className = "admin-override-status saved";
-  } catch (e) {
-    overrideStatusEl.textContent = "Could not reach the server.";
-    overrideStatusEl.className = "admin-override-status rejected";
-  }
+  updateUnsubmittedBanner();
 }
 
 // ============================================================

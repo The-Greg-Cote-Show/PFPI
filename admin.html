@@ -282,6 +282,51 @@ button:hover{opacity:.9;}
       <div class="status" id="correctionStatus"></div>
     </div>
 
+    <!-- Admin deadline override (relocated 2026-09-09, per Yeti, from
+         picks.html itself -- see BUILD_LOG.md "Item 5"). Same backend
+         (handleDeadlineOverride, POST /admin/deadline-override), same
+         required-reason + accountability-email + audit-log behavior,
+         unchanged -- only how the target game is selected changed, from
+         clicking a locked card directly on a real team's live link to
+         picking it here via three real dropdowns. Naturally satisfies the
+         original "invisible to non-admins" requirement by living inside
+         this already-authenticated portal instead of needing its own
+         detection logic layered onto a public-facing page. -->
+    <div class="panel hidden" id="overridePanel">
+      <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Admin deadline override</div>
+      <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
+        For saving/fixing one team's pick for one game directly, bypassing
+        that game's deadline lock — for when a real link shows a game
+        already past its deadline that still needs fixing/entering. A real
+        reason is required and this always emails Greg (Cc you) naming the
+        team, week, game, pick, and reason verbatim, logged the same way
+        every other admin override is.
+      </div>
+      <label for="overrideWeek">Week</label>
+      <select id="overrideWeek"></select>
+      <label for="overrideTeam">Team</label>
+      <select id="overrideTeam">
+        <optgroup label="Real roster">
+          <option value="Lobos">Greg's Lobos</option>
+          <option value="Roughriders">Dick's Roughriders</option>
+          <option value="Maniacs">Mom's Maniacs</option>
+          <option value="Critters">Chris' Critters</option>
+          <option value="Chickens">Mike's Chickens</option>
+          <option value="Ferraris">Christie's Ferraris</option>
+          <option value="Llamas">Tati's Llamas</option>
+          <option value="Giraffes">Gracelin's Giraffes</option>
+        </optgroup>
+      </select>
+      <label for="overrideGameId">Game</label>
+      <select id="overrideGameId"></select>
+      <label for="overridePick">Pick</label>
+      <select id="overridePick"></select>
+      <label for="overrideReason">Reason (required)</label>
+      <textarea id="overrideReason" placeholder="Why this override is needed -- emailed to Greg verbatim"></textarea>
+      <button id="overrideBtn">Save override</button>
+      <div class="status" id="overrideStatus"></div>
+    </div>
+
     <div class="panel hidden" id="triggerPollPanel">
       <div style="font-size:.85rem;font-weight:700;margin-bottom:.5rem;">Manually trigger a poll</div>
       <div style="font-size:.72rem;color:var(--muted);line-height:1.5;">
@@ -558,6 +603,7 @@ function showLoggedIn() {
   document.getElementById("loginPanel").classList.add("hidden");
   document.getElementById("resendPicksPanel").classList.remove("hidden");
   document.getElementById("correctionPanel").classList.remove("hidden");
+  document.getElementById("overridePanel").classList.remove("hidden");
   document.getElementById("triggerPollPanel").classList.remove("hidden");
   document.getElementById("clearPicksPanel").classList.remove("hidden");
   document.getElementById("unlockPicksPanel").classList.remove("hidden");
@@ -568,6 +614,7 @@ function showLoggedIn() {
   document.getElementById("mainSectionTabs3").classList.remove("hidden");
   switchMainSection("admin");
   populateCorrectionWeeks();
+  populateOverrideWeeks();
   populateMissingPicksWeeks();
   populateUnlockPicksWeeks();
   populateMbgWeeks();
@@ -585,6 +632,7 @@ function clearSession(message) {
   document.getElementById("loginPanel").classList.remove("hidden");
   document.getElementById("resendPicksPanel").classList.add("hidden");
   document.getElementById("correctionPanel").classList.add("hidden");
+  document.getElementById("overridePanel").classList.add("hidden");
   document.getElementById("triggerPollPanel").classList.add("hidden");
   document.getElementById("clearPicksPanel").classList.add("hidden");
   document.getElementById("unlockPicksPanel").classList.add("hidden");
@@ -898,6 +946,144 @@ async function populateCorrectionGames() {
 }
 
 document.getElementById("correctionWeek").onchange = populateCorrectionGames;
+
+// ============================================================
+// ADMIN DEADLINE OVERRIDE (relocated 2026-09-09, per Yeti, from
+// picks.html -- see BUILD_LOG.md "Item 5"). Same dropdown-driven,
+// typo-safe pattern as the correction tool just above: Week -> Game
+// (populated from that week's real published schedule, same
+// data/week-N.json source), plus a 4th real control -- Pick -- populated
+// with that game's own two real teams once it's selected (not literally
+// one of the "three dropdowns" the task named, since a target game alone
+// doesn't say who to pick; kept as a dropdown rather than free text for
+// the same typo-safety reason as everything else here). Backend
+// (handleDeadlineOverride, POST /admin/deadline-override) is completely
+// unchanged from when this lived on picks.html.
+// ============================================================
+let overrideGamesCache = [];
+
+async function populateOverrideWeeks() {
+  const sel = document.getElementById("overrideWeek");
+  const currentWeek = await fetchCurrentWeek();
+  sel.innerHTML = "";
+  for (let w = 1; w <= currentWeek; w++) {
+    const opt = document.createElement("option");
+    opt.value = String(w);
+    opt.textContent = "Week " + w;
+    sel.appendChild(opt);
+  }
+  sel.value = String(currentWeek);
+  await populateOverrideGames();
+}
+
+async function populateOverrideGames() {
+  const week = document.getElementById("overrideWeek").value;
+  const gameSel = document.getElementById("overrideGameId");
+  gameSel.innerHTML = "";
+  overrideGamesCache = [];
+
+  try {
+    const res = await fetch(`data/week-${week}.json?t=${Date.now()}`);
+    if (res.ok) {
+      const data = await res.json();
+      overrideGamesCache = Array.isArray(data.games) ? data.games : [];
+    }
+  } catch (e) {
+    overrideGamesCache = [];
+  }
+
+  if (overrideGamesCache.length === 0) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No schedule loaded for this week yet";
+    gameSel.appendChild(opt);
+    gameSel.disabled = true;
+  } else {
+    overrideGamesCache.forEach(g => {
+      const opt = document.createElement("option");
+      opt.value = g.id;
+      opt.textContent = `${g.away} @ ${g.home} — ${fmtCorrectionKickoff(g.kickoffISO)}`;
+      gameSel.appendChild(opt);
+    });
+    gameSel.disabled = false;
+  }
+  populateOverridePick();
+}
+
+function populateOverridePick() {
+  const gameId = document.getElementById("overrideGameId").value;
+  const pickSel = document.getElementById("overridePick");
+  pickSel.innerHTML = "";
+  const game = overrideGamesCache.find(g => g.id === gameId);
+  if (!game) {
+    pickSel.disabled = true;
+    return;
+  }
+  [game.away, game.home].forEach(team => {
+    const opt = document.createElement("option");
+    opt.value = team;
+    opt.textContent = team;
+    pickSel.appendChild(opt);
+  });
+  pickSel.disabled = false;
+}
+
+document.getElementById("overrideWeek").onchange = populateOverrideGames;
+document.getElementById("overrideGameId").onchange = populateOverridePick;
+
+document.getElementById("overrideBtn").onclick = async () => {
+  const statusEl = document.getElementById("overrideStatus");
+  const gameId = document.getElementById("overrideGameId").value;
+  const newPick = document.getElementById("overridePick").value;
+  const reason = document.getElementById("overrideReason").value.trim();
+
+  if (!gameId) {
+    statusEl.textContent = "No game selected -- pick a week with a loaded schedule first.";
+    statusEl.className = "status error";
+    return;
+  }
+  if (!newPick) {
+    statusEl.textContent = "No pick selected.";
+    statusEl.className = "status error";
+    return;
+  }
+  if (!reason) {
+    statusEl.textContent = "A reason is required.";
+    statusEl.className = "status error";
+    return;
+  }
+
+  const body = {
+    team: document.getElementById("overrideTeam").value,
+    week: parseInt(document.getElementById("overrideWeek").value, 10),
+    gameId, newPick, reason,
+    adminName: "Yeti",
+  };
+  statusEl.textContent = "Saving...";
+  statusEl.className = "status";
+  try {
+    const res = await fetch(`${WORKER_BASE}/admin/deadline-override`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Admin-Token": sessionToken },
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Override failed.";
+      statusEl.className = "status error";
+      return;
+    }
+    statusEl.textContent = data.emailed
+      ? "Saved and emailed to Greg (Cc you)."
+      : "Saved, but the email may not have sent -- check Worker logs.";
+    statusEl.className = "status ok";
+    document.getElementById("overrideReason").value = "";
+  } catch (e) {
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "status error";
+  }
+};
 
 document.getElementById("correctionBtn").onclick = async () => {
   const statusEl = document.getElementById("correctionStatus");

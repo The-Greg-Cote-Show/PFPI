@@ -8411,3 +8411,241 @@ games in question.**
   polling the real public JSON until it flipped. Final live state
   confirmed for both real games: Wednesday's now correctly shows all 8
   real picks, Thursday's remains correctly hidden.
+
+## Overnight build #3 (2026-09-09, same night): submitted-vs-saved universal fix, relocate Admin Override, "Saved" UX fix
+
+Third unattended overnight run, same night. Yeti's task doc named a
+confirmed root cause from the last two builds -- the whole system was
+inconsistent about whether a "picked" game means genuinely SUBMITTED
+(locked) or merely SAVED (an individual pick-button click) -- and asked
+for a full audit + universal fix, plus relocating last night's Admin
+Override off `picks.html` entirely, plus a real UX fix for the exact
+human confusion that caused tonight's Ferraris/Giraffes situation in the
+first place. Logging in order, per the hard rules.
+
+### Main fix: one shared definition of "has this team picked this game," applied everywhere
+
+**Full audit performed before changing anything, per the hard rule.**
+Grepped every file in the repo for every pattern that could compute
+pick-completeness (`picksByTeam`, `lockedByTeam`, `allTeamsLocked`,
+`picksRevealed`, `missingGames`, `missingTeams`, `getSavedPicks`,
+`getLockedGameIds`, `!saved[`, `!(g.picks`, etc.) across
+`picks-worker.js`, `worker.js`, `admin.html`, `brief.html`, `index.html`,
+`shared.js`, `analytics-shared.js`. Full result:
+
+**Real spots found checking pick completeness, and their status:**
+
+| Spot | File | Was reading | Fixed? |
+|---|---|---|---|
+| `handleAdminWeekPicks` (`GET /admin/week-picks`) -- feeds the Commissioner Portal Missing Picks tab, brief.html's own copy of it, AND the Admin Portal's Missing Picks by Game view, all three | `picks-worker.js` | `getSavedPicks` (saved) | **YES -- fixed** |
+| `handleSendReminderEmail` (`POST /greg/send-reminder`, per-team reminder) | `picks-worker.js` | `getSavedPicks` (saved) | **YES -- fixed** (judgment call, see below) |
+| `handleSendGameReminderEmail` (`POST /greg/send-game-reminder`, per-game reminder, added last session) | `picks-worker.js` | `getSavedPicks` (saved) | **YES -- fixed** (same judgment call) |
+| `buildWeekPublicJSON` (public per-game reveal condition) | `worker.js` | `getLockedGameIds`-equivalent (`locked-picks:`, i.e. already submission-based) | **Already correct -- confirmed, not touched.** This is the exact same conclusion last session's Item 4 investigation reached; re-confirmed again tonight rather than assumed, since the task doc's own framing implied it might still need a fix. |
+| `computeStandings`/Unique Hits scoring | `worker.js` | raw `picks:{week}:{team}` values | **Correctly out of scope** -- this only ever reads games that already have a FINAL result (deadline long passed, value already frozen by `isGameLocked`), so it's scoring an already-locked-by-time value, not answering "is this team done yet." Submission status is irrelevant to what already happened in a completed game. |
+| `handleGetPicks`/`handleSubmitPicks` (a picker's own `/my-picks` view of their own picks) | `picks-worker.js` | `getSavedPicks` (saved) | **Correctly out of scope, deliberately unchanged** -- a picker must keep seeing their own in-progress (saved-but-unsubmitted) selections reflected as selected on their own page; this is the save mechanism itself, explicitly excluded by the hard rules. |
+| `index.html`'s own picks display | `index.html` | Consumes `worker.js`'s already-computed `picksRevealed`/`picks` fields directly | **No independent logic to fix** -- confirmed by reading it, not assumed. |
+| `admin.html`/`brief.html` Missing Picks tab and Missing Picks by Game rendering | `admin.html`, `brief.html` | Consume `handleAdminWeekPicks`'s `games[].picks` field directly (`!(g.picks && g.picks[team])`) | **No client-side fix needed** -- fixing the one shared server endpoint above fixes all three consumers at once, confirmed by tracing each one's fetch call back to `/admin/week-picks`. |
+
+**The fix itself** (`picks-worker.js`): `handleAdminWeekPicks` now reads
+BOTH `getSavedPicks` (for the real pick value, once shown) AND
+`getLockedGameIds` (to decide WHETHER to show it) per team, and only
+populates `picks[team]` when `lockedByTeam[team].has(g.id)` is true --
+the exact same real signal (`locked-picks:{week}:{team}`)
+`buildWeekPublicJSON` already correctly uses for the public reveal
+condition. This is the "one single, shared definition" the task asked
+for: after tonight, every completeness check in the system reads the
+same underlying KV signal, not two different ones.
+
+**Judgment call, flagged per the hard rules rather than silently decided
+either way**: the two reminder-email handlers
+(`handleSendReminderEmail`/`handleSendGameReminderEmail`) were not
+explicitly named in the task's "at minimum" list, but both compute
+"missing" the same way (`!saved[gameId]`) and exist specifically to
+nudge someone toward finishing. Changed both to use `getLockedGameIds`
+too, reasoning: leaving them on the old saved-based definition would
+mean a team in Ferraris/Giraffes' exact situation (picked, never
+submitted) would NEVER receive a reminder at all -- silently treated as
+done by the one mechanism whose whole job is catching exactly this. Note
+for Yeti: this does NOT change either reminder's email COPY (still says
+"is still missing ... picks for: X"), only which teams/games trigger it
+-- a team that's picked-but-not-submitted now gets nudged with wording
+that still reads as "you haven't picked this," which is slightly
+imprecise (they have picked it, just not confirmed it) but was judged
+less confusing than leaving them un-reminded. Flagging this wording gap
+explicitly in case it's worth a follow-up.
+
+**Verification**: `test_submitted_vs_saved.mjs` (scratchpad, not
+committed) -- imported the real, unmodified `picks-worker.js` against an
+in-memory mock KV seeded with the EXACT real shape found in production
+(6 teams genuinely locked, Ferraris/Giraffes with a real saved value but
+no lock entry). 8 assertions, all passing: the 6 genuinely-submitted
+teams appear in the response, Ferraris and Giraffes do NOT (despite
+having real values), and once Ferraris' mock lock entry is added, she
+immediately starts appearing correctly with her real value while
+Giraffes (still unlocked in the mock) stays absent -- confirms the fix
+is precise, not a blanket change. Also re-ran and updated
+`test_item3.mjs` from last session (its old assertions assumed
+saved-based "missing," now stale by design -- updated to seed
+`locked-picks:` instead, all 14 assertions pass against the new
+definition) and re-ran `test_overnight.mjs` (25/25 still pass,
+unaffected). Zero real KV or Resend calls made in any of this.
+
+### Item 5: Admin Override relocated to the Admin Portal
+
+**Removed entirely from `picks.html`**: the admin-session detection
+(`checkAdminSession`, `ADMIN_SESSION_STORAGE_KEY`, `isAdminSession`,
+`adminSessionToken`), the per-card override control (CSS, markup, toggle
+button, reason box), and `saveDeadlineOverride()`. Verified via a
+repo-wide grep of `picks.html` for `admin`/`override` (case-insensitive)
+afterward -- the only remaining match is the pre-existing, unrelated
+"Admin-issued correction links" comment describing the separate
+correction-link feature. Nothing admin-related remains on this
+public-facing page.
+
+**Rebuilt as a new Admin Portal panel** (`admin.html`, `#overridePanel`):
+Week -> Team -> Game, all real dropdowns, no free text anywhere -- Week
+and Team reuse the exact same real-8-team/real-week patterns already
+established by the correction tool right above it in the same tab; Game
+is populated from that week's real published schedule
+(`data/week-{week}.json`, the same public source and fetch pattern the
+correction tool's own Game dropdown already uses) and repopulates on
+Week change. A 4th real control, Pick, was added beyond the task's
+literal "three dropdowns" -- populated with that game's own two real
+teams once a game is selected -- since a target game alone doesn't say
+which team to pick; kept as a dropdown rather than free text for the
+same typo-safety reason as everything else on this page, so this doesn't
+violate the "no free-text anywhere" instruction even though it's a
+control the task didn't explicitly enumerate.
+
+**Backend completely unchanged**: still `handleDeadlineOverride` /
+`POST /admin/deadline-override`, the exact same function from last
+session -- required reason, same audit-trail entry
+(`override-log:{week}:{timestamp}`, `action: "deadline-override"`), same
+accountability email (To Greg, Cc Yeti, subject naming team/week/game,
+body with the pick and reason verbatim). Only the caller changed, from a
+picks.html card click to this new panel's submit button. Verified this
+is genuinely unchanged by diffing the request shape sent from the new
+panel against the backend's own parameter list -- identical fields
+(`team, week, gameId, newPick, adminName, reason`).
+
+**Security posture**: this tool now lives entirely inside admin.html's
+existing login gate (shown/hidden by the same `showLoggedIn()`/
+`clearSession()` calls as every other panel), so the original "must be
+invisible to a non-admin" requirement is satisfied by construction --
+there's no page for a non-admin to load that could ever reveal it,
+rather than needing its own detection-and-fail-closed logic layered onto
+a page real family members also use. This is a strictly simpler, harder-
+to-get-wrong security posture than last night's version.
+
+### Item 6: "Saved" no longer reads as "you're done"
+
+**Root cause, confirmed**: `savePick()` (`picks.html`) showed a bare
+"Saved." after every individual pick-button click -- accurate about what
+happened, but easily (and, per tonight's real report, actually) read as
+"my week is complete."
+
+**Two-layer fix, both live only on `picks.html`, nothing server-side
+touched:**
+1. **Per-pick wording**: changed to "Saved -- don't forget to hit Submit
+   when you're done." -- right where the confusion originally happened,
+   can no longer be read as completion.
+2. **Persistent banner** (`#unsubmittedBanner`, new): shown whenever ANY
+   currently-visible game has a selected-but-not-yet-locked pick,
+   regardless of which card the visitor most recently clicked --
+   "You have picks that are saved but not yet submitted -- they won't
+   count until you click 'Submit picks' below." Lives outside `#content`
+   so it survives that div's `innerHTML` reset on every render, and is
+   recomputed via `updateUnsubmittedBanner()` after every render
+   (`loadPicks()`) and after every individual save (`savePick()`,
+   including the locked-game-rejection path). Hides itself the moment
+   it's no longer true -- nothing picked yet, or everything picked has
+   been genuinely submitted -- so it can't become a permanent, ignorable
+   fixture the way a static reminder might.
+
+Chose "both a per-pick line AND a persistent banner" over either alone,
+per the task's own framing that this was a real human-confusion risk
+worth taking seriously: the per-pick text is easy to miss after several
+clicks across different cards (which is exactly what happened to
+Christie), while the banner stays visible regardless of which card was
+last touched, until the actual remaining action (Submit) is taken.
+
+**Neither the pick-button save mechanic nor Submit's own behavior was
+touched** -- confirmed by diffing: `savePick()`'s actual fetch call to
+`/submit-picks` and `doSubmit()`'s call to `/confirm-picks` are
+byte-for-byte unchanged; only display strings and the new banner element/
+function were added.
+
+**Verification**: extracted and syntax-checked both of `picks.html`'s
+inline `<script>` blocks after every edit (`node --check`, both pass).
+No real submission needed to confirm wording -- read the exact rendered
+strings directly out of the real file's source rather than guessing from
+memory.
+
+### Item 7: Tomorrow's game (SF @ LA) reveal -- confirmed live, RESOLVED
+
+Per Yeti's real report: Christie's and Gracelin's picks are now
+genuinely submitted (he submitted on their behalf after speaking with
+Christie). Confirmed this directly, read-only, against the real
+production KV before checking anything else:
+- `locked-picks:1:Ferraris` -> `["2026_01_NE_SEA","2026_01_SF_LA"]`
+- `locked-picks:1:Giraffes` -> `["2026_01_NE_SEA","2026_01_SF_LA"]`
+
+Both teams are now genuinely locked for BOTH games -- meaning all 8 real
+teams have a genuine `locked-picks` entry for `2026_01_SF_LA`, so
+`buildWeekPublicJSON`'s condition (a) (`allTeamsLocked`) is now
+genuinely met for that game, independent of whether its deadline has
+passed (it hasn't -- kickoff is still ~a day out).
+
+**Fetched the real live public JSON immediately after** (`GET
+https://pfpi.me/data/week-1.json`, read-only): `2026_01_SF_LA` now shows
+`picksRevealed:true` with all 8 real teams' real picks
+(`{Lobos:LA, Roughriders:LA, Maniacs:LA, Critters:LA, Chickens:LA,
+Ferraris:LA, Llamas:SF, Giraffes:LA}`). **Already resolved, confirmed
+live, before this session even finished deploying tonight's fix** --
+because `buildWeekPublicJSON`'s reveal logic was never actually broken
+(see the main fix's audit table above, re-confirmed again this session):
+once the real underlying data changed (Yeti's real submissions on
+Christie's/Gracelin's behalf), the always-correct existing logic picked
+it up on its normal publish cadence, exactly as designed. Tonight's main
+fix (`handleAdminWeekPicks` et al.) didn't need to run at all to resolve
+this specific case -- it fixes the ADMIN-FACING views that misled Yeti
+into not immediately noticing sooner, not the public reveal path itself.
+
+**Item 7 status: RESOLVED, confirmed live.** Both real games in question
+(NE @ SEA from last session, SF @ LA tonight) now correctly show
+`picksRevealed:true` with all 8 real teams' picks visible.
+
+### Deployment
+
+- `pfpi-picks-worker` deployed via `wrangler deploy` -- Version ID
+  `34fede03-de08-452e-8b6d-9eb67edccb48`. Confirmed live and still
+  correctly gated: `GET /admin/week-picks?week=1` with no session token
+  -> real `403`.
+- `pfpi-scores-worker` (`worker.js`) was NOT redeployed this session --
+  no changes were made to that file (its reveal logic was confirmed
+  already correct, not touched).
+- `admin.html`/`picks.html` frontend changes: committed and pushed (see
+  commit hash below) -- both files pass `node --check` on their
+  extracted inline `<script>` blocks.
+
+### Status summary (all three items + the main fix)
+
+- **Main fix (submitted-vs-saved, universal)**: DONE. Full audit table
+  above covers every real spot found; the one shared server-side
+  definition (`getLockedGameIds`, i.e. genuine submission) now backs
+  `handleAdminWeekPicks` (both Missing Picks views + brief.html) and
+  both reminder-email handlers (the latter a flagged judgment call, not
+  explicitly named in the task but reasoned through above). The public
+  reveal condition was re-confirmed already correct, not changed.
+- **Item 5 (relocate Admin Override)**: DONE. Fully removed from
+  `picks.html` (verified by grep), rebuilt as a Week/Team/Game(/Pick)
+  dropdown-driven Admin Portal panel, backend genuinely unchanged (same
+  endpoint, same reason requirement, same email, same audit log).
+- **Item 6 ("Saved" UX fix)**: DONE. Per-pick wording no longer reads as
+  completion, plus a new persistent banner that stays visible until
+  every picked game is genuinely submitted. Save mechanic and Submit
+  behavior both confirmed untouched.
+- **Item 7 (tomorrow's game reveal)**: RESOLVED, confirmed live. Both
+  Ferraris and Giraffes are now genuinely locked for SF @ LA (and NE @
+  SEA), and the real public JSON confirms `picksRevealed:true` with all
+  8 real teams' picks showing for both games.

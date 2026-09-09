@@ -951,14 +951,28 @@ async function handleAdminWeekPicks(request, env) {
 
   const schedule = await getWeekSchedule(week, env);
   const picksByTeam = {};
+  const lockedByTeam = {};
   for (const team of TEAMS) {
     picksByTeam[team] = (await getSavedPicks(team, week, env)) || {};
+    lockedByTeam[team] = await getLockedGameIds(team, week, env);
   }
 
   const games = schedule.map(g => {
     const picks = {};
     for (const team of TEAMS) {
-      if (picksByTeam[team][g.id]) picks[team] = picksByTeam[team][g.id];
+      // Submitted-vs-saved fix (2026-09-09, per Yeti -- see BUILD_LOG.md):
+      // a game only counts as "picked" here once a team has genuinely
+      // SUBMITTED it (in `locked-picks:{week}:{team}`, the exact same
+      // signal buildWeekPublicJSON/worker.js already uses for the public
+      // reveal condition) -- not merely saved via an individual
+      // pick-button click. The saved VALUE itself is still real and
+      // correct the moment it's picked; this only changes when it's
+      // reported as "done" through this admin-facing completeness view
+      // (Missing Picks tab, Missing Picks by Game, and anything else that
+      // reads this endpoint). Was previously keyed off `picksByTeam`
+      // alone (saved, not submitted) -- the confirmed root cause of
+      // tonight's Ferraris/Giraffes confusion.
+      if (lockedByTeam[team].has(g.id)) picks[team] = picksByTeam[team][g.id];
     }
     return { id: g.id, home: g.home, away: g.away, kickoffISO: g.kickoffISO, deadline: g.deadline, picks };
   });
@@ -1164,8 +1178,16 @@ async function handleSendReminderEmail(request, env) {
     return jsonResponse({ error: "No schedule found for that week." }, 400, request);
   }
 
-  const saved = (await getSavedPicks(team, weekNum, env)) || {};
-  const missing = schedule.filter(g => !saved[g.id]);
+  // Submitted-vs-saved fix (2026-09-09, per Yeti -- see BUILD_LOG.md):
+  // "missing" now means not yet SUBMITTED (locked), not merely not yet
+  // saved -- a team that's picked a game but never clicked Submit is
+  // exactly the case this fix exists for; the old saved-only check would
+  // have silently skipped reminding them at all. Flagged in BUILD_LOG.md
+  // as a judgment call: this endpoint's own explicit scope in the task
+  // was "any other spot that computes has-team-X-picked-game-Y," which
+  // this genuinely is.
+  const locked = await getLockedGameIds(team, weekNum, env);
+  const missing = schedule.filter(g => !locked.has(g.id));
   if (missing.length === 0) {
     return jsonResponse({ error: `${team} has already picked every game this week.` }, 400, request);
   }
@@ -1226,10 +1248,13 @@ async function handleSendGameReminderEmail(request, env) {
 
   // Real 8-team roster only, matching the Missing Picks by Game view's own
   // scope -- not FAMILY_MEMBERS' test-team spread other admin tools use.
+  // Submitted-vs-saved fix (2026-09-09, per Yeti): "missing" means not yet
+  // SUBMITTED (locked), matching handleAdminWeekPicks/
+  // handleSendReminderEmail's identical fix above -- see BUILD_LOG.md.
   const missingTeams = [];
   for (const team of TEAMS) {
-    const saved = (await getSavedPicks(team, weekNum, env)) || {};
-    if (!saved[gameId]) missingTeams.push(team);
+    const locked = await getLockedGameIds(team, weekNum, env);
+    if (!locked.has(gameId)) missingTeams.push(team);
   }
   if (missingTeams.length === 0) {
     return jsonResponse({ error: `Every real team has already picked ${game.away} @ ${game.home}.` }, 400, request);

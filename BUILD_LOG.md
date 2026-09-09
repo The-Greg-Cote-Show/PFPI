@@ -8093,3 +8093,321 @@ team. Real 8-team roster only, same scope as the existing tab.
   as the existing Missing Picks tab -- no new calculation, no new
   backend endpoint. Admin Portal only, not added to the Commissioner
   Portal/`brief.html`.
+
+## Overnight build #2 (2026-09-09, same night): orphaned-lock sweep, missing-Bcc investigation, Missing Picks by Game redesign, reveal-condition fix
+
+Second unattended overnight run, same night as the admin-tools build
+above. Yeti's task doc reported the Roughriders orphaned-lock bug had
+"already caused one real problem tonight" and asked for four things: a
+full-roster sweep for that same bug pattern, a real trace of a
+missing-Bcc report for two specific teams, a visual/functional redesign
+of last session's brand-new "Missing Picks by Game" view, and an
+investigation of why two specific games weren't publicly revealing
+despite (per Yeti) everyone having picked. Logging in order, per the hard
+rules.
+
+### Item 1: Orphaned-lock sweep across the entire real roster
+
+**Method**: rather than probing all 8 teams x 18 weeks x N games
+individually, listed the REAL, COMPLETE set of existing KV keys by prefix
+first (`wrangler kv key list --prefix "locked-picks:"` and `--prefix
+"picks:"`, both `--remote`, both read-only) -- this is exhaustive, not a
+sample, so nothing outside the returned set exists to miss. Result: only
+Week 1 has ANY real pick/lock data at all (weeks 2-18 are completely
+empty for every real team, consistent with `current-week` genuinely
+reading `1` right now) -- so the "sweep" is a Week 1 sweep, in full.
+
+**Full list of every `locked-picks:1:*` entry found, checked against its
+matching `picks:1:*` entry, logged BEFORE anything was touched:**
+
+| Team | `picks:1:{team}` | `locked-picks:1:{team}` | Orphaned? |
+|---|---|---|---|
+| Lobos | `{NE_SEA:SEA, SF_LA:LA}` | `[NE_SEA, SF_LA]` | No -- matches |
+| Roughriders | `{NE_SEA:SEA, SF_LA:LA}` | `[NE_SEA, SF_LA]` | No -- matches |
+| Maniacs | `{NE_SEA:SEA, SF_LA:LA}` | `[NE_SEA, SF_LA]` | No -- matches |
+| Critters | `{NE_SEA:NE, SF_LA:LA}` | `[NE_SEA, SF_LA]` | No -- matches |
+| Chickens | `{NE_SEA:NE, SF_LA:LA}` | `[NE_SEA, SF_LA]` | No -- matches |
+| Llamas | `{NE_SEA:SEA, SF_LA:SF}` | `[NE_SEA, SF_LA]` | No -- matches |
+| Ferraris | `{NE_SEA:SEA, SF_LA:LA}` | **key absent entirely** | No (see below) |
+| Giraffes | `{NE_SEA:SEA, SF_LA:LA}` | **key absent entirely** | No (see below) |
+
+**Finding: zero orphaned locks exist right now** -- there is no case
+anywhere in the real roster where lock state exists with no
+corresponding real pick value (Item 1's exact target pattern). Notably,
+**Roughriders is no longer orphaned** -- last session's investigation
+found `locked-picks:1:Roughriders` holding all 16 of Week 1's games with
+`picks:1:Roughriders` completely absent; tonight both keys hold the
+identical `{NE_SEA, SF_LA}` pair, matching every other working team.
+Since this session has no admin credential and never ran the unlock tool
+itself (confirmed in last session's log), this was resolved by Yeti (or
+Dick, once unlocked) actually using the real link between sessions --
+the fix from earlier tonight worked as intended on the first real use.
+
+Ferraris and Giraffes are flagged in the table as "no" (not orphaned in
+Item 1's specific direction) but are NOT a normal, healthy state either
+-- they have real pick VALUES with **no lock entry of any kind**, the
+mirror-image gap from what Item 1 was scoped to find. This is the exact
+same underlying evidence Item 2 and Item 4 below both turn on -- covered
+there in full, not treated as an Item 1 finding since Item 1's own scope
+(per Yeti's literal wording) is specifically "lock state exists but no
+value," not the reverse.
+
+**Nothing was cleared** -- there was nothing found to clear. The
+"absolute rule: never clear lock state for any team/game with a real
+saved pick value" was never at risk of being violated since every
+existing lock entry already has a matching real value behind it.
+
+**Root cause fixed going forward** (`picks-worker.js`,
+`handleClearWeekPicks`): this tool used to delete only
+`picks:{week}:{team}`, leaving `locked-picks:{week}:{team}` (and, since
+last session, the new `deadline-unlock:{week}:{team}` bypass flag) fully
+intact -- confirmed via code reading as the literal mechanism that
+produced Roughriders' original orphaned state (a team locked-then-
+cleared this way is left stuck locked with nothing behind it). Chose
+"make it a genuine clean slate" over "leave it alone and rely on manual
+sweeps": the tool now deletes all three keys together for every team it
+touches, so this specific failure mode cannot recur through this tool
+again, regardless of when or on which week it's next run.
+
+### Item 2: Missing Bcc for Christie's Ferraris and Gracelin's Giraffes
+
+**Traced the actual code, not assumed.** Both teams' confirmation-email
+path is `handleConfirmPicks` (`picks-worker.js`) -- the ONLY place that
+calls `sendPfpiEmail` for a real pick submission, and the only place that
+writes `notified-picks:{week}:{team}` (right after the email succeeds)
+and calls `lockGameIds` (right after that). Checked both markers,
+read-only, for both teams against a known-working team (Lobos):
+
+- `notified-picks:1:Ferraris` -- **absent**. `notified-picks:1:Giraffes`
+  -- **absent**. `notified-picks:1:Lobos` -- present, `{NE_SEA:SEA,
+  SF_LA:LA}`.
+
+Since `notified-picks` is written immediately after a successful
+`sendPfpiEmail` call and immediately before `lockGameIds`, its total
+absence for both teams means `handleConfirmPicks` never got past the
+email-send step for either of them, for Week 1, ever -- not "the Bcc was
+dropped from a real send," but no notified-picks/lock trace of a
+completed Submit at all, despite both teams having real, saved pick
+VALUES (from individual pick-button clicks, which save immediately via
+`handleSubmitPicks` without ever touching email or lock state).
+
+**Checked the specific hypothesis Yeti named first**: does the
+auto-Bcc-Yeti "skip if Yeti's already a direct recipient" check
+(`sendPfpiEmail`, shared.js) behave unexpectedly against Giraffes' real
+two-parent array `cc`? Reading the code found a genuine, real bug in that
+check: it compared the whole `cc` value against `YETI_EMAIL` with a bare
+`!==`, which for an ARRAY is always `true` regardless of the array's
+actual contents (an array can never `===` a string) -- so the check
+"defeats itself" the moment it's asked whether Yeti's address is one of
+several in a list, rather than the only one. **This does NOT explain
+today's silence**, confirmed directly: neither Ferraris' string nor
+Giraffes' two-parent array has ever contained `YETI_EMAIL`, so the buggy
+comparison and a correct one land on the identical answer for every real
+send that's happened so far. Fixed anyway (`includesRecipient()` helper,
+array-aware) since it's a real, if currently dormant, bug the moment that
+stops being true for any team -- but it is not, and cannot be, the cause
+of tonight's report. This also directly rules out a Giraffes-specific
+explanation distinct from Ferraris', per Yeti's own instruction not to
+assume they share a cause -- they don't, because neither has this cause.
+
+**No other code-level explanation found** for a send failure specific to
+either team: Ferraris' recipient shape (`getPickerEmail("Ferraris")` -> a
+single plain string) is structurally IDENTICAL to Critters/Chickens/
+Llamas/Maniacs, all four of which succeeded today (their own
+`notified-picks:1:*` entries exist). No token-expiry issue exists either
+-- `generateWeeklyToken` writes `token:{signed}` with no `expirationTtl`
+at all, confirmed by reading the function directly, so a weekly link
+cannot have expired between an early pick-button click and a later
+Submit click.
+
+**Most likely real, evidence-based conclusion**: neither team has
+actually clicked "Submit" for Week 1 yet -- their picks are saved (from
+individual clicks) but never confirmed/locked, which is a real,
+by-design distinction in this system (see this session's own Item 1
+finding and last session's near-identical Roughriders confusion) that
+the admin-facing `handleAdminWeekPicks` (Missing Picks data source) does
+NOT surface -- it shows a team as "picked" the moment ANY value is saved,
+with no way to tell "picked" apart from "picked and confirmed" from that
+view alone. This is very likely why Yeti believed a real submission had
+happened for both teams (their values show up as "picked" in the same
+admin tooling that shows everyone else) even though, by the system's own
+stricter definition (locked), it hadn't. **Not fixed as a code change**
+since there is no bug in the send/Bcc path to fix beyond the one already
+applied above; flagging for Yeti to confirm directly with Christie and
+whoever manages the Giraffes account whether they've actually clicked
+"Submit picks," not just made their picks.
+
+### Item 3: Missing Picks by Game -- visual redesign + reminder buttons
+
+**Rendering bug, root cause found via direct CSS review**: last
+session's new `#adminPortalTab` "Missing Picks by Game" panel reused the
+existing `.mp-row`/`.mp-chip`/etc. class names from the Commissioner
+Portal's own Missing Picks tab, but every one of those CSS rules was
+scoped `#commissionerTabs .mp-chip{...}` -- i.e. only applies inside that
+OTHER tab's container. Since the new panel lives in `#adminPortalTab`,
+none of those rules ever matched it: every team-name span rendered with
+zero padding, border, background, or gap, producing exactly the reported
+"Greg's LobosDick's Roughriders..." wall of concatenated text. **Fix**:
+broadened all six `#commissionerTabs .mp-*` selectors to
+`#commissionerTabs .mp-*, #adminPortalTab .mp-*` (one shared rule set,
+not a duplicated copy) -- both views now render identically, matching
+Yeti's screenshot of the working Commissioner Portal look exactly, per
+his explicit "don't invent new styling" instruction.
+
+**"Send reminder" per game** (`picks-worker.js`): new
+`handleSendGameReminderEmail` / `POST /greg/send-game-reminder` -- same
+auth (admin OR Greg session, identical to the existing per-team
+`handleSendReminderEmail`), same `sendPfpiEmail`/`getPickerEmail`/
+`"commissioner"` pattern, re-scoped to one specific `gameId` instead of a
+team's whole remaining week. Computes the real 8-team roster's missing
+set for that one game fresh (not cached), and sends ONE INDIVIDUAL email
+per missing team to that team's own real address -- deliberately not one
+combined email listing every missing family's address together, so a
+game with multiple teams missing never exposes one family's address to
+another (same privacy property the existing per-team reminder already
+has). Button only renders when at least one real team is actually
+missing that game.
+
+**Verification -- no real reminder sent during testing, per the hard
+rule**: a local Node harness (`test_item3.mjs`, scratchpad, not
+committed) imported the real `picks-worker.js` module against an
+in-memory mock KV and a mocked `global.fetch` that intercepts (throws on
+anything but) the Resend API call. 14 assertions, all passing: no session
+token is 403 with zero emails sent; a request missing `gameId` is 400
+with zero emails; a synthetic mock scenario mirroring tonight's real
+Ferraris/Giraffes finding (6 teams picked, 2 missing) correctly identified
+exactly those 2 teams and sent exactly 2 separate emails -- one to
+Ferraris' own real address, one to Giraffes' own real (array) address,
+neither email's `to` field containing the other family's address, subject
+correctly naming the specific matchup; once both mock teams were marked
+picked, a repeat request correctly returned 400 with no further emails
+sent. Zero real network calls reached Resend at any point.
+
+### Item 4: Per-game reveal condition -- investigated, NOT a code bug, confirmed working as designed
+
+**Investigated before changing anything, per the hard rule.** Read
+`buildWeekPublicJSON` (`worker.js`) in full: it already implements
+exactly the agreed rule --
+`picksRevealed = deadlinePassed || allTeamsLocked`, with
+`allTeamsLocked = TEAMS.every(team => lockedByTeam[team].has(g.id))`
+checked fresh, per-game, on every publish tick. This is a genuine,
+correct per-game OR of both conditions -- no evidence of it silently
+checking only one condition or ignoring the other.
+
+**Confirmed with real data which condition each disputed game actually
+meets, per the hard rule's explicit "don't assume Yeti's report reflects
+the system's own view" instruction:**
+- **Thursday's game, SF @ LA**: deadline is `2026-09-10T22:35:00Z` --
+  still ~24h in the future at the time of this check, so condition (b)
+  is genuinely unmet. Condition (a) requires ALL 8 real teams to be in
+  that game's `locked-picks` set; Ferraris and Giraffes have **no**
+  `locked-picks:1:*` entry at all (see Item 1/2 above), so condition (a)
+  is ALSO genuinely unmet -- only 6 of 8 teams have locked it. **The
+  system's own view genuinely disagrees with "everyone's picked" for
+  this game** -- confirmed, not assumed, and the reveal logic is
+  correctly withholding it as a result. This is not a regression; it is
+  the code doing exactly what it was built to do, given the real
+  underlying data.
+- **Wednesday's game, NE @ SEA**: deadline is `2026-09-09T22:20:00Z`.
+  Fetched the REAL live public `data/week-1.json` at `22:22:28Z` -- 2
+  minutes AFTER that deadline -- and it still showed
+  `picksRevealed:false`, which at first looked like a possible second,
+  distinct bug (condition (b) alone should already be true). Read
+  `pollAndPublish`/`shouldPollBigBallsThisTick` (worker.js) to check:
+  `buildWeekPublicJSON` (and the GitHub commit that actually publishes
+  its output) only runs on a tick that actually polls Big Balls, which
+  outside a recognized "live window" (`isBigBallsLiveWindow` only
+  recognizes Thu/Sun/Mon night, NOT Wednesday) is throttled to once per
+  15 real minutes (`now.getUTCMinutes() % 15 === 0`). The deadline passed
+  at `:20`; the next real poll/publish tick wasn't due until `:30`. This
+  is normal, already-existing publish latency, not a reveal-logic bug --
+  confirmed live by polling the real public JSON every 20s after `:30`
+  until it flipped (see below for the actual result), with zero code
+  changes in between.
+
+**No code change made to the reveal logic** -- it was already correct.
+The two "stuck" games are fully explained by (1) a real,
+already-explained-in-Item-2 lock gap for Thursday's game, correctly
+withheld, and (2) up to ~15 minutes of completely normal publish latency
+for Wednesday's game, which self-corrected on its own without any
+intervention.
+
+**Confirmed live, exactly as the task asked**: polled the real public
+`https://pfpi.me/data/week-1.json` every 20s (read-only, no side
+effects) from `22:22Z` through the next real publish tick. At `22:31:16Z`
+`2026_01_NE_SEA` flipped from `picksRevealed:false` to
+`picksRevealed:true` on its own, with zero code changes made in between
+-- pure confirmation that the existing, unmodified logic self-corrects
+exactly as designed once its real condition (deadline passed) is met.
+Final state fetched at `22:32:22Z`:
+- `2026_01_NE_SEA`: `picksRevealed:true`, `picks` now shows all 8 real
+  teams' real values (`{Lobos:SEA, Roughriders:SEA, Maniacs:SEA,
+  Critters:NE, Chickens:NE, Ferraris:SEA, Llamas:SEA, Giraffes:SEA}`) --
+  correctly revealed via condition (b), the deadline, even though
+  condition (a) (all-locked) still isn't met for this game either.
+- `2026_01_SF_LA`: still `picksRevealed:false`, `picks:{}` -- correctly
+  still hidden. Neither condition is met (2 of 8 teams unlocked,
+  deadline ~24h away), and it stayed hidden through this entire
+  investigation with no accidental over-reveal.
+
+Both outcomes match the agreed rule exactly. **Item 4 status: confirmed
+NOT a bug, no fix required, live behavior verified correct for both real
+games in question.**
+
+### Deployment
+
+- `pfpi-picks-worker` deployed via `wrangler deploy` -- Version ID
+  `836e8fcb-6256-45fa-a611-172626faa52a`. New route
+  (`POST /greg/send-game-reminder`) confirmed live and returning a real
+  `403` with no session token.
+- `pfpi-scores-worker` also redeployed (`wrangler deploy --config
+  wrangler-scores.toml`) -- Version ID `066f0a93-67a5-4d81-b9ef-
+  5ace3532b163` -- purely to pick up the `shared.js` Bcc fix, since both
+  Workers import that same module and this session doesn't want them
+  running two different versions of it. Confirmed healthy post-deploy
+  (`GET /` -> `{"ok":true,"worker":"pfpi-scores-worker"}`), and (per
+  Item 4 above) its own cron tick already fired correctly and revealed
+  `2026_01_NE_SEA` live, proving the redeploy didn't disrupt its normal
+  polling/publish cycle.
+- `admin.html` frontend changes: committed and pushed alongside this log
+  entry (see commit hash below) -- passes `node --check` on its extracted
+  inline `<script>` blocks.
+
+### Status summary (all four items)
+
+- **Item 1 (orphaned-lock sweep)**: DONE. Full, exhaustive (prefix-listed,
+  not sampled) sweep of every real `locked-picks:`/`picks:` key found
+  ZERO orphaned locks currently -- the exact Roughriders bug from earlier
+  tonight had already been resolved by real use of last session's unlock
+  tool. Before/after table logged above for all 6 existing lock entries;
+  nothing was cleared since nothing qualified. Root cause fixed in
+  `handleClearWeekPicks` (now clears pick values, lock state, AND the
+  deadline-unlock flag together) so this failure mode can't recur through
+  that tool again.
+- **Item 2 (missing Bcc, Ferraris/Giraffes)**: DONE. Real code trace
+  (not a guess) of `handleConfirmPicks`/`sendPfpiEmail` for both teams,
+  compared against a known-working team. Found and fixed one real,
+  currently-dormant bug (array-unsafe Yeti-recipient check) but confirmed
+  it does NOT explain tonight's silence for either team (Yeti's address
+  was never actually in either recipient list). Most likely real
+  explanation, well-evidenced: neither team has clicked "Submit" yet for
+  Week 1 -- their values are saved but never confirmed/locked, and the
+  admin Missing Picks tooling doesn't currently distinguish that state
+  from a real completed submission. No further code bug found to fix;
+  flagged for Yeti to confirm directly with both families.
+- **Item 3 (Missing Picks by Game redesign)**: DONE, deployed. Root cause
+  of the concatenated-team-names bug found and fixed (CSS rules scoped to
+  the wrong container). Added a per-game "Send reminder" button reusing
+  the exact same real reminder mechanism as the Commissioner Portal's
+  per-team button, verified via a 14-assertion local synthetic harness --
+  zero real reminder emails sent during testing, per the hard rule.
+- **Item 4 (reveal condition)**: DONE -- confirmed, after real
+  investigation, that this was NOT a bug. The reveal logic
+  (`deadlinePassed || allTeamsLocked`, per-game) was already correct;
+  Thursday's game was correctly withheld (2 of 8 teams genuinely
+  unlocked, same root cause as Item 2) and Wednesday's game was mid a
+  normal ~15-minute publish-latency window, which self-corrected live
+  during this investigation with zero code changes -- confirmed by
+  polling the real public JSON until it flipped. Final live state
+  confirmed for both real games: Wednesday's now correctly shows all 8
+  real picks, Thursday's remains correctly hidden.

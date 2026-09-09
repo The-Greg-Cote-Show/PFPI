@@ -98,13 +98,30 @@ button:hover{opacity:.9;}
 #commissionerTabs .status.warn{background:rgba(232,184,75,.12);color:var(--gold);border:1px solid rgba(232,184,75,.3);}
 #commissionerTabs .char-count{font-size:.68rem;color:var(--muted);text-align:right;margin-top:.35rem;}
 
-#commissionerTabs .mp-row{background:var(--panel2);border:1px solid var(--border2);border-radius:10px;padding:.75rem .9rem;margin-bottom:.6rem;}
-#commissionerTabs .mp-row-header{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem;margin-bottom:.5rem;flex-wrap:wrap;}
-#commissionerTabs .mp-matchup{font-size:.85rem;font-weight:700;}
-#commissionerTabs .mp-chips{display:flex;flex-wrap:wrap;gap:6px;}
-#commissionerTabs .mp-chip{background:var(--panel3);border:1px solid rgba(224,82,82,.35);color:var(--red);font-size:.72rem;font-weight:600;padding:4px 9px;border-radius:6px;}
-#commissionerTabs .mp-chip-locked{border-color:var(--border2);color:var(--muted);}
-#commissionerTabs .mp-all-picked{color:var(--green);font-size:.78rem;font-weight:600;}
+/* Shared by the Commissioner Portal's own Missing Picks tab AND the Admin
+   Portal's "Missing Picks by Game" test view (2026-09-09) -- the latter
+   was scoped to #adminPortalTab only when these rules were originally
+   #commissionerTabs-only, so its team-name chips rendered as bare
+   unstyled inline text with zero separation ("Greg's LobosDick's
+   Roughriders..."). Broadened to both containers rather than duplicated,
+   so the two views can never visually drift apart again. */
+#commissionerTabs .mp-row, #adminPortalTab .mp-row{background:var(--panel2);border:1px solid var(--border2);border-radius:10px;padding:.75rem .9rem;margin-bottom:.6rem;}
+#commissionerTabs .mp-row-header, #adminPortalTab .mp-row-header{display:flex;justify-content:space-between;align-items:baseline;gap:.75rem;margin-bottom:.5rem;flex-wrap:wrap;}
+#commissionerTabs .mp-matchup, #adminPortalTab .mp-matchup{font-size:.85rem;font-weight:700;}
+#commissionerTabs .mp-chips, #adminPortalTab .mp-chips{display:flex;flex-wrap:wrap;gap:6px;}
+#commissionerTabs .mp-chip, #adminPortalTab .mp-chip{background:var(--panel3);border:1px solid rgba(224,82,82,.35);color:var(--red);font-size:.72rem;font-weight:600;padding:4px 9px;border-radius:6px;}
+#commissionerTabs .mp-chip-locked, #adminPortalTab .mp-chip-locked{border-color:var(--border2);color:var(--muted);}
+#commissionerTabs .mp-all-picked, #adminPortalTab .mp-all-picked{color:var(--green);font-size:.78rem;font-weight:600;}
+/* No `.btn` class on this button (unlike the Commissioner tab's own
+   per-team reminder button) -- Admin Portal buttons everywhere else on
+   this page use the page's own global blue `button{}` base style, not
+   the Commissioner Portal's gold `.btn`, so this just tightens that same
+   base style to fit inline below a row of chips instead of inventing a
+   third button look. */
+#adminPortalTab .mp-reminder-btn{margin-top:.6rem;font-size:.75rem;padding:.5rem .9rem;}
+#adminPortalTab .mp-reminder-status{font-size:.7rem;margin-top:.4rem;min-height:1em;}
+#adminPortalTab .mp-reminder-status.ok{color:var(--green);}
+#adminPortalTab .mp-reminder-status.err{color:var(--red);}
 #commissionerTabs .mp-reminder-btn{width:auto;margin-top:.7rem;font-size:.75rem;padding:.5rem .9rem;}
 #commissionerTabs .mp-reminder-status{font-size:.7rem;margin-top:.4rem;}
 #commissionerTabs .mp-reminder-status.ok{color:var(--green);}
@@ -1101,16 +1118,66 @@ async function renderMissingByGame() {
     const teamsHtml = missingTeams.length === 0
       ? `<span class="mp-all-picked">Everyone picked</span>`
       : missingTeams.map(team => `<span class="mp-chip${locked ? " mp-chip-locked" : ""}">${TEAM_SHORT[team] || team}</span>`).join("");
+    // "Send reminder" only shown when someone's actually missing -- reuses
+    // the exact same real reminder mechanism as the by-team tab
+    // (sendPfpiEmail/getPickerEmail/"commissioner"), just re-scoped
+    // server-side to this one game (handleSendGameReminderEmail,
+    // POST /greg/send-game-reminder) instead of a team's whole week.
+    const reminderHtml = missingTeams.length === 0 ? "" : `
+      <button class="mp-reminder-btn" type="button" data-week="${week}" data-game-id="${g.id}" data-matchup="${g.away} @ ${g.home}">Send reminder</button>
+      <div class="mp-reminder-status" data-mbg-reminder-status="${g.id}"></div>
+    `;
     return `
       <div class="mp-row">
         <div class="mp-row-header"><span class="mp-matchup">${g.away} @ ${g.home}${locked ? " — deadline passed" : " — " + fmtDeadline(g.deadline)}</span></div>
         <div class="mp-chips">${teamsHtml}</div>
+        ${reminderHtml}
       </div>
     `;
   }).join("");
+
+  contentEl.querySelectorAll(".mp-reminder-btn").forEach(btn => {
+    btn.addEventListener("click", () => sendGameReminder(btn));
+  });
 }
 
 document.getElementById("mbgWeekSelect").addEventListener("change", renderMissingByGame);
+
+async function sendGameReminder(btn) {
+  const week = btn.dataset.week;
+  const gameId = btn.dataset.gameId;
+  const matchup = btn.dataset.matchup;
+  const statusEl = document.querySelector(`[data-mbg-reminder-status="${gameId}"]`);
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = "Sending...";
+  statusEl.textContent = "";
+  statusEl.className = "mp-reminder-status";
+
+  try {
+    const res = await fetch(`${WORKER_BASE}/greg/send-game-reminder`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Session-Token": sessionToken },
+      body: JSON.stringify({ week: week === PRESEASON_MP_KEY ? week : parseInt(week, 10), gameId }),
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = originalText;
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    if (!res.ok) {
+      statusEl.textContent = data.error || "Could not send reminder.";
+      statusEl.className = "mp-reminder-status err";
+      return;
+    }
+    statusEl.textContent = `Reminder sent for ${matchup} to: ${data.sentTeams.map(t => TEAM_SHORT[t] || t).join(", ")}.`;
+    statusEl.className = "mp-reminder-status ok";
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = originalText;
+    statusEl.textContent = "Could not reach the server.";
+    statusEl.className = "mp-reminder-status err";
+  }
+}
 
 // ============================================================
 // LEAGUE EMAIL (2026-09-07, per Yeti) -- "a way for us to send a message to

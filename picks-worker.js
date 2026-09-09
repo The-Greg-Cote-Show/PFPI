@@ -820,9 +820,21 @@ async function handleClearWeekPicks(request, env) {
     return jsonResponse({ error: "week is required." }, 400, request);
   }
 
+  // Root-cause fix (2026-09-09, per Yeti -- see BUILD_LOG.md's "orphaned-
+  // lock sweep"): this used to clear ONLY `picks:{week}:{team}`, leaving
+  // `locked-picks:{week}:{team}` (and, since last session, the
+  // `deadline-unlock:{week}:{team}` bypass flag) fully intact -- so a team
+  // that had already submitted/locked a game before this ran was left
+  // stuck locked with nothing behind it, exactly what happened to Uncle
+  // Dick's real Week 1 Roughriders data. "Clear all picks for a week" is
+  // supposed to be a genuine clean slate, so it now clears all three keys
+  // together for every team -- this failure mode can't recur through this
+  // tool again.
   const allTeams = [...TEAMS, ...FAMILY_MEMBERS.map(m => m.team)];
   for (const team of allTeams) {
     await env.PFPI_KV.delete(`picks:${week}:${team}`);
+    await env.PFPI_KV.delete(`locked-picks:${week}:${team}`);
+    await env.PFPI_KV.delete(`deadline-unlock:${week}:${team}`);
   }
 
   const logEntry = {
@@ -1176,6 +1188,73 @@ async function handleSendReminderEmail(request, env) {
     return jsonResponse({ error: "Could not send reminder email. Check Worker logs." }, 502, request);
   }
   return jsonResponse({ sent: true, missingCount: missing.length }, 200, request);
+}
+
+// ============================================================
+// PER-GAME REMINDER (admin.html "Missing Picks by Game" test view,
+// 2026-09-09, per Yeti)
+// ============================================================
+// Same real mechanism as handleSendReminderEmail above -- same auth (admin
+// OR Greg session), same sendPfpiEmail/getPickerEmail/"commissioner"
+// pattern, same real per-team recipient -- just re-scoped to ONE specific
+// game instead of a team's whole remaining week. Sends one INDIVIDUAL
+// email per missing team (not one combined email to multiple real
+// addresses at once) -- each family only ever sees their own reminder,
+// same privacy property the per-team version already has; "multiple real
+// recipients" for one game click just means multiple separate real sends,
+// not one email exposing every missing family's address to each other.
+async function handleSendGameReminderEmail(request, env) {
+  const sessionToken = request.headers.get("X-Session-Token");
+  const isGreg = await verifySessionToken("greg", sessionToken, env);
+  const isAdmin = !isGreg && (await verifySessionToken("admin", sessionToken, env));
+  if (!isGreg && !isAdmin) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+
+  const { week, gameId } = await request.json();
+  const weekNum = week === "preseason-3" ? week : parseInt(week, 10);
+  if (!gameId || (weekNum !== "preseason-3" && !Number.isInteger(weekNum))) {
+    return jsonResponse({ error: "week and gameId are required." }, 400, request);
+  }
+  const weekLabel = weekNum === "preseason-3" ? "Preseason" : `Week ${weekNum}`;
+
+  const schedule = await getWeekSchedule(weekNum, env);
+  const game = schedule.find(g => g.id === gameId);
+  if (!game) {
+    return jsonResponse({ error: `No game with id "${gameId}" found in ${weekLabel}'s schedule.` }, 400, request);
+  }
+
+  // Real 8-team roster only, matching the Missing Picks by Game view's own
+  // scope -- not FAMILY_MEMBERS' test-team spread other admin tools use.
+  const missingTeams = [];
+  for (const team of TEAMS) {
+    const saved = (await getSavedPicks(team, weekNum, env)) || {};
+    if (!saved[gameId]) missingTeams.push(team);
+  }
+  if (missingTeams.length === 0) {
+    return jsonResponse({ error: `Every real team has already picked ${game.away} @ ${game.home}.` }, 400, request);
+  }
+
+  const matchup = `${game.away} @ ${game.home}`;
+  const results = [];
+  for (const team of missingTeams) {
+    const sent = await sendPfpiEmail(
+      getPickerEmail(team),
+      `PFPI reminder: ${fullTeamName(team)}, ${weekLabel} pick still needed for ${matchup}`,
+      `${fullTeamName(team)} is still missing a ${weekLabel} pick for ${matchup}.`,
+      env, undefined, "commissioner"
+    );
+    results.push({ team, sent });
+  }
+
+  const failedTeams = results.filter(r => !r.sent).map(r => r.team);
+  if (failedTeams.length > 0) {
+    return jsonResponse({
+      error: `Reminder failed for: ${failedTeams.join(", ")}. Check Worker logs.`,
+      sentTeams: results.filter(r => r.sent).map(r => r.team),
+    }, 502, request);
+  }
+  return jsonResponse({ sent: true, sentTeams: missingTeams }, 200, request);
 }
 
 // ============================================================
@@ -1689,6 +1768,9 @@ export default {
     }
     if (url.pathname === "/greg/send-reminder" && request.method === "POST") {
       return handleSendReminderEmail(request, env);
+    }
+    if (url.pathname === "/greg/send-game-reminder" && request.method === "POST") {
+      return handleSendGameReminderEmail(request, env);
     }
     if (url.pathname === "/current-week" && request.method === "GET") {
       return handleCurrentWeek(request, env);

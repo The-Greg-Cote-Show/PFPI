@@ -226,6 +226,23 @@ export async function emailsLiveForEveryone(env) {
   return (await env.PFPI_KV.get("emails-live-for-everyone")) === "true";
 }
 
+// `to`/`cc` are usually a single email string, but Gracelin's Giraffes
+// (FAMILY_MEMBERS, both real parents) is deliberately an array of two --
+// every "is Yeti already one of the recipients" check below needs to
+// treat that array as a real list of recipients, not compare the whole
+// array against a single string (which a bare `!==` always finds "not
+// equal" regardless of the array's actual contents, silently defeating
+// the check it's supposed to perform). Investigated 2026-09-09 as a
+// possible explanation for a real missing-Bcc report (see BUILD_LOG.md,
+// Item 2) -- ruled out as THIS incident's actual cause (neither team's
+// real recipient list has ever contained YETI_EMAIL, so the old bare
+// `!==` happened to reach the same answer as this by coincidence, for
+// every real send so far) but fixed anyway since it's a genuine latent
+// bug the moment that stops being true for any team.
+function includesRecipient(value, email) {
+  return Array.isArray(value) ? value.includes(email) : value === email;
+}
+
 export async function sendPfpiEmail(to, subject, text, env, cc, identity = "admin") {
   const sender = SENDER_IDENTITIES[identity] || SENDER_IDENTITIES.admin;
   const bodyWithReply = `${text}\n\n---\n${sender.replyLabel}: mailto:${sender.replyTo}`;
@@ -244,11 +261,11 @@ export async function sendPfpiEmail(to, subject, text, env, cc, identity = "admi
   let finalCc = cc;
   const blocked = [];
   if (!live) {
-    if (to && to !== YETI_EMAIL) {
+    if (to && !includesRecipient(to, YETI_EMAIL)) {
       blocked.push(to);
       finalTo = YETI_EMAIL;
     }
-    if (cc && cc !== YETI_EMAIL) {
+    if (cc && !includesRecipient(cc, YETI_EMAIL)) {
       blocked.push(cc);
       finalCc = undefined;
     }
@@ -263,7 +280,7 @@ export async function sendPfpiEmail(to, subject, text, env, cc, identity = "admi
   // twice. Once the flag is on and/or real family addresses exist, `to`/
   // `cc` will actually differ from YETI_EMAIL and this starts doing real
   // work: a silent copy of every real send, alongside the real recipient.
-  const finalBcc = (finalTo !== YETI_EMAIL && finalCc !== YETI_EMAIL) ? YETI_EMAIL : undefined;
+  const finalBcc = (!includesRecipient(finalTo, YETI_EMAIL) && !includesRecipient(finalCc, YETI_EMAIL)) ? YETI_EMAIL : undefined;
 
   const res = await fetch("https://api.resend.com/emails", {
     method: "POST",

@@ -8057,10 +8057,18 @@ team. Real 8-team roster only, same scope as the existing tab.
   `349be24f-d113-4885-b226-c339388d1b7e`. Both new routes
   (`/admin/deadline-override`, `/admin/unlock-week-picks`) confirmed live
   and returning real `403`s with no auth token, with zero side effects.
-- `admin.html`/`picks.html` frontend changes: committed and pushed to
-  GitHub Pages in this same session (see commit hash logged right after
-  this entry, once the push completes) -- both files pass `node --check`
-  on their extracted inline `<script>` blocks.
+- `admin.html`/`picks.html` frontend changes: committed
+  (`8fab5332`, message "Add admin deadline override, unlock-week-picks
+  tool, missing-picks-by-game view") -- both files pass `node --check` on
+  their extracted inline `<script>` blocks. Initial `git push origin
+  main` was rejected (`origin/main` had 268 new automated commits since
+  this clone last pulled); diffed `main...origin/main` first and
+  confirmed all of it was routine `data/current.json`/`data/standings.json`
+  score-cron updates (2 lines changed total), zero overlap with anything
+  touched tonight, so `git merge origin/main` was safe. Pushed
+  successfully after the merge: `c24ff5db..a245599e main -> main`.
+  `data/current.json` still reads `currentWeek: 1` after the merge,
+  consistent with everything logged above.
 
 ### Status summary (all three items)
 

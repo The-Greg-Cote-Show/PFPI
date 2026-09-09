@@ -12,8 +12,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "SEA",
+        "Roughriders": "SEA",
+        "Maniacs": "SEA",
+        "Critters": "NE",
+        "Chickens": "NE",
+        "Ferraris": "SEA",
+        "Llamas": "SEA",
+        "Giraffes": "SEA"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-09-09T22:20:00.000Z"
     },

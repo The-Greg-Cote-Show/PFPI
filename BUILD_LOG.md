@@ -7755,3 +7755,29 @@ an unwanted live send, the exact failure mode this task exists to avoid):
 address, since that's a real, visible action affecting someone outside
 this session and wasn't asked for -- Yeti can fire the first real resend
 himself once he sees this log.
+
+**Frontend push, completed after the above was written:** the first
+`git push origin main` failed -- `403, Permission to
+The-Greg-Cote-Show/PFPI.git denied to yeti-blanc` -- and a follow-up
+`git fetch` showed local `main` and `origin/main` had diverged (1 local
+commit vs. 1323 remote-only commits; this local clone was very stale).
+Diffed the merge base against `origin/main` first and confirmed those
+1323 commits only ever touched `data/current.json` and
+`data/standings.json` (routine automated score/standings updates) --
+zero overlap with `admin.html`/`picks-worker.js`/`BUILD_LOG.md`, so the
+merge was safe. `git merge origin/main` completed with no conflicts.
+
+Root cause of the 403 turned out to be the `gh` CLI's *active account*,
+not Git Credential Manager (a `git credential-manager github logout` did
+nothing -- GCM wasn't actually what was supplying git's credentials
+here). `gh auth status` showed both `yeti-blanc` and `The-Greg-Cote-Show`
+already logged in via keyring, with `yeti-blanc` active; `gh auth switch
+--user The-Greg-Cote-Show` fixed it with no re-login needed, and the
+retried push succeeded: `545deb66..e0646e17 main -> main`. Saved as a
+standing project memory (git credential switching) so this doesn't need
+re-diagnosing next time the user is on the wrong account for this repo.
+
+**End state: both halves of the deploy are live** -- `pfpi-picks-worker`
+(Version ID `a7ee3056-67cb-460b-8241-cde18b2495dc`) and `admin.html` on
+GitHub Pages (commit `e0646e17`). The old test-email tool is fully gone
+from the live site, not just from the local working tree.

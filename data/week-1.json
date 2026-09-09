@@ -37,8 +37,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "LA",
+        "Roughriders": "LA",
+        "Maniacs": "LA",
+        "Critters": "LA",
+        "Chickens": "LA",
+        "Ferraris": "LA",
+        "Llamas": "SF",
+        "Giraffes": "LA"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-09-10T22:35:00.000Z"
     },

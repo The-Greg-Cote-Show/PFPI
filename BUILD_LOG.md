@@ -8829,3 +8829,110 @@ games, rate limits, whether `/v1/nfl/games` is still needed for
 anything `/v1/stored/matches` doesn't cover) is a real design decision
 Yeti should make deliberately, not something to build silently as a
 side effect of this test.
+
+## Real bug confirmed: PFPI stats never updated after NE @ SEA finished -- root cause traced and fixed (2026-09-10)
+
+Yeti's real report: the game ended hours ago, PFPI stats still hadn't
+updated ("everything worked during testing"). Investigated live before
+building anything.
+
+**Confirmed the real, current root cause with a direct diagnostic call**
+(same temporary-route technique as the earlier `/v1/stored/matches`
+test, added, used once, then reverted): hit this Worker's own exact
+`/v1/nfl/games?season=2026&week=1` call directly, hours after the real
+game ended. Real response, unedited: `2026_01_NE_SEA` still had
+`"home_score":null,"away_score":null"` -- **Big Balls' own
+`/v1/nfl/games` endpoint itself had not been updated with the real final
+score, hours after the real game ended.** This is not a bug in this
+Worker's polling (separately reconfirmed the 15-minute commit cadence
+never stopped, straight through the whole window) and not caused by
+anything built tonight before this -- it's a genuine gap/lag in that one
+upstream Big Balls endpoint for a just-completed game, distinct from
+(and more severe than) the "no live signal at all" limit already
+documented weeks ago.
+
+**Cross-checked the same real game against `/v1/stored/matches`
+(discovered earlier tonight)**: it already showed the real result --
+`"status":"finished"`, `"score":{"home":13,"away":10}` (Seattle 13,
+New England 10) -- confirming Big Balls genuinely HAS the real final
+data, just not synced to the endpoint this system has always used.
+
+**Fix built and deployed** (`worker.js`):
+- `normalizeGame()` now also carries through Big Balls' real match UUID
+  (`match_id`) as an internal-only `matchId` field -- confirmed both
+  endpoints share this exact same real ID, giving a precise join key
+  instead of a fuzzy team/date guess. Never exposed on the public JSON
+  (`buildWeekPublicJSON`'s own explicit field list is unchanged).
+- New `enrichLiveScores()` step, run once per week right after the
+  existing `enrichKickoffTimes()`: for any game that has genuinely
+  kicked off (using its real, Highlightly-corrected kickoffISO, not Big
+  Balls' own placeholder) and isn't already confirmed final from an
+  earlier tick, queries `/v1/stored/matches` for that kickoff's real UTC
+  calendar date and overlays its status/score onto the game via the
+  shared `matchId` -- `/v1/nfl/games` stays the real schedule/matchup
+  source of truth, this only ever supplements it.
+- Budget-conscious by construction, not just by hope: a game already
+  confirmed final in the existing `results:week:{week}` KV cache is
+  reapplied directly from that cache (only its outcome fields --
+  score/status/tie/winner; home/away/kickoffISO stay this tick's own
+  fresh values) and never triggers a fresh stored-matches call again --
+  the query scope naturally shrinks to only genuinely-still-pending games
+  as the week progresses, and one call covers every game sharing a date,
+  not one call per game.
+- Same real cache read also fixes a related, previously-unnoticed
+  fragility: since `results:week:{week}` is fully overwritten every
+  tick from that tick's own fresh data, a game /v1/nfl/games regresses
+  back to "scheduled" on (confirmed real behavior tonight) could
+  previously have been silently dropped from a later tick's write even
+  after once appearing final. Reapplying the cached result before that
+  write now makes an already-confirmed final immune to that regression.
+- Tie/winner derivation extracted into a shared `computeTieAndWinner()`
+  helper, used by both `normalizeGame()` and the new enrichment path, so
+  the two can never quietly diverge on tie/winner logic.
+
+**Verification**: temporarily exported the new internal functions
+(`computeTieAndWinner`, `normalizeGame`, `fetchStoredMatchesForDate`,
+`buildStoredMatchLookup`, `applyStoredMatch`, `enrichLiveScores`,
+`STORED_MATCH_STATUS_MAP`) for a local Node test importing the real
+module directly against a mocked `global.fetch` -- removed again before
+deploy (confirmed via `grep "^export "` showing only the original
+`export default`). 25 assertions, all passing, using tonight's exact
+real data (matchId `b7a3f771-...`, final score SEA 13 - NE 10): tie/
+winner math (win, tie, not-yet-final); `matchId` carried through
+correctly; a real "finished" stored-match correctly flips status/score/
+winner; an unrecognized status value falls back safely without throwing;
+end-to-end enrichment produces the real final result and queries the
+correct UTC kickoff date, not the ET `game_date`; an already-cached-final
+game triggers ZERO fresh stored-matches calls while still resolving
+correctly, and keeps this tick's own fresh home/kickoffISO rather than
+stale cached ones; a not-yet-kicked-off game is left completely
+untouched; a mixed batch (one cached-final, one still-pending, one
+future) makes exactly one call per unique date actually needed.
+
+Deployed via `wrangler deploy --config wrangler-scores.toml` at
+`f45a7872-125f-4c72-ba41-1df0799aefe4`. Watched the real public
+`data/week-1.json` (20s polling, read-only) through the next real poll
+tick.
+
+**Confirmed live, end to end, real result:** at `2026-09-10T06:31:55Z`,
+`2026_01_NE_SEA` flipped from `status:"scheduled"`/null scores (frozen
+that way since before kickoff) to `status:"final"`, `homeScore:13`,
+`awayScore:10`, `winner:"SEA"` -- the exact real result, with zero
+manual intervention, purely from the next scheduled poll tick running
+the new code. Cross-checked the downstream effect too: `data/
+standings.json` (`updatedAt: 2026-09-10T06:30:59Z`) now shows
+`gamesPlayed: {"1":1}` and each real team's correct-pick count matches
+their actual real pick exactly -- Lobos, Roughriders, Maniacs, Ferraris,
+Llamas, Giraffes (all picked SEA, the winner) each show `1`; Critters and
+Chickens (picked NE) each show `0`.
+
+**Status: FIXED, confirmed live, standings correctly recalculated.**
+Real root cause was a genuine upstream Big Balls data gap
+(`/v1/nfl/games` not syncing a just-finished game's real result for
+hours), not anything in this Worker's own polling or anything built
+earlier tonight. Fix enriches from a second, already-vetted Big Balls
+endpoint rather than replacing the schedule source of truth, is
+budget-conscious by construction (already-final games never re-query),
+and is immune to the specific regression risk (a late `/v1/nfl/games`
+"scheduled" flip-back silently un-finalizing an already-real result)
+that the original bug's own behavior made newly relevant tonight.

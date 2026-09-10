@@ -57,6 +57,22 @@ async function fetchBigBallsWeek(week, env) {
   return Array.isArray(data) ? data : (data.games || data.data || []);
 }
 
+// Tie/winner derivation, shared between normalizeGame() (below) and
+// enrichLiveScores() (see the /v1/stored/matches section further down) --
+// extracted so the two can never quietly diverge on this logic. Per Yeti
+// (2026-08-25): a tied game is nullified for pick'em purposes entirely --
+// no winner, excluded from every team's correct/incorrect tally and from
+// the week's game-count denominator (see computeStandings below).
+function computeTieAndWinner(status, home, away, homeScore, awayScore) {
+  const bothScored = homeScore !== null && awayScore !== null;
+  const tie = status === "final" && bothScored && homeScore === awayScore;
+  let winner = null;
+  if (status === "final" && bothScored && !tie) {
+    winner = homeScore > awayScore ? home : away;
+  }
+  return { tie, winner };
+}
+
 // Isolates every assumption about Big Balls' exact response shape.
 function normalizeGame(raw) {
   // game_id format per Big Balls' marketing docs: YYYY_WW_AWAY_HOME
@@ -69,7 +85,11 @@ function normalizeGame(raw) {
   const homeScore = raw.home_score ?? raw.homeScore ?? null;
   const awayScore = raw.away_score ?? raw.awayScore ?? null;
   // No status field exists in real responses (see gap notice above) — the
-  // only signal available is whether both scores are populated.
+  // only signal available is whether both scores are populated. Residual
+  // known limitation as of this endpoint alone: no live/in-progress
+  // signal, AND (confirmed live 2026-09-10, real Week 1 NE @ SEA) can lag
+  // hours behind even a genuinely FINAL result -- see enrichLiveScores
+  // below, which now covers both gaps via a second Big Balls endpoint.
   const status = (homeScore !== null && awayScore !== null) ? "final" : "scheduled";
   // No kickoff time-of-day exists in real responses either, only a
   // date-only game_date — anchored at noon UTC so the calendar day is
@@ -77,35 +97,162 @@ function normalizeGame(raw) {
   const kickoffISO = raw.kickoff || raw.start_time || raw.game_time
     || (raw.game_date ? `${raw.game_date}T12:00:00.000Z` : null);
 
-  // Tie handling, per Yeti (2026-08-25): a tied game is nullified for
-  // pick'em purposes entirely -- no winner, excluded from every team's
-  // correct/incorrect tally and from the week's game-count denominator
-  // (see computeStandings below). Before this fix, a tie (homeScore ===
-  // awayScore) fell through to the `else` branch below and was silently
-  // recorded as an away-team win -- a real scoring bug, not just a missing
-  // feature, now fixed at the source.
-  const tie = status === "final" && homeScore !== null && awayScore !== null && homeScore === awayScore;
-  let winner = null;
-  if (status === "final" && homeScore !== null && awayScore !== null && !tie) {
-    winner = homeScore > awayScore ? home : away;
-  }
+  const { tie, winner } = computeTieAndWinner(status, home, away, homeScore, awayScore);
 
   return {
     id: raw.game_id || raw.id,
+    // Big Balls' own real match UUID (shared verbatim with /v1/stored/
+    // matches' own `id` field, confirmed live 2026-09-10) -- purely
+    // internal (never present on buildWeekPublicJSON's public output
+    // object below), used only to join this game against that other
+    // endpoint's live/final data in enrichLiveScores.
+    matchId: raw.match_id || null,
     // hasRealTime: false -- kickoffISO above is a noon-UTC placeholder
     // anchored to the real calendar date, not a real kickoff hour (see
     // the gap notice above). The frontend uses this flag to show a date
     // only for these games, never a fabricated time -- contrast
     // normalizeHighlightlyGame()'s hasRealTime: true, which has genuine
     // kickoff timestamps.
-    // clockReport: always null -- Big Balls has no "in_progress" status at
-    // all (see the gap notice above: status here is only ever "final" or
-    // "scheduled", inferred from whether scores are populated), so there
-    // is no live game-clock data source for real regular-season games,
-    // unlike Highlightly's preseason feed (see normalizeHighlightlyGame's
-    // own clockReport, confirmed against a real live game 2026-08-27).
+    // clockReport: always null -- neither Big Balls endpoint has a real
+    // game-clock field for regular-season NFL games (only a coarse
+    // status), unlike Highlightly's preseason feed (see
+    // normalizeHighlightlyGame's own clockReport, confirmed against a
+    // real live game 2026-08-27).
     home, away, homeScore, awayScore, status, kickoffISO, winner, tie, hasRealTime: false, clockReport: null,
   };
+}
+
+// ============================================================
+// LIVE/FINAL SCORE ENRICHMENT via /v1/stored/matches (added 2026-09-10,
+// per Yeti -- real bug: Week 1's real NE @ SEA game finished hours before
+// PFPI's stats reflected it. Traced live, with a real diagnostic call
+// against production data: /v1/nfl/games (above) was STILL returning
+// null scores / "scheduled" for that exact game hours after it ended --
+// not a bug in this Worker's own polling (confirmed separately: the
+// 15-minute poll/commit cadence never stopped), a real gap/lag in that
+// one Big Balls endpoint itself. A second, different Big Balls endpoint,
+// /v1/stored/matches?sport=american_football&league=nfl&date=YYYY-MM-DD,
+// tracked that same real game from "live" (with a real, populated score)
+// through "finished" (real final score) the whole time -- confirmed with
+// a real live test call, not assumed. Both endpoints share the exact
+// same real match UUID (/v1/nfl/games' `match_id` == this endpoint's own
+// `id`), so this enriches (never replaces -- /v1/nfl/games is still the
+// real schedule/team-matchup source of truth) each already-normalized
+// game with this endpoint's fresher status/score wherever a confident
+// UUID match exists.
+//
+// `date` on this endpoint is UTC-anchored (confirmed live: the real ET
+// game-date returned nothing; the UTC kickoff date matched) -- a
+// different convention than /v1/nfl/games' own ET-anchored `game_date`,
+// so this must be derived from each game's own (Highlightly-corrected,
+// where available) real kickoffISO, not Big Balls' original field.
+async function fetchStoredMatchesForDate(date, env) {
+  const res = await fetch(
+    `${BIG_BALLS_BASE}/v1/stored/matches?sport=american_football&league=nfl&date=${encodeURIComponent(date)}`,
+    { headers: { "Authorization": `Bearer ${env.BIG_BALLS_API_KEY}` } }
+  );
+  if (!res.ok) {
+    console.error(`Big Balls stored-matches fetch failed for ${date}: ${res.status} ${await res.text()}`);
+    return [];
+  }
+  const data = await res.json();
+  return Array.isArray(data.data) ? data.data : [];
+}
+
+// Builds a matchId -> stored-match lookup for every UTC calendar date
+// among the given games' real kickoff times -- one call per unique date,
+// not per game (a single Sunday slate is usually one call, not ten).
+async function buildStoredMatchLookup(games, env) {
+  const dates = new Set(games.map(g => new Date(g.kickoffISO).toISOString().slice(0, 10)));
+  const lookup = new Map();
+  for (const date of dates) {
+    const matches = await fetchStoredMatchesForDate(date, env);
+    matches.forEach(m => { if (m.id) lookup.set(m.id, m); });
+  }
+  return lookup;
+}
+
+// stored-matches' own status vocabulary, mapped onto this system's
+// existing one ("scheduled"/"in_progress"/"final") -- the same values
+// index.html's statusLabel/clockReport logic already branches on, so no
+// frontend change is needed for this to show up correctly.
+const STORED_MATCH_STATUS_MAP = { scheduled: "scheduled", live: "in_progress", finished: "final" };
+
+// Applies stored-match enrichment to one already-normalized game.
+// Confident, narrow join (matchId only, never a fuzzy team/date guess),
+// and never downgrades a game this Worker has already confirmed final in
+// an earlier tick (see enrichLiveScores' own comment on `knownFinalsById`
+// below) -- a transient stored-matches miss on a later tick must never
+// un-finalize an already-real result.
+function applyStoredMatch(game, storedMatch) {
+  if (!storedMatch || !storedMatch.score) return game;
+  const homeScore = typeof storedMatch.score.home === "number" ? storedMatch.score.home : game.homeScore;
+  const awayScore = typeof storedMatch.score.away === "number" ? storedMatch.score.away : game.awayScore;
+  const mappedStatus = STORED_MATCH_STATUS_MAP[storedMatch.status];
+  if (!mappedStatus) {
+    console.error(`Unrecognized /v1/stored/matches status "${storedMatch.status}" for matchId ${storedMatch.id} -- keeping /v1/nfl/games' own status.`);
+  }
+  const status = mappedStatus || game.status;
+  const { tie, winner } = computeTieAndWinner(status, game.home, game.away, homeScore, awayScore);
+  return {
+    ...game,
+    homeScore, awayScore, status, tie, winner,
+    // A real, though coarse, live-progress hint for the frontend --
+    // stored-matches doesn't expose a play-by-play clock, only the
+    // per-quarter linescore, which is at least real signal that a
+    // "Live" game truly is in progress rather than just guessing.
+    clockReport: status === "in_progress" && storedMatch.linescore ? "Live" : game.clockReport,
+  };
+}
+
+// Top-level enrichment step, called once per week right after
+// enrichKickoffTimes(). `knownFinalsById` is this week's existing
+// `results:week:{week}` KV cache (already-confirmed finals from a
+// PREVIOUS tick) -- a game already in there is reapplied directly,
+// without spending a fresh stored-matches call on it, and specifically
+// so it can never be silently dropped from this tick's own
+// `results:week` write if /v1/nfl/games regresses back to "scheduled"
+// (confirmed real behavior tonight) or a stored-matches call transiently
+// fails. Only games that have genuinely kicked off AND aren't already
+// confirmed final ever trigger a real stored-matches call -- a future
+// game's correct "scheduled"/null state from /v1/nfl/games is left
+// alone, and this budget-conscious scoping naturally shrinks as more
+// games actually finish and get cached.
+async function enrichLiveScores(games, knownFinalsById, env) {
+  const now = Date.now();
+  const alreadyFinal = [];
+  const needsLiveCheck = [];
+  const untouched = [];
+  for (const g of games) {
+    if (knownFinalsById.has(g.id)) {
+      alreadyFinal.push(g);
+    } else if (g.matchId && g.kickoffISO && now > new Date(g.kickoffISO).getTime()) {
+      needsLiveCheck.push(g);
+    } else {
+      untouched.push(g);
+    }
+  }
+
+  // Only the outcome fields come from the cache -- home/away/kickoffISO/
+  // hasRealTime/matchId stay THIS tick's own fresh values (from
+  // /v1/nfl/games + enrichKickoffTimes above), in case an earlier tick's
+  // cached snapshot predates a later kickoff-time correction.
+  const cachedResults = alreadyFinal.map(g => {
+    const cached = knownFinalsById.get(g.id);
+    return { ...g, homeScore: cached.homeScore, awayScore: cached.awayScore, status: cached.status, tie: cached.tie, winner: cached.winner };
+  });
+
+  let liveResults = needsLiveCheck;
+  if (needsLiveCheck.length > 0) {
+    const lookup = await buildStoredMatchLookup(needsLiveCheck, env);
+    liveResults = needsLiveCheck.map(g => applyStoredMatch(g, lookup.get(g.matchId)));
+  }
+
+  // Recombine, preserving the original schedule order (buildWeekPublicJSON
+  // downstream doesn't depend on order, but nothing else in this Worker
+  // should have to reason about a resorted list either).
+  const byId = new Map([...cachedResults, ...liveResults, ...untouched].map(g => [g.id, g]));
+  return games.map(g => byId.get(g.id) || g);
 }
 
 // ============================================================
@@ -985,7 +1132,19 @@ async function pollAndPublish(env, force = false) {
     for (const week of weeksToPoll) {
       const raw = await fetchBigBallsWeek(week, env);
       if (!raw) continue;
-      const normalized = enrichKickoffTimes(raw.map(normalizeGame), kickoffLookup);
+      let normalized = enrichKickoffTimes(raw.map(normalizeGame), kickoffLookup);
+
+      // Live/final score enrichment (2026-09-10, per Yeti -- see
+      // enrichLiveScores' own comment above for the full real incident
+      // this fixes). `knownFinalsById` is this week's own existing
+      // results:week: cache -- read BEFORE this tick overwrites it, so an
+      // already-confirmed final never needs a fresh stored-matches call
+      // and can never be silently dropped by this tick's own write below.
+      const existingResultsRaw = await env.PFPI_KV.get(`results:week:${week}`);
+      const knownFinalsById = new Map(
+        (existingResultsRaw ? JSON.parse(existingResultsRaw) : []).map(g => [g.id, g])
+      );
+      normalized = await enrichLiveScores(normalized, knownFinalsById, env);
 
       // Schedule cache for the picks worker's deadline math: kickoff times only.
       await env.PFPI_KV.put(

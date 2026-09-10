@@ -8724,3 +8724,108 @@ expanded Week 1's real SF @ LA card: Tati's Llamas now shows a raccoon
 icon directly next to her real "SF" pick; all 7 other real teams (all
 picked "LA") correctly show no icon. Exactly the real scenario Yeti
 reported, now rendering correctly on the live site.
+
+## Live scores not showing for tonight's real NE @ SEA game -- investigated, root cause confirmed, no fix applied yet (report-only, per Yeti's explicit ask)
+
+Real report: Wednesday night's real NE @ SEA game (live, in progress) was
+showing blank dashes for the score on the Games tab instead of real
+numbers. Asked to investigate and report the real root cause before
+changing anything -- no fix applied in this section.
+
+**Confirmed the polling pipeline is genuinely running, not stalled**,
+via three independent signals rather than just checking the cron exists:
+- `data/current.json`/`data/standings.json`/`data/week-1.json` all
+  received fresh automated commits every 15 real minutes tonight,
+  straight through and past kickoff (checked real commit timestamps:
+  20:30, 20:45, 21:00 ... 22:15 ET).
+- `data/current.json`'s commit only happens inside the code branch gated
+  on `env.BIG_BALLS_API_KEY` being set -- its presence proves the key is
+  configured and that branch is executing, not skipped.
+- `data/week-1.json`'s commit only happens after `fetchBigBallsWeek(1)`
+  returns real, non-null data -- its presence proves Big Balls is
+  responding successfully, not erroring.
+
+**Confirmed the actual data is genuinely frozen, not a rendering bug**:
+diffed the real committed `data/week-1.json` content between 8:30pm ET
+(pre-kickoff) and 10:15pm ET (~2h into the live game) -- byte-for-byte
+identical. `2026_01_NE_SEA` has held `status:"scheduled"`,
+`homeScore:null`, `awayScore:null` continuously across the entire live
+game so far. The frontend's dash rendering
+(`homeScore ?? (isFinal ? "" : "-")`) is doing exactly the right thing
+with the data it's actually being given.
+
+**Root cause, confirmed via the code's own dated comment (2026-08-25,
+verified against real Big Balls responses at the time -- over two weeks
+before tonight, unrelated to anything built tonight)**: `/v1/nfl/games`
+(the endpoint this Worker has always used) has "no live/in-progress
+signal at all" -- `normalizeGame()` infers `status` purely from whether
+both scores are populated, and Big Balls apparently never populates
+either field for this endpoint until a game is fully final. Confirmed
+this is not touched by anything built tonight (picks-submission
+completeness and the raccoon badge, both unrelated code paths).
+
+### Follow-up: tested a real alternate endpoint, per Yeti's lead -- CONFIRMED VIABLE
+
+Yeti named a specific lead from a separate project (PowerSwap) also
+using Big Balls Sports Data: `/v1/stored/matches?sport=
+american_football&league=<league>&date=YYYY-MM-DD`, working there for
+NCAAF. Asked for one real, live test call against this endpoint with an
+NFL league value, not an assumption either way.
+
+**Method**: added a temporary, unauthenticated diagnostic route
+(`GET /debug/stored-matches?league=&date=`) directly to the deployed
+`pfpi-scores-worker`, proxying one live call to
+`/v1/stored/matches?sport=american_football&league={league}&date={date}`
+using the real `BIG_BALLS_API_KEY` server-side (never exposed to this
+session) and returning the raw upstream response. Read-only, no KV/
+GitHub writes. Removed immediately after the test (`git checkout --
+worker.js`, redeployed) -- confirmed gone afterward (`GET
+/debug/stored-matches` now falls through to the Worker's normal
+`{"ok":true}` root response, a real 200 from the unmatched-route
+fallback, not the diagnostic route).
+
+**First call** -- `league=nfl`, `date=2026-09-09` (the ET calendar date
+of tonight's real game): `200 OK`, `{"data":[],"pagination":{"total":0}}`
+-- empty, no match.
+
+**Second call** -- same league, `date=2026-09-10` (the UTC calendar date
+of the same real kickoff, `2026-09-10T00:20:00.000Z`): **a real, populated
+result for the actual live game:**
+```json
+{
+  "id": "b7a3f771-e05d-4de1-82f6-554d2b9087c1",
+  "sport": "american_football", "league": "NFL",
+  "home": { "name": "Seattle Seahawks", "short_name": "SEA" },
+  "away": { "name": "New England Patriots", "short_name": "NE" },
+  "kickoff_utc": "2026-09-10T00:20:00.000Z",
+  "status": "live",
+  "score": { "home": 10, "away": 10 },
+  "linescore": { "away": [0,7,3,0], "home": [0,0,3,7] },
+  "broadcast": "NBC", "has_odds": true
+}
+```
+`kickoff_utc` matches this system's own real kickoff time for this exact
+game exactly, confirming it's genuinely the same real game, not a
+lookalike.
+
+**Confirmed, real, and clean**: `league=nfl` IS a valid value on
+`/v1/stored/matches` (Yeti's lead was right to test, not assume, given
+it was only confirmed for NCAAF before), and it genuinely returns a real
+`"live"` status with real, populated, currently-accurate in-progress
+scores (`10-10` at time of test) -- something `/v1/nfl/games` has never
+provided. This is a real, viable fix path, not a dead end. One concrete
+implementation nuance already surfaced by this test, worth remembering
+if this is built: the `date` parameter is UTC-anchored (the ET date
+returned nothing; the UTC date matched), unlike the current endpoint's
+own `game_date` field convention -- a late-night ET kickoff crossing
+midnight UTC needs the day-after date, not the real-world game night's
+own calendar date.
+
+**Status: investigation-only, per Yeti's explicit ask -- no fix built or
+deployed.** `worker.js` is back to its exact pre-diagnostic state (git
+diff clean, confirmed). Whether/how to actually switch the live-score
+pipeline over to this endpoint (schedule discovery, historical/final
+games, rate limits, whether `/v1/nfl/games` is still needed for
+anything `/v1/stored/matches` doesn't cover) is a real design decision
+Yeti should make deliberately, not something to build silently as a
+side effect of this test.

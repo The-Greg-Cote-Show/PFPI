@@ -8717,8 +8717,10 @@ first proved the OLD logic never flags Tati's pick pre-deadline
 (reproducing the reported bug from real data), then proved the NEW logic
 correctly flags Llamas as unique and all 7 "LA" teams as not-unique.
 
-**Status: FIXED.** Deployed via the same `git push` as this log entry
-(GitHub Pages, static frontend -- no Worker redeploy needed, this file
-has no backend component). Not yet re-confirmed visually in a live
-browser as of writing this entry -- doing that next, will note the
-result in a follow-up if anything unexpected turns up.
+**Status: FIXED, confirmed live in a real browser.** Deployed via `git
+push` (GitHub Pages, static frontend -- no Worker redeploy needed, this
+file has no backend component). Opened `https://pfpi.me/`, Games tab,
+expanded Week 1's real SF @ LA card: Tati's Llamas now shows a raccoon
+icon directly next to her real "SF" pick; all 7 other real teams (all
+picked "LA") correctly show no icon. Exactly the real scenario Yeti
+reported, now rendering correctly on the live site.

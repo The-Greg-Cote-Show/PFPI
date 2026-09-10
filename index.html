@@ -901,18 +901,6 @@ function formatKickoff(g) {
   return new Intl.DateTimeFormat("en-US", opts).format(d) + (g.hasRealTime ? " ET" : "");
 }
 
-// Same "locked" definition as shared.js's isGameLocked() (this plain page
-// has no module import, so it's inlined rather than sharing that file) --
-// `g.deadline` is worker.js's own computeGameDeadline() result, already
-// published on every game object (regular-season via buildWeekPublicJSON,
-// preseason via its own merge step in pollAndPublish -- both paths added
-// it, 2026-08-29, specifically so this check works uniformly everywhere).
-// Missing deadline defaults to NOT locked -- safer to under-reveal a
-// unique pick than to guess a game is locked when it might not be.
-function isGameLocked(g) {
-  return !!g.deadline && Date.now() > new Date(g.deadline).getTime();
-}
-
 // Only ever called with real, non-empty game data (render() shows the empty
 // state itself otherwise) — see BUILD_LOG.md for the 2025-sim archival that
 // removed the simulated-schedule fallback this used to have.
@@ -1011,39 +999,43 @@ function renderGames(realGames){
 
       // Unique-pick badge (2026-08-29, per Yeti): "a raccoon head beside
       // any pick that is a unique pick," same raccoon as the Unique Hits
-      // leaderboard, once the game is locked -- NOT before. Same
-      // definition worker.js's own Unique Hits computation already uses
-      // ("among the TEAMS that actually picked that game, exactly one
-      // team chose that side"), computed fresh here from this game's own
-      // real picks rather than duplicating worker.js's per-week aggregate
-      // (that's a cumulative hits/opps count, not a per-game flag -- a
-      // different shape, not reusable directly).
+      // leaderboard, once the game is genuinely revealed -- NOT before.
+      // Same definition worker.js's own Unique Hits computation already
+      // uses ("among the TEAMS that actually picked that game, exactly
+      // one team chose that side"), computed fresh here from this game's
+      // own real picks rather than duplicating worker.js's per-week
+      // aggregate (that's a cumulative hits/opps count, not a per-game
+      // flag -- a different shape, not reusable directly).
       //
-      // Deliberately gated on isGameLocked(g), NOT on isFinal: the raw
-      // pick values are already publicly visible before a game locks (see
-      // buildWeekPublicJSON, worker.js -- an existing, unrelated design
-      // this doesn't change), but flagging ONE of those visible picks as
-      // "the only one who picked this side" is a genuine spoiler while
-      // other teams can still submit or change their own pick for this
-      // same game -- it would hand later-deciding teams free strategic
-      // information. Once locked, every team's pick for THIS SPECIFIC
-      // game is frozen (this system's deadlines are per-game, not
-      // per-week -- a locked game's picks can never change regardless of
-      // whether other games that week are still open), so revealing
-      // uniqueness at that point is safe. Not tied to the game being
-      // final/decided -- the whole point, per Yeti, is to draw fans into
-      // watching a game they might otherwise skip, which only works
-      // before it's already over.
-      const locked = isGameLocked(g);
-      // Part 2b (2026-09-05, per Yeti): the server now withholds `g.picks`
-      // entirely for a game until every real roster team has locked their
-      // pick for it or its deadline passes (buildWeekPublicJSON,
-      // worker.js) -- `picksRevealed` defaults true for older cached JSON
-      // that predates this field, so an existing/finished week doesn't
-      // suddenly render as "hidden" against stale data.
+      // Gated on `g.picksRevealed` -- the same real per-game signal
+      // buildWeekPublicJSON (worker.js) already computes as
+      // `deadlinePassed || allTeamsLocked` (genuinely SUBMITTED by every
+      // real team, or the deadline passed, whichever first) -- not a
+      // second, separate check. Was gated on a local, inlined
+      // deadline-only `isGameLocked(g)` before (removed 2026-09-09,
+      // per Yeti -- see BUILD_LOG.md): that predates `picksRevealed`
+      // itself (added six days later, Part 2b, 2026-09-05) and was never
+      // updated once the real signal existed, so a game where every team
+      // had genuinely submitted BEFORE its own deadline passed (Tati's
+      // real Week 1 SF @ LA unique pick) correctly showed everyone's
+      // picks (via `picksRevealed`) but never got a raccoon (the old
+      // check was still waiting on the deadline alone). `picksRevealed`
+      // is exactly the right signal here for the same reason it already
+      // gates `pick`/`pickText` below: once it's true, every team's pick
+      // for THIS SPECIFIC game is frozen (submitted picks can never
+      // change, and a passed deadline blocks further edits too), so
+      // revealing uniqueness at that point can never be a spoiler for
+      // anyone still deciding. Not tied to the game being final/decided
+      // -- the whole point, per Yeti, is to draw fans into watching a
+      // game they might otherwise skip, which only works before it's
+      // already over.
+      //
+      // `picksRevealed` defaults true for older cached JSON that predates
+      // this field, so an existing/finished week doesn't suddenly render
+      // as "hidden" against stale data.
       const picksRevealed = g.picksRevealed !== false;
       const pickCounts = {};
-      if (locked && g.picks) {
+      if (picksRevealed && g.picks) {
         TEAMS.forEach(team => {
           const p = g.picks[team];
           if (p) pickCounts[p] = (pickCounts[p] || 0) + 1;
@@ -1056,7 +1048,7 @@ function renderGames(realGames){
         // cached preseason data (from before that date) won't have it.
         const pick = (picksRevealed && g.picks && g.picks[team]) || null;
         const correct = (pick && isFinal) ? pick === g.winner : null;
-        const isUnique = locked && pick && pickCounts[pick] === 1;
+        const isUnique = picksRevealed && pick && pickCounts[pick] === 1;
         const color = TEAM_COLORS[team];
         // "Hidden until..." is a genuinely different, honest state from "No
         // pick yet" -- the latter would be a false claim for a game that

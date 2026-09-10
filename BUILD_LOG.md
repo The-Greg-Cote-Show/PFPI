@@ -8649,3 +8649,76 @@ into not immediately noticing sooner, not the public reveal path itself.
   Ferraris and Giraffes are now genuinely locked for SF @ LA (and NE @
   SEA), and the real public JSON confirms `picksRevealed:true` with all
   8 real teams' picks showing for both games.
+
+## Unique-pick raccoon badge missing for a genuine unique pick (2026-09-09, same night) -- investigated, then fixed on request
+
+Yeti asked whether the raccoon "unique pick" badge (Games tab,
+`index.html`) still existed and, if so, why it wasn't showing for Tati's
+real Week 1 pick (San Francisco, `2026_01_SF_LA`) -- a genuine unique
+pick per Yeti (everyone else picked LA). Asked for investigation and a
+real-state report FIRST, no changes until confirmed.
+
+**Investigation (no changes made yet):** the feature is real and
+deployed (`index.html`, added 2026-08-29 -- `raccoonSvg()`,
+`.pick-raccoon-icon`, in the Games tab's expanded picks breakdown).
+Traced the actual gating logic: it used its OWN local, inlined
+`isGameLocked(g)` function (`!!g.deadline && Date.now() >
+new Date(g.deadline).getTime()`) -- a THIRD, independent "locked"
+definition, checking only whether the real kickoff-deadline has passed,
+with no awareness of submission status at all. The badge's `pickCounts`/
+`isUnique` computation only ran when that check was true.
+
+Confirmed with real data before concluding anything: `2026_01_SF_LA`'s
+deadline (`2026-09-10T22:35:00Z`) had NOT yet passed (current time
+`2026-09-09T23:57Z`, ~22.5h out), while all 8 real teams were already
+genuinely locked/submitted (confirmed via `locked-picks:1:*` in KV) --
+so `g.picksRevealed` (computed server-side by `buildWeekPublicJSON`,
+worker.js, as `deadlinePassed || allTeamsLocked`, and already present on
+the same object) was correctly `true` and the real picks were already
+public (`Llamas: "SF"`, all 7 others: `"LA"` -- a genuine unique pick),
+but the badge's own deadline-only check was still `false`, so no raccoon
+rendered despite the pick being real, public, and genuinely unique.
+
+**Confirmed this is a genuinely separate, pre-existing bug, NOT caused
+by or related to tonight's earlier submitted-vs-saved fix**: that fix
+only touched admin-facing views in `picks-worker.js`
+(`handleAdminWeekPicks` and the two reminder handlers). This bug lives
+entirely in `index.html`'s client-side rendering and has behaved this
+way since the raccoon feature shipped on 2026-08-29 -- a full week
+BEFORE `g.picksRevealed`'s per-game submit-aware logic even existed
+(Part 2b, 2026-09-05). It's the same class of problem (yet another spot
+with its own stale, independent definition of "is this game done") but
+a distinct instance in a different file than tonight's earlier audit
+covered (that audit was scoped to "has team X picked game Y"
+completeness checks, not "is this game locked enough to reveal a badge"
+checks on the public Games tab). Also explains why it "worked in earlier
+testing," per Yeti: in whatever prior scenario, the deadline had likely
+already passed by the time everyone picked, so the two definitions
+happened to agree -- tonight's real SF @ LA case is the first one where
+full submission beat the deadline, exposing the gap.
+
+**Fix, applied after Yeti confirmed he wanted it made:** removed the
+now-fully-dead local `isGameLocked(g)` function (and its comment)
+entirely rather than leave unused code behind -- it existed solely for
+this one check. The badge's gate (previously a separate `locked`
+variable) now reuses `picksRevealed` directly, the exact same real
+per-game signal already governing whether `pick`/`pickText` show at all
+two lines below it in the same function -- one shared definition, not a
+second one reintroduced. `pickCounts`/`isUnique` are otherwise unchanged
+(same "exactly one team picked this side" logic as before, and as
+worker.js's own Unique Hits leaderboard aggregate uses).
+
+**Verification**: `node --check` on both of `index.html`'s extracted
+inline `<script>` blocks (both pass). A local synthetic test
+(`test_raccoon_fix.mjs`, scratchpad, not committed) using the EXACT real
+live data confirmed above (deadline still future, `picksRevealed:true`,
+Llamas:"SF" vs. everyone else "LA") -- 13 assertions, all passing:
+first proved the OLD logic never flags Tati's pick pre-deadline
+(reproducing the reported bug from real data), then proved the NEW logic
+correctly flags Llamas as unique and all 7 "LA" teams as not-unique.
+
+**Status: FIXED.** Deployed via the same `git push` as this log entry
+(GitHub Pages, static frontend -- no Worker redeploy needed, this file
+has no backend component). Not yet re-confirmed visually in a live
+browser as of writing this entry -- doing that next, will note the
+result in a follow-up if anything unexpected turns up.

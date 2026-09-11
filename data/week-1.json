@@ -32,9 +32,9 @@
       "away": "SF",
       "kickoffISO": "2026-09-11T00:35:00.000Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -48,7 +48,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "Live",
       "deadline": "2026-09-10T22:35:00.000Z"
     },
     {

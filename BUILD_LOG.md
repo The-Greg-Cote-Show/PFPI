@@ -8936,3 +8936,139 @@ budget-conscious by construction (already-final games never re-query),
 and is immune to the specific regression risk (a late `/v1/nfl/games`
 "scheduled" flip-back silently un-finalizing an already-real result)
 that the original bug's own behavior made newly relevant tonight.
+
+## Sunday live-window quota risk found + throttled; real-API full-slate simulation blocked by an actual plan restriction (2026-09-11)
+
+Yeti asked whether a genuine, full, real-API Sunday-slate simulation had
+already been run ahead of the real 2026-09-13 Sunday slate -- prompted by
+a related project (PowerSwap) hitting real, painful quota-maxing problems
+in production over the prior weekend, and wanting PFPI proven against the
+same class of test before that happens here too. Checked this file first:
+no such simulation had been run (the closest prior real-API tests were
+the off-season Week 18 lock-lifecycle test and the single-game NE@SEA
+`/v1/stored/matches` investigation -- neither exercised a full concurrent
+multi-game slate).
+
+**Verified the real current cadence directly from code, not from memory**:
+the previously-assumed "~96 calls/day" schedule-polling figure undercounts
+by roughly 2x even on an ordinary off-window day -- `shouldPollBigBalls
+ThisTick`'s 15-min baseline fires 96 ticks/day, but each qualifying tick
+made 2 `/v1/nfl/games` calls (current week + next week), so the real
+off-window baseline was 192 calls/day, not 96.
+
+**Bigger, previously-unflagged finding**: computed the real worst-case
+cost of an ORDINARY Sunday's regular production polling alone (zero
+simulation, zero anything new) at roughly 2,070-2,100 Big Balls calls --
+already at or over the assumed 2,000/day cap by itself. Root cause:
+`isBigBallsLiveWindow` lifts the 15-min throttle entirely during its live
+window (Sun hour >= 13 ET, uncapped through midnight -- 11 real hours),
+and during that window every single 1-minute cron tick fired 2
+`/v1/nfl/games` calls (current + next week) PLUS, since the 2026-09-10
+`enrichLiveScores` fix, up to 1 more `/v1/stored/matches` call per tick
+for as long as any of that day's games were still pending. 11 hours x 60
+ticks/hr x up to 3 calls/tick, plus the 13 off-window hours, lands right
+at the cap purely from normal operation -- the exact real version of the
+PowerSwap-style risk Yeti wanted PFPI checked against.
+
+**Fix, deployed and unit-tested** (`worker.js`, `wrangler-scores.toml`
+Version ID `7dfbc8dd-eb21-40a8-8e00-e9551d390917`):
+
+1. **`isBigBallsLiveWindow` rewritten to be schedule-driven**, per Yeti's
+   explicit correction: the old version hardcoded "live window = Thu/Sun/
+   Mon evenings," which silently fails for any real NFL schedule quirk
+   that moves a game off its usual day -- a Thanksgiving Thursday slate
+   (games from ~12:30pm ET, not the usual 8pm TNF slot), a Black Friday or
+   Christmas game landing on whatever weekday the holiday falls on that
+   year, or a Week 16-18 Saturday game. New `getTodaysEarliestKickoffMs()`
+   reads the real, already-cached `schedule:week:{week}` KV (kept fresh
+   every 15 min regardless of window state) and finds the earliest real
+   kickoff whose ET calendar date is today; `isBigBallsLiveWindow` opens
+   15 minutes before that kickoff and closes at ET midnight (same
+   end-of-window boundary -- and same known very-late-OT-game tail
+   limitation -- as the original weekday version; not a regression).
+   Self-corrects on a flex/time change the moment it lands in the cache,
+   and matches the real NFL rule Yeti stated: kickoff can slide later
+   within its own day but never earlier or to a different day (barring a
+   manual-override-class reschedule).
+2. **Next week's `/v1/nfl/games` poll now only happens on 15-min marks**,
+   not every live-window tick -- next week's games can't possibly be live,
+   so they never needed faster-than-15-min freshness. Single biggest lever
+   in the fix.
+3. **`/v1/stored/matches` live-score enrichment throttled to at most once
+   per 2 minutes per week** (`STORED_MATCH_MIN_INTERVAL_MS`, KV-timestamp
+   gated same pattern as this file's existing Highlightly throttle;
+   `force` bypasses it same as every other gate in `pollAndPublish`). A
+   throttled tick reuses the last real fetch's own result
+   (`stored-matches-cache:{week}`) rather than falling back to stale
+   un-enriched Big Balls data, which would have been a real regression for
+   an in-progress game.
+
+Recomputed worst-case Sunday cost with the fix applied: ~1,138 calls (104
+off-window + 660 current-week nfl/games + 44 next-week nfl/games + ~330
+throttled stored-matches) -- down from ~2,070-2,100, with real headroom
+left under the 2,000/day cap.
+
+**Verified locally** via temporary named exports (`getTodaysEarliestKickoffMs`,
+`isBigBallsLiveWindow`, `enrichLiveScores` -- removed again immediately
+after, confirmed via `grep "^export "` showing only the original `export
+default`) against a mocked KV + `global.fetch`, 11 assertions all passing:
+correct behavior preserved for a real Sunday game (not live 30 min before
+kickoff, live inside the 15-min buffer, live during the game); a
+simulated Friday Christmas game correctly detected as a live window
+despite not being Thu/Sun/Mon (the exact class of bug the old hardcoded
+check had); the stored-matches throttle makes exactly one real call, skips
+a tick 1 minute later (reusing the cached result, not stale data), makes
+a fresh call again after 3 minutes, and `force:true` always bypasses it.
+
+### Real-API full-slate simulation: attempted, blocked by an actual account restriction
+
+Per Yeti's explicit, firm instruction, attempted a genuine real-API test
+against the real second Sunday of the 2025 regular season (2025-09-14) --
+not a mock, and not this current season's still-future 2026-09-13 Sunday,
+which hasn't happened yet and so has no real completed multi-game slate
+to test against. Used the same technique as the 2026-09-10
+`/debug/stored-matches` investigation: added a temporary, unauthenticated,
+read-only diagnostic route (`GET /debug/sunday-simulation`) directly to
+the deployed `pfpi-scores-worker`, designed to make exactly 3 real Big
+Balls calls (1 `/v1/nfl/games?season=2025&week=2` schedule fetch + 2
+`/v1/stored/matches` date fetches for 2025-09-14 and 2025-09-15 UTC, to
+correctly cover a Sunday-night game crossing midnight UTC) and run the
+real response through the exact same `normalizeGame`/`applyStoredMatch`/
+`computeTieAndWinner` code production uses. Deployed, called once,
+reverted, and redeployed clean immediately after -- confirmed gone
+(`GET /debug/sunday-simulation` now falls through to the normal
+`{"ok":true,"worker":"pfpi-scores-worker"}` root response).
+
+**Real, unexpected result -- the schedule fetch itself failed**, before
+either stored-matches call could fire (so total real spend was 1 call,
+not 3): a real 403 from Big Balls' own API, `code: "history_not_included"`
+-- "Your plan covers the current season only. This request resolves to 1
+season back, which is not included." The error's own metadata included an
+upgrade suggestion: a paid "Solo" tier at $19/month unlocks the current
+season plus 4 prior seasons, and separately lists a 10,000/day limit for
+itself.
+
+**This directly contradicts this file's own repeated "2000/day,
+GitHub-linked tier" assumption** (see the 2026-08-25 and 2026-09-04ish
+cron-drift entries) -- Big Balls' own error metadata says the account's
+real current tier is "free," not a GitHub-linked paid tier, and free does
+not include any prior-season history at all (the paid Solo tier does).
+
+**Not resolved tonight, flagged to Yeti rather than guessed at or worked
+around**: whether free tier's real daily call limit actually is 2,000 (or
+something else) is now a genuinely open question this file's entire
+throttle design has been assuming an answer to since 2026-08-25 without
+ever independently confirming it against the account's real plan.
+Upgrading tiers is a real billing decision, not something to do
+unilaterally. No further real API calls were spent chasing this without
+Yeti's go-ahead. The originally-requested 2025-historical-slate simulation
+could not be completed as specified -- blocked by a real account
+restriction that wasn't knowable from reading the code, only by trying it
+live.
+
+**Status**: Sunday quota-risk throttle fix is real, deployed, and
+unit-tested -- that part of tonight's ask is done regardless of the plan
+question. The full-slate real-API simulation itself is blocked pending
+Yeti's decision on how to proceed (upgrade to Solo, test against a
+current-season date once one exists, or confirm the real free-tier limit
+some other way). Total real Big Balls API spend tonight: 1 call.

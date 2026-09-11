@@ -205,6 +205,19 @@ function applyStoredMatch(game, storedMatch) {
   };
 }
 
+// Minimum real time between fresh /v1/stored/matches calls for a given
+// week's still-pending games, added 2026-09-11 per Yeti as part of the
+// Sunday-budget fix (see BUILD_LOG.md): the schedule-driven live window
+// above still fires this whole tick every single minute during a live
+// window, and re-checking live scores at that same 1-minute cadence was
+// the single largest remaining cost in the projected ~2,070-2,100
+// call/day worst case for an ordinary Sunday -- over the 2,000/day cap
+// from ordinary polling alone, before anything else touches the budget.
+// 2 minutes keeps scores meaningfully fresh (well inside anything a
+// pick'em standings page needs) while roughly halving this piece of the
+// cost.
+const STORED_MATCH_MIN_INTERVAL_MS = 2 * 60 * 1000;
+
 // Top-level enrichment step, called once per week right after
 // enrichKickoffTimes(). `knownFinalsById` is this week's existing
 // `results:week:{week}` KV cache (already-confirmed finals from a
@@ -218,7 +231,11 @@ function applyStoredMatch(game, storedMatch) {
 // game's correct "scheduled"/null state from /v1/nfl/games is left
 // alone, and this budget-conscious scoping naturally shrinks as more
 // games actually finish and get cached.
-async function enrichLiveScores(games, knownFinalsById, env) {
+//
+// `week` + `force` (added 2026-09-11) drive the STORED_MATCH_MIN_INTERVAL_MS
+// throttle below: a manual/admin `force` poll always gets a fresh call,
+// same as every other throttle in this file.
+async function enrichLiveScores(games, knownFinalsById, env, week, force = false) {
   const now = Date.now();
   const alreadyFinal = [];
   const needsLiveCheck = [];
@@ -244,8 +261,25 @@ async function enrichLiveScores(games, knownFinalsById, env) {
 
   let liveResults = needsLiveCheck;
   if (needsLiveCheck.length > 0) {
-    const lookup = await buildStoredMatchLookup(needsLiveCheck, env);
-    liveResults = needsLiveCheck.map(g => applyStoredMatch(g, lookup.get(g.matchId)));
+    const throttleKey = `stored-matches-throttle:${week}`;
+    const cacheKey = `stored-matches-cache:${week}`;
+    const lastCheck = Number((await env.PFPI_KV.get(throttleKey)) || 0);
+
+    if (force || now - lastCheck >= STORED_MATCH_MIN_INTERVAL_MS) {
+      const lookup = await buildStoredMatchLookup(needsLiveCheck, env);
+      liveResults = needsLiveCheck.map(g => applyStoredMatch(g, lookup.get(g.matchId)));
+      await env.PFPI_KV.put(throttleKey, String(now));
+      await env.PFPI_KV.put(cacheKey, JSON.stringify(liveResults));
+    } else {
+      // Too soon since the last real stored-matches call -- reuse that
+      // call's own result rather than spending another one this tick.
+      // Falling back to the un-enriched game (Big Balls' own status/score)
+      // instead would be a real regression for an in-progress game, since
+      // that's exactly the gap enrichLiveScores exists to cover.
+      const cachedRaw = await env.PFPI_KV.get(cacheKey);
+      const cachedById = new Map((cachedRaw ? JSON.parse(cachedRaw) : []).map(g => [g.id, g]));
+      liveResults = needsLiveCheck.map(g => cachedById.get(g.id) || g);
+    }
   }
 
   // Recombine, preserving the original schedule order (buildWeekPublicJSON
@@ -962,26 +996,78 @@ async function buildWeekPublicJSON(week, results, env) {
 // complexity), so "every ~15-20s" during Big Balls live windows is
 // approximated as "every tick" (the finest available), per the handoff
 // doc's own "target behavior matters more than exact mechanism" allowance.
+//
+// REWRITTEN 2026-09-11, per Yeti — the original version hardcoded
+// "live window = Thu/Sun/Mon evenings," which silently breaks for any real
+// NFL schedule quirk that moves a game off its usual day: a Thanksgiving
+// Thursday slate (three games starting ~12:30pm ET, not the usual 8pm TNF
+// slot), a Black Friday or Christmas game landing on whatever weekday the
+// holiday falls on that year, or a Week 16-18 Saturday game. None of those
+// would have gotten faster-than-15-min polling under the old check, purely
+// because they don't fall on "Thu/Sun/Mon." Real NFL scheduling rule (per
+// Yeti): a game's kickoff can slide LATER within its originally-slated
+// calendar day (flex, weather delay) but is never moved earlier than its
+// own week's earliest known kickoff and never moved to a different day
+// (barring a natural-disaster-class reschedule, which is a manual-override
+// situation, not something this function should try to guess).
+//
+// So instead of a weekday name, this now derives "is today a live game
+// day, and are we past its earliest kickoff" directly from the real,
+// already-cached schedule (`schedule:week:{week}`, kept fresh every 15 min
+// regardless of window state by the 15-min baseline tick below) — correct
+// for any real day of the week a game actually lands on, and self-updating
+// the moment a flex/time change lands in that cache.
 // ============================================================
 
-function isBigBallsLiveWindow(now) {
-  const weekday = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short" }).format(now);
-  const hour = parseInt(getEasternDateParts(now).hour, 10);
-  // Thursday/Monday night windows; Sunday covers early/late/SNF.
-  if (weekday === "Thu") return hour >= 20;
-  if (weekday === "Sun") return hour >= 13;
-  if (weekday === "Mon") return hour >= 20;
-  return false;
+const LIVE_WINDOW_PREGAME_BUFFER_MS = 15 * 60 * 1000;
+
+// Earliest real kickoff (ms since epoch) among this week's + next week's
+// cached schedule whose ET calendar date matches `now`'s ET calendar date.
+// Checking both weeks (same set pollAndPublish always polls) covers the
+// rare case where a week boundary miscalculation would otherwise hide a
+// real game happening today. Returns null if no real game is scheduled
+// today at all (a genuine off day — most Tuesdays/Wednesdays).
+async function getTodaysEarliestKickoffMs(env, now) {
+  const todayParts = getEasternDateParts(now);
+  const todayKey = `${todayParts.year}-${todayParts.month}-${todayParts.day}`;
+  const currentWeek = computeCurrentWeekFromDate(now);
+  const weeksToCheck = [currentWeek, Math.min(currentWeek + 1, 18)];
+
+  let earliestMs = null;
+  for (const week of weeksToCheck) {
+    const raw = await env.PFPI_KV.get(`schedule:week:${week}`);
+    if (!raw) continue;
+    for (const g of JSON.parse(raw)) {
+      if (!g.kickoffISO) continue;
+      const kickoffParts = getEasternDateParts(new Date(g.kickoffISO));
+      const kickoffKey = `${kickoffParts.year}-${kickoffParts.month}-${kickoffParts.day}`;
+      if (kickoffKey !== todayKey) continue;
+      const t = new Date(g.kickoffISO).getTime();
+      if (earliestMs === null || t < earliestMs) earliestMs = t;
+    }
+  }
+  return earliestMs;
+}
+
+async function isBigBallsLiveWindow(now, env) {
+  const earliestMs = await getTodaysEarliestKickoffMs(env, now);
+  if (earliestMs === null) return false;
+  // Window ends at ET midnight by construction (once the calendar date
+  // rolls over, `getTodaysEarliestKickoffMs` recomputes against the NEW
+  // day's games) — same end-of-window boundary the original weekday-based
+  // version had, including its known limitation that a game running very
+  // late into overtime past midnight ET tail off back to 15-min polling.
+  // Not introduced by this rewrite; unchanged from before.
+  return now.getTime() >= earliestMs - LIVE_WINDOW_PREGAME_BUFFER_MS;
 }
 
 // Outside live windows: poll every 15 min instead of every tick -- still
 // catches schedule/flex changes, a fraction of the 2000/day budget. UTC
 // minute is safe to gate on directly since every NFL-market US timezone is
 // a whole-hour UTC offset (no half-hour zones), so UTC and ET
-// minute-of-hour always agree.
-function shouldPollBigBallsThisTick(now) {
-  return isBigBallsLiveWindow(now) || now.getUTCMinutes() % 15 === 0;
-}
+// minute-of-hour always agree. (Inlined directly in pollAndPublish below,
+// which also needs the same `inLiveWindow`/`isFifteenMinMark` values to
+// decide the current/next-week split -- no separate wrapper function.)
 
 // ============================================================
 // FULL 2026 REGULAR-SEASON SCHEDULE PRELOAD (one-time)
@@ -1108,9 +1194,13 @@ async function pollAndPublish(env, force = false) {
   const currentWeek = computeCurrentWeekFromDate();
   await env.PFPI_KV.put("current-week", String(currentWeek));
 
+  const now = new Date();
+  const inLiveWindow = env.BIG_BALLS_API_KEY ? await isBigBallsLiveWindow(now, env) : false;
+  const isFifteenMinMark = now.getUTCMinutes() % 15 === 0;
+
   if (!env.BIG_BALLS_API_KEY) {
     console.error("Skipping Big Balls poll: BIG_BALLS_API_KEY not set. No regular-season score/schedule data fetched or published this tick.");
-  } else if (!force && !shouldPollBigBallsThisTick(new Date())) {
+  } else if (!force && !inLiveWindow && !isFifteenMinMark) {
     // Throttled: outside a live window and not a 15-min mark this tick.
   } else {
     await preloadFullSeasonScheduleIfNeeded(env);
@@ -1124,9 +1214,19 @@ async function pollAndPublish(env, force = false) {
     // silently reverts the fix between refetches).
     const kickoffLookup = await getHighlightlyKickoffLookup(env, force);
 
-    // Poll current week and next week, so next week's kickoff times (and
-    // therefore deadlines) are available before Tuesday's picks email goes out.
-    const weeksToPoll = [currentWeek, Math.min(currentWeek + 1, 18)];
+    // Poll current week every qualifying tick (it's the only week that can
+    // ever have a live/finishing game). Next week's games haven't kicked
+    // off yet, so it never needs faster-than-15-min freshness -- added
+    // 2026-09-11 per Yeti, this is the biggest single lever in the
+    // Sunday-budget fix (see BUILD_LOG.md): it removes the second of the
+    // two /v1/nfl/games calls from every live-window tick except the
+    // 15-min marks, without ever delaying next week's kickoff times (and
+    // therefore deadlines) by more than 15 minutes -- still comfortably
+    // ahead of Tuesday's picks email.
+    const nextWeek = Math.min(currentWeek + 1, 18);
+    const weeksToPoll = (force || !inLiveWindow || isFifteenMinMark)
+      ? [currentWeek, nextWeek]
+      : [currentWeek];
     const weekFiles = {};
 
     for (const week of weeksToPoll) {
@@ -1144,7 +1244,7 @@ async function pollAndPublish(env, force = false) {
       const knownFinalsById = new Map(
         (existingResultsRaw ? JSON.parse(existingResultsRaw) : []).map(g => [g.id, g])
       );
-      normalized = await enrichLiveScores(normalized, knownFinalsById, env);
+      normalized = await enrichLiveScores(normalized, knownFinalsById, env, week, force);
 
       // Schedule cache for the picks worker's deadline math: kickoff times only.
       await env.PFPI_KV.put(

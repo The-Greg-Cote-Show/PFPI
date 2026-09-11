@@ -9136,3 +9136,113 @@ corrected 2026 pass. Nowhere close to threatening either the assumed
 2,000/day cap or Sunday's own regular production polling. The unresolved
 item remains the same as above: the account's real free-tier daily limit
 itself is still unconfirmed.
+
+**Update, same night**: Yeti independently verified the 2,000/day cap is
+real, then pushed back hard (correctly) on the throttle fix above once he
+understood what it actually did. Second pass, below, replaces it.
+
+## Second pass, same night: decoupled schedule polling from live-score checking entirely (2026-09-11)
+
+Yeti's real objection, once the mechanics were explained: schedule/
+matchup checks (`/v1/nfl/games`) barely ever need to happen at all --
+flex changes are announced days in advance, never last-minute -- so 3x/
+day is already generous, "not even a drop in the bucket" of the 2,000/day
+budget. Live-score checks (`/v1/stored/matches`), meanwhile, should just
+run every 1 minute during live play, full stop -- a whole Sunday only
+ever resolves to 1-2 unique dates (confirmed live, see the simulation
+above), so even at 1/min that's only ~660 calls for an 11-hour window.
+Combined: ~666 calls/day worst case, not the ~1,138 the first pass
+landed on.
+
+**Where the first pass actually went wrong**: it kept `/v1/nfl/games`
+polling every single minute during a live window (660 of its 1,138 calls)
+-- leftover logic from BEFORE `/v1/stored/matches` existed, when
+`/v1/nfl/games` was the only source of scores and polling it constantly
+made sense. Once live scoring moved to a second endpoint (2026-09-10),
+there was no real reason left to keep re-fetching the schedule at that
+same frequency -- it doesn't even carry a live signal. The first pass
+reduced the waste (splitting next-week's poll to 15-min marks) without
+questioning whether coupling schedule-refresh to live-score-refresh at
+all still made sense. It didn't.
+
+**Real rewrite, `worker.js`, `pollAndPublish()`**:
+
+1. **Schedule poll and live-score check are now on fully independent
+   gates.** Schedule (`/v1/nfl/games`, both weeks) fires only at three
+   fixed ET times a day (`SCHEDULE_POLL_ET_HOURS = ["06","14","22"]`), on
+   `force`, or if either week's `schedule:week:*` cache is simply missing
+   (bootstraps a fresh deploy or a brand-new week immediately rather than
+   waiting up to ~8 hours). ~6 calls/day.
+2. **The overnight 2-minute `STORED_MATCH_MIN_INTERVAL_MS` throttle on
+   `enrichLiveScores` is removed.** It was solving the wrong problem --
+   `enrichLiveScores` is already self-throttling by construction
+   (`needsLiveCheck` is empty, zero real calls, on any tick where nothing
+   has kicked off or everything's already cached final), so calling it on
+   every tick that reaches this point naturally costs a real call only
+   exactly when a game is genuinely live and unresolved. That IS "check
+   live scores every 1 minute during live play," with no interval to
+   tune.
+3. **The schedule cache (`schedule:week:{week}`) now also stores
+   `hasRealTime` and `matchId`**, not just id/home/away/kickoffISO -- so
+   the live-score check and the publish step can both fully reconstruct a
+   game from KV alone between schedule-poll ticks, with zero further
+   `/v1/nfl/games` calls.
+4. **The PUBLISH step (weekFiles/standings/current.json + GitHub commits)
+   stays on its existing cadence** (every tick in `isBigBallsLiveWindow`,
+   else every 15 min) -- unchanged, because it costs zero Big Balls calls
+   (pure KV reads), so there was never a budget reason to touch it. Its
+   only remaining real job is keeping the picks-reveal condition and
+   GitHub commit history reasonably fresh/quiet, not managing API spend.
+   `isBigBallsLiveWindow` itself is unchanged from the first pass (still
+   schedule-driven, not hardcoded weekdays) -- it's just been repurposed
+   to govern only this, not the two Big Balls calls anymore.
+
+**A real regression caught and fixed before it ever shipped**: the first
+draft of this rewrite re-derived the current week's publish data from KV
+(`schedule:week` + `results:week`) the same way next week safely can.
+That's wrong for current week specifically -- only FINAL games ever get
+written to `results:week`; a genuinely in-progress, not-yet-final score
+only ever exists in that tick's own memory. Re-deriving from KV after the
+live-score check would have silently dropped every live score back to
+blank/"scheduled" until the game actually ended, on every single tick.
+Fixed by using the live-score check's in-memory result directly for
+current week's `buildWeekPublicJSON` call, and only using the
+KV-reconstruction path (`loadWeekGamesFromCache`) for next week, which
+can never have live data to lose.
+
+**Verified locally** via temporarily-exported functions (`pollAndPublish`,
+`isScheduledPollHour`, `enrichLiveScores`, `loadWeekGamesFromCache` --
+removed again immediately after, confirmed via `grep "^export "` showing
+only the original `export default`), a mocked KV, and a mocked
+`global.fetch` distinguishing `/v1/nfl/games`, `/v1/stored/matches`,
+`api.github.com`, and `api.resend.com` calls. 16 assertions, all passing,
+including: an idle 15-min-mark tick with a populated schedule cache and no
+pending games makes ZERO real calls; a missing schedule cache bootstraps
+immediately (2 calls) even off-hour; a real `isScheduledPollHour` tick
+(06:00 ET) makes exactly 2 `/v1/nfl/games` calls; a live-window tick with
+a pending game makes ZERO `/v1/nfl/games` calls and exactly ONE
+`/v1/stored/matches` call, AND -- decoding the actual base64 GitHub commit
+payload -- the real in-progress score (10-7) is genuinely present in the
+published `data/week-1.json`, confirming the regression above is fixed;
+an already-cached-final game costs zero further stored-matches calls
+(the existing optimization, still intact).
+
+**Deployed**: `wrangler deploy --config wrangler-scores.toml`, Version ID
+`80e31c6e-3279-41ee-9bb3-863c78cc1a5a`. Confirmed live and healthy after
+deploy: `GET /` still returns the normal `{"ok":true,...}` response, and
+the next several automated commits landed cleanly with correct real data
+(`2026_01_NE_SEA` still shows `status:"final"`, `13-10`, `winner:"SEA"`;
+`2026_01_SF_LA` shows `status:"final"`, `7-27`, `winner:"SF"` -- both
+correct, both survived the rewrite).
+
+**Recomputed real worst-case Sunday cost**: ~666 calls (6 schedule + ~660
+live-score checks over an ~11-hour live window) -- down from the first
+pass's ~1,138, and the original unthrottled ~2,070-2,100 -- with the same
+1-minute live-score freshness the unthrottled version had, not the
+first pass's 2-minute throttle. Matches Yeti's own hand math almost
+exactly.
+
+**Status: DONE.** Both the schedule-poll and live-score cadences now
+match what Yeti specified, the coupling that caused the original waste is
+gone, and the one real regression this rewrite could have introduced was
+caught and fixed pre-deploy, not discovered live on Sunday.

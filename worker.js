@@ -205,37 +205,36 @@ function applyStoredMatch(game, storedMatch) {
   };
 }
 
-// Minimum real time between fresh /v1/stored/matches calls for a given
-// week's still-pending games, added 2026-09-11 per Yeti as part of the
-// Sunday-budget fix (see BUILD_LOG.md): the schedule-driven live window
-// above still fires this whole tick every single minute during a live
-// window, and re-checking live scores at that same 1-minute cadence was
-// the single largest remaining cost in the projected ~2,070-2,100
-// call/day worst case for an ordinary Sunday -- over the 2,000/day cap
-// from ordinary polling alone, before anything else touches the budget.
-// 2 minutes keeps scores meaningfully fresh (well inside anything a
-// pick'em standings page needs) while roughly halving this piece of the
-// cost.
-const STORED_MATCH_MIN_INTERVAL_MS = 2 * 60 * 1000;
-
-// Top-level enrichment step, called once per week right after
-// enrichKickoffTimes(). `knownFinalsById` is this week's existing
-// `results:week:{week}` KV cache (already-confirmed finals from a
-// PREVIOUS tick) -- a game already in there is reapplied directly,
-// without spending a fresh stored-matches call on it, and specifically
-// so it can never be silently dropped from this tick's own
+// Top-level enrichment step, called once per tick for the current week
+// only (see pollAndPublish -- next week can never have a live/finishing
+// game, so it's never worth calling this for it). `knownFinalsById` is
+// this week's existing `results:week:{week}` KV cache (already-confirmed
+// finals from a PREVIOUS tick) -- a game already in there is reapplied
+// directly, without spending a fresh stored-matches call on it, and
+// specifically so it can never be silently dropped from this tick's own
 // `results:week` write if /v1/nfl/games regresses back to "scheduled"
 // (confirmed real behavior tonight) or a stored-matches call transiently
 // fails. Only games that have genuinely kicked off AND aren't already
 // confirmed final ever trigger a real stored-matches call -- a future
-// game's correct "scheduled"/null state from /v1/nfl/games is left
-// alone, and this budget-conscious scoping naturally shrinks as more
-// games actually finish and get cached.
+// game's correct "scheduled"/null state is left alone, and this
+// budget-conscious scoping naturally shrinks as more games finish and get
+// cached.
 //
-// `week` + `force` (added 2026-09-11) drive the STORED_MATCH_MIN_INTERVAL_MS
-// throttle below: a manual/admin `force` poll always gets a fresh call,
-// same as every other throttle in this file.
-async function enrichLiveScores(games, knownFinalsById, env, week, force = false) {
+// REWRITTEN 2026-09-11 (second pass, per Yeti): the original 9/10 version
+// of this function is unchanged in shape; only the previous night's
+// STORED_MATCH_MIN_INTERVAL_MS 2-minute throttle is removed here. That
+// throttle turned out to be solving the wrong problem -- the real
+// oversized cost on a live Sunday was `/v1/nfl/games` polling every
+// minute (removed by decoupling schedule polling into pollAndPublish's
+// separate 3x/day check), not this function. This function is already
+// self-throttling by construction: `needsLiveCheck` is empty (zero real
+// calls) for every tick where nothing has actually kicked off yet or
+// everything already-kicked-off is already cached final, so calling it on
+// every tick naturally costs a real call only exactly when a game is
+// genuinely live and unresolved -- which is exactly the "check live
+// scores every 1 minute during live play" cadence Yeti asked for, with no
+// separate interval to tune.
+async function enrichLiveScores(games, knownFinalsById, env) {
   const now = Date.now();
   const alreadyFinal = [];
   const needsLiveCheck = [];
@@ -251,9 +250,9 @@ async function enrichLiveScores(games, knownFinalsById, env, week, force = false
   }
 
   // Only the outcome fields come from the cache -- home/away/kickoffISO/
-  // hasRealTime/matchId stay THIS tick's own fresh values (from
-  // /v1/nfl/games + enrichKickoffTimes above), in case an earlier tick's
-  // cached snapshot predates a later kickoff-time correction.
+  // hasRealTime/matchId stay THIS tick's own fresh values, in case an
+  // earlier tick's cached snapshot predates a later kickoff-time
+  // correction.
   const cachedResults = alreadyFinal.map(g => {
     const cached = knownFinalsById.get(g.id);
     return { ...g, homeScore: cached.homeScore, awayScore: cached.awayScore, status: cached.status, tie: cached.tie, winner: cached.winner };
@@ -261,25 +260,8 @@ async function enrichLiveScores(games, knownFinalsById, env, week, force = false
 
   let liveResults = needsLiveCheck;
   if (needsLiveCheck.length > 0) {
-    const throttleKey = `stored-matches-throttle:${week}`;
-    const cacheKey = `stored-matches-cache:${week}`;
-    const lastCheck = Number((await env.PFPI_KV.get(throttleKey)) || 0);
-
-    if (force || now - lastCheck >= STORED_MATCH_MIN_INTERVAL_MS) {
-      const lookup = await buildStoredMatchLookup(needsLiveCheck, env);
-      liveResults = needsLiveCheck.map(g => applyStoredMatch(g, lookup.get(g.matchId)));
-      await env.PFPI_KV.put(throttleKey, String(now));
-      await env.PFPI_KV.put(cacheKey, JSON.stringify(liveResults));
-    } else {
-      // Too soon since the last real stored-matches call -- reuse that
-      // call's own result rather than spending another one this tick.
-      // Falling back to the un-enriched game (Big Balls' own status/score)
-      // instead would be a real regression for an in-progress game, since
-      // that's exactly the gap enrichLiveScores exists to cover.
-      const cachedRaw = await env.PFPI_KV.get(cacheKey);
-      const cachedById = new Map((cachedRaw ? JSON.parse(cachedRaw) : []).map(g => [g.id, g]));
-      liveResults = needsLiveCheck.map(g => cachedById.get(g.id) || g);
-    }
+    const lookup = await buildStoredMatchLookup(needsLiveCheck, env);
+    liveResults = needsLiveCheck.map(g => applyStoredMatch(g, lookup.get(g.matchId)));
   }
 
   // Recombine, preserving the original schedule order (buildWeekPublicJSON
@@ -1049,6 +1031,20 @@ async function getTodaysEarliestKickoffMs(env, now) {
   return earliestMs;
 }
 
+// REPURPOSED 2026-09-11 (second pass, per Yeti): this used to gate BOTH
+// the `/v1/nfl/games` schedule fetch and the `/v1/stored/matches`
+// live-score check, which is what made a live Sunday cost ~2,070-2,100
+// Big Balls calls -- polling the schedule every single minute for 11
+// hours straight was almost the whole cost, even though the schedule
+// itself barely ever changes mid-game. Real fix: the schedule fetch and
+// the live-score check are now on their own independent, decoupled gates
+// in pollAndPublish (see `isScheduledPollHour` below and
+// `enrichLiveScores`'s own self-throttling comment). This function's ONLY
+// remaining job is the PUBLISH cadence -- how often to regenerate/commit
+// the public JSON -- which costs zero Big Balls calls (pure KV reads +
+// a GitHub commit), so keeping it at "every tick while a game's actually
+// happening today" is just about fresh picks-reveal/standings output, not
+// API budget.
 async function isBigBallsLiveWindow(now, env) {
   const earliestMs = await getTodaysEarliestKickoffMs(env, now);
   if (earliestMs === null) return false;
@@ -1061,13 +1057,50 @@ async function isBigBallsLiveWindow(now, env) {
   return now.getTime() >= earliestMs - LIVE_WINDOW_PREGAME_BUFFER_MS;
 }
 
-// Outside live windows: poll every 15 min instead of every tick -- still
-// catches schedule/flex changes, a fraction of the 2000/day budget. UTC
+// Outside a live window (per isBigBallsLiveWindow above): the PUBLISH step
+// still runs every 15 min instead of every tick -- purely to keep
+// GitHub commit history from getting noisy on an ordinary idle weekday
+// (Tue/Wed/Fri/Sat), since it's otherwise free API-budget-wise. UTC
 // minute is safe to gate on directly since every NFL-market US timezone is
 // a whole-hour UTC offset (no half-hour zones), so UTC and ET
 // minute-of-hour always agree. (Inlined directly in pollAndPublish below,
 // which also needs the same `inLiveWindow`/`isFifteenMinMark` values to
-// decide the current/next-week split -- no separate wrapper function.)
+// decide the schedule/live-score split -- no separate wrapper function.)
+
+// SCHEDULE POLL CADENCE (added 2026-09-11, second pass, per Yeti):
+// `/v1/nfl/games` only needs to be re-checked a few times a day -- flex
+// schedule changes are announced days in advance, never last-minute, so
+// there's no real freshness need for anything faster. Three ET times a
+// day, 8 hours apart, comfortably catches a same-day flex/schedule change
+// well before any deadline while spending a genuinely negligible slice of
+// the 2,000/day budget (2 calls -- current + next week -- x 3 = 6/day).
+const SCHEDULE_POLL_ET_HOURS = ["06", "14", "22"];
+function isScheduledPollHour(now) {
+  const parts = getEasternDateParts(now);
+  return SCHEDULE_POLL_ET_HOURS.includes(parts.hour) && parts.minute === "00";
+}
+
+// Reconstructs a week's full game list from KV alone (schedule cache +
+// any already-confirmed final results), spending zero real API calls --
+// used for the PUBLISH step so it never needs to re-fetch anything just to
+// regenerate/commit the public JSON. NOT used for the live-score check
+// itself, which needs the plain "not yet resolved" shape as input to
+// enrichLiveScores (that function does its own, more careful merge with
+// `knownFinalsById` and is also the only path that ever sees a genuinely
+// in-progress, not-yet-final score -- see its own comment).
+async function loadWeekGamesFromCache(week, env) {
+  const scheduleRaw = await env.PFPI_KV.get(`schedule:week:${week}`);
+  if (!scheduleRaw) return [];
+  const schedule = JSON.parse(scheduleRaw);
+  const resultsRaw = await env.PFPI_KV.get(`results:week:${week}`);
+  const resultsById = new Map((resultsRaw ? JSON.parse(resultsRaw) : []).map(g => [g.id, g]));
+  return schedule.map(g => {
+    const cached = resultsById.get(g.id);
+    return cached
+      ? { ...g, homeScore: cached.homeScore, awayScore: cached.awayScore, status: cached.status, tie: cached.tie, winner: cached.winner, clockReport: cached.clockReport ?? null }
+      : { ...g, homeScore: null, awayScore: null, status: "scheduled", winner: null, tie: false, clockReport: null };
+  });
+}
 
 // ============================================================
 // FULL 2026 REGULAR-SEASON SCHEDULE PRELOAD (one-time)
@@ -1201,64 +1234,96 @@ async function pollAndPublish(env, force = false) {
   if (!env.BIG_BALLS_API_KEY) {
     console.error("Skipping Big Balls poll: BIG_BALLS_API_KEY not set. No regular-season score/schedule data fetched or published this tick.");
   } else if (!force && !inLiveWindow && !isFifteenMinMark) {
-    // Throttled: outside a live window and not a 15-min mark this tick.
+    // Throttled: outside a live window and not a 15-min mark this tick
+    // (publish cadence only -- see isBigBallsLiveWindow's own comment).
   } else {
-    await preloadFullSeasonScheduleIfNeeded(env);
-
-    // Own throttle, independent of Big Balls' -- see
-    // getHighlightlyKickoffLookup's own comment (and the bug it fixes:
-    // this must return a usable lookup on EVERY tick, from cache if this
-    // isn't a refetch tick, not just the tick that actually refetches --
-    // Big Balls resynthesizes a placeholder kickoff time from scratch
-    // every time it runs, so anything less than "enrich every tick"
-    // silently reverts the fix between refetches).
-    const kickoffLookup = await getHighlightlyKickoffLookup(env, force);
-
-    // Poll current week every qualifying tick (it's the only week that can
-    // ever have a live/finishing game). Next week's games haven't kicked
-    // off yet, so it never needs faster-than-15-min freshness -- added
-    // 2026-09-11 per Yeti, this is the biggest single lever in the
-    // Sunday-budget fix (see BUILD_LOG.md): it removes the second of the
-    // two /v1/nfl/games calls from every live-window tick except the
-    // 15-min marks, without ever delaying next week's kickoff times (and
-    // therefore deadlines) by more than 15 minutes -- still comfortably
-    // ahead of Tuesday's picks email.
     const nextWeek = Math.min(currentWeek + 1, 18);
-    const weeksToPoll = (force || !inLiveWindow || isFifteenMinMark)
-      ? [currentWeek, nextWeek]
-      : [currentWeek];
-    const weekFiles = {};
+    const weeksToPublish = [currentWeek, nextWeek];
 
-    for (const week of weeksToPoll) {
-      const raw = await fetchBigBallsWeek(week, env);
-      if (!raw) continue;
-      let normalized = enrichKickoffTimes(raw.map(normalizeGame), kickoffLookup);
+    // ---- SCHEDULE POLL: /v1/nfl/games, ~3x/day (see SCHEDULE_POLL_ET_HOURS) ----
+    // REWRITTEN 2026-09-11 (second pass, per Yeti): decoupled from the
+    // live-score check below entirely. The schedule barely ever changes
+    // mid-week, so there's no reason to keep re-fetching it every minute
+    // just because a live-score tick also needs to run -- that coupling
+    // was the actual source of the ~2,070-2,100 call/day worst case this
+    // file's first pass (a few hours earlier tonight) only partially
+    // fixed. Also bootstraps immediately if either week's schedule cache
+    // is simply missing (a fresh deploy, or a brand-new week that hasn't
+    // been polled yet), rather than waiting up to ~8 hours for the next
+    // scheduled slot.
+    const cacheMissing = (
+      await Promise.all(weeksToPublish.map(w => env.PFPI_KV.get(`schedule:week:${w}`)))
+    ).some(v => !v);
 
-      // Live/final score enrichment (2026-09-10, per Yeti -- see
-      // enrichLiveScores' own comment above for the full real incident
-      // this fixes). `knownFinalsById` is this week's own existing
-      // results:week: cache -- read BEFORE this tick overwrites it, so an
-      // already-confirmed final never needs a fresh stored-matches call
-      // and can never be silently dropped by this tick's own write below.
-      const existingResultsRaw = await env.PFPI_KV.get(`results:week:${week}`);
+    if (force || isScheduledPollHour(now) || cacheMissing) {
+      await preloadFullSeasonScheduleIfNeeded(env);
+      const kickoffLookup = await getHighlightlyKickoffLookup(env, force);
+
+      for (const week of weeksToPublish) {
+        const raw = await fetchBigBallsWeek(week, env);
+        if (!raw) continue;
+        const normalized = enrichKickoffTimes(raw.map(normalizeGame), kickoffLookup);
+        // Schedule cache: kickoff times for the picks worker's deadline
+        // math, plus (2026-09-11) hasRealTime/matchId so the live-score
+        // check and the publish step below can both fully reconstruct a
+        // game from this cache alone, with zero further /v1/nfl/games
+        // calls between schedule-poll ticks.
+        await env.PFPI_KV.put(
+          `schedule:week:${week}`,
+          JSON.stringify(normalized.map(g => ({
+            id: g.id, home: g.home, away: g.away, kickoffISO: g.kickoffISO,
+            hasRealTime: g.hasRealTime, matchId: g.matchId,
+          })))
+        );
+      }
+    }
+
+    // ---- LIVE-SCORE CHECK: /v1/stored/matches, current week only ----
+    // Runs on every tick that reaches this point (see the outer throttle
+    // above) -- enrichLiveScores only ever spends a real call when a game
+    // has genuinely kicked off and isn't already cached final, so this
+    // naturally costs nothing on an idle day and exactly one real check
+    // per live minute during actual live play, with no separate interval
+    // to tune. Never done for next week -- it can't possibly have a live
+    // or finishing game yet.
+    //
+    // IMPORTANT: `enriched` (not a re-read from KV) is what feeds the
+    // current week's publish step below. Only FINAL games get persisted to
+    // `results:week` -- a genuinely in-progress, not-yet-final score only
+    // ever exists in this tick's own memory, so re-deriving current week's
+    // games from KV after this point (the way next week safely can, since
+    // it never has live data at all) would silently drop every live score
+    // back to blank until the game ends. Caught this exact regression
+    // while writing this rewrite, before it ever shipped.
+    let currentWeekGames = null;
+    const currentScheduleRaw = await env.PFPI_KV.get(`schedule:week:${currentWeek}`);
+    if (currentScheduleRaw) {
+      const baseGames = JSON.parse(currentScheduleRaw).map(g => ({
+        ...g, homeScore: null, awayScore: null, status: "scheduled", winner: null, tie: false, clockReport: null,
+      }));
+      const existingResultsRaw = await env.PFPI_KV.get(`results:week:${currentWeek}`);
       const knownFinalsById = new Map(
         (existingResultsRaw ? JSON.parse(existingResultsRaw) : []).map(g => [g.id, g])
       );
-      normalized = await enrichLiveScores(normalized, knownFinalsById, env, week, force);
-
-      // Schedule cache for the picks worker's deadline math: kickoff times only.
-      await env.PFPI_KV.put(
-        `schedule:week:${week}`,
-        JSON.stringify(normalized.map(g => ({ id: g.id, home: g.home, away: g.away, kickoffISO: g.kickoffISO })))
-      );
-
-      // Once a game is final, its result is locked in for standings purposes.
-      const finals = normalized.filter(g => g.status === "final");
+      currentWeekGames = await enrichLiveScores(baseGames, knownFinalsById, env);
+      const finals = currentWeekGames.filter(g => g.status === "final");
       if (finals.length > 0) {
-        await env.PFPI_KV.put(`results:week:${week}`, JSON.stringify(finals));
+        await env.PFPI_KV.put(`results:week:${currentWeek}`, JSON.stringify(finals));
       }
+    }
 
-      weekFiles[week] = await buildWeekPublicJSON(week, normalized, env);
+    // ---- PUBLISH: build weekFiles for both weeks ----
+    // Zero further Big Balls calls -- current week uses the in-memory
+    // live-score result straight from this same tick (see above); next
+    // week is rebuilt from its schedule cache alone (it can never have
+    // results, so there's nothing to lose by re-deriving it from KV).
+    const weekFiles = {};
+    if (currentWeekGames && currentWeekGames.length > 0) {
+      weekFiles[currentWeek] = await buildWeekPublicJSON(currentWeek, currentWeekGames, env);
+    }
+    const nextWeekGames = await loadWeekGamesFromCache(nextWeek, env);
+    if (nextWeekGames.length > 0) {
+      weekFiles[nextWeek] = await buildWeekPublicJSON(nextWeek, nextWeekGames, env);
     }
 
     const {

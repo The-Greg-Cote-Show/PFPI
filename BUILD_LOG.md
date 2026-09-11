@@ -9066,9 +9066,73 @@ could not be completed as specified -- blocked by a real account
 restriction that wasn't knowable from reading the code, only by trying it
 live.
 
-**Status**: Sunday quota-risk throttle fix is real, deployed, and
-unit-tested -- that part of tonight's ask is done regardless of the plan
-question. The full-slate real-API simulation itself is blocked pending
-Yeti's decision on how to proceed (upgrade to Solo, test against a
-current-season date once one exists, or confirm the real free-tier limit
-some other way). Total real Big Balls API spend tonight: 1 call.
+**Status (superseded by the section below)**: Sunday quota-risk throttle
+fix is real, deployed, and unit-tested -- that part of tonight's ask is
+done regardless of the plan question. Total real Big Balls API spend at
+this point: 1 call (the failed 2025 schedule fetch).
+
+### Real-API full-slate simulation, take 2: swapped to the REAL 2026-09-13 Week 1 Sunday slate -- DONE
+
+Per Yeti's direction after the 2025-history block above: swapped the test
+to the real, actual, already-scheduled 2026-09-13 Week 1 Sunday slate
+instead -- current season, so allowed on the account's real "free" tier,
+and the real slate this system actually needs to be right about in two
+days. Same temporary-diagnostic-route technique, added/called/reverted/
+redeployed clean each pass, confirmed gone afterward via the normal
+`{"ok":true,"worker":"pfpi-scores-worker"}` fallback response.
+
+**First pass** called a fresh `/v1/nfl/games?season=2026&week=1` (1 real
+call) and grouped games by Big Balls' own raw `game_date` instead of the
+Highlightly-corrected real kickoff time -- a real, useful mistake to
+catch here rather than live Sunday: it mis-filed the real Sunday-night
+DAL@NYG game and the real Monday DEN@KC game into the same date bucket,
+because both happen to carry the placeholder date "2026-09-14" before
+Highlightly correction. Exactly the class of bug `enrichKickoffTimes`
+exists to prevent, and confirms doing this enrichment BEFORE the
+stored-matches date grouping (as `pollAndPublish` already does) is
+load-bearing, not cosmetic.
+
+**Second pass, corrected**: reused the already-cached, already-
+Highlightly-corrected `schedule:week:1` KV (no extra `/v1/nfl/games` call
+needed -- production's own 15-min polling already keeps it fresh) and
+grouped by each game's real kickoff's ET calendar date, matching
+`pollAndPublish`'s real logic exactly. Real, confirmed results:
+
+- **13 real games** in the real 2026-09-13 Sunday slate (12 at 1pm/4:25pm
+  ET, plus the real Sunday-night DAL@NYG game at 8:20pm ET).
+- Those 13 games' real kickoff times resolve to **exactly 2 real UTC
+  dates** -- `2026-09-13` (the 12 day games) and `2026-09-14` (DAL@NYG,
+  crossing midnight UTC) -- confirming live, on the actual real slate,
+  the core assumption this whole file's budget math depends on: a full
+  Sunday needs one `/v1/stored/matches` call per unique date, not one per
+  game. **2 real API calls total, not 13.**
+- Both real calls succeeded and returned real data: 12 matches for
+  2026-09-13, 1 for 2026-09-14 -- 13 total, one per real Sunday game, all
+  currently `status: "scheduled"` (confirmed live: this endpoint DOES
+  expose real pre-game entries ahead of kickoff, not just "live"/
+  "finished" -- a new real data point this session didn't have before
+  tonight).
+- This diagnostic's own simplified team-name join (a stand-in for
+  production's real matchId join, since `schedule:week` doesn't cache
+  matchId) flagged WAS@PHI as "unmatched" -- but its real matchId
+  (`bcc3ad22-...`, confirmed from the first pass's raw `/v1/nfl/games`
+  response) IS present in the 12 matches returned for 2026-09-13, so the
+  real game genuinely came back; the diagnostic's own name-based fallback
+  just couldn't confirm it independently, almost certainly the same
+  real WAS/WSH short-code mismatch between providers already documented
+  elsewhere in this file (Highlightly `WSH` vs. Big Balls `WAS`). Not
+  spending a further real call to nail this down -- it's a limitation of
+  this one-off diagnostic's simplified matching, not of production, which
+  always joins by the real matchId UUID (already proven live 2026-09-10).
+
+**Status: real-API full-slate simulation done.** All 13 real games in the
+actual upcoming Sunday slate are reachable through the real pipeline with
+exactly 2 stored-matches calls, matching the throttle fix's budget
+assumptions exactly, and the endpoint behaves as expected pre-kickoff.
+Total real Big Balls API spend across all of tonight's real-API work
+(the reverted 2025 attempt + both 2026 passes): **6 calls** -- 1 failed
+2025 schedule fetch, 3 for the first (uncorrected) 2026 pass, 2 for the
+corrected 2026 pass. Nowhere close to threatening either the assumed
+2,000/day cap or Sunday's own regular production polling. The unresolved
+item remains the same as above: the account's real free-tier daily limit
+itself is still unconfirmed.

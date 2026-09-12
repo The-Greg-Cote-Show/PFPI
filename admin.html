@@ -1617,7 +1617,7 @@ async function sendMissingPicksReminder(btn) {
       statusEl.className = "mp-reminder-status err";
       return;
     }
-    statusEl.textContent = `Reminder sent (to yeti@yetiblanc.com for testing) — ${data.missingCount} game(s) listed.`;
+    statusEl.textContent = `Reminder sent, with a picks link, ${data.missingCount} game(s) listed.`;
     statusEl.className = "mp-reminder-status ok";
   } catch (e) {
     btn.disabled = false;

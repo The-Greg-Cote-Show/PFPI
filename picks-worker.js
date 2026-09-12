@@ -1193,6 +1193,13 @@ async function handleSendReminderEmail(request, env) {
   }
 
   const lines = missing.map(g => `${g.away} @ ${g.home}`);
+  // Reminder link added (2026-09-11, per Yeti): mints a fresh weekly token
+  // the same way handleResendPicksLink does, so the recipient doesn't have
+  // to go dig up Tuesday's original email -- same real picks.html link,
+  // just re-issued. Not restricted to the still-missing games; it's the
+  // same all-week link the original picks-open email sent.
+  const token = await generateWeeklyToken(team, weekNum, env);
+  const link = `https://pfpi.me/picks.html?token=${token}`;
   // "commissioner" identity (2026-09-06) -- this reminder is nominally to a
   // real family member on Greg's behalf, same category as the real
   // picks-open/picks-confirmation emails, and now genuinely reaches that
@@ -1202,7 +1209,7 @@ async function handleSendReminderEmail(request, env) {
   const sent = await sendPfpiEmail(
     getPickerEmail(team),
     `PFPI reminder: ${fullTeamName(team)}, ${weekLabel} picks still needed`,
-    `${fullTeamName(team)} is still missing ${weekLabel} picks for:\n\n${lines.join("\n")}`,
+    `${fullTeamName(team)} is still missing ${weekLabel} picks for:\n\n${lines.join("\n")}\n\nUse this link to make them now:\n\n${link}`,
     env, undefined, "commissioner"
   );
 
@@ -1263,10 +1270,14 @@ async function handleSendGameReminderEmail(request, env) {
   const matchup = `${game.away} @ ${game.home}`;
   const results = [];
   for (const team of missingTeams) {
+    // Same reminder-link addition as handleSendReminderEmail above -- a
+    // fresh whole-week token per team, not scoped to just this one game.
+    const token = await generateWeeklyToken(team, weekNum, env);
+    const link = `https://pfpi.me/picks.html?token=${token}`;
     const sent = await sendPfpiEmail(
       getPickerEmail(team),
       `PFPI reminder: ${fullTeamName(team)}, ${weekLabel} pick still needed for ${matchup}`,
-      `${fullTeamName(team)} is still missing a ${weekLabel} pick for ${matchup}.`,
+      `${fullTeamName(team)} is still missing a ${weekLabel} pick for ${matchup}.\n\nUse this link to make it now:\n\n${link}`,
       env, undefined, "commissioner"
     );
     results.push({ team, sent });

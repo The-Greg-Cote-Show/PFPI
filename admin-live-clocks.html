@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex, nofollow">
+<title>PFPI Live Clocks (dev)</title>
+<style>
+:root {
+  --bg:#080c14; --panel:#0f1623; --panel2:#141d2e;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --gold:#e8b84b; --red:#e05252; --green:#3ecf74; --blue:#4a9eff;
+  --text:#eef2f7; --muted:#7a8ba8;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh;font-size:14px;}
+.wrap{max-width:720px;margin:0 auto;padding:2rem 1.25rem 3rem;}
+.title-main{font-size:1.3rem;font-weight:800;margin-bottom:.25rem;}
+.title-main span{color:var(--gold);}
+.subtitle{color:var(--muted);font-size:.8rem;margin-bottom:1.5rem;}
+.bar{display:flex;align-items:center;gap:.75rem;margin-bottom:1.25rem;flex-wrap:wrap;}
+button{background:var(--blue);border:none;color:#08111f;font-weight:700;padding:.55rem 1rem;border-radius:8px;cursor:pointer;font-size:.8rem;}
+button:hover{opacity:.9;}
+button:disabled{opacity:.5;cursor:default;}
+.status{font-size:.75rem;color:var(--muted);}
+.status.error{color:var(--red);}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;margin-bottom:.6rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;}
+.card.live{border-color:var(--green);}
+.matchup{font-weight:700;font-size:.95rem;}
+.meta{color:var(--muted);font-size:.75rem;margin-top:.15rem;}
+.clock{font-size:1.1rem;font-weight:800;text-align:right;min-width:140px;}
+.clock.live{color:var(--green);}
+.clock.final{color:var(--muted);font-size:.85rem;}
+.clock.scheduled{color:var(--muted);font-size:.75rem;}
+.badge{display:inline-block;font-size:.65rem;text-transform:uppercase;letter-spacing:.04em;padding:.15rem .4rem;border-radius:4px;background:var(--panel2);color:var(--muted);margin-right:.4rem;}
+.badge.live{background:rgba(62,207,116,.15);color:var(--green);}
+.loginGate{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
+.loginGate a{color:var(--blue);}
+.hidden{display:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="title-main">PFPI <span>Live Clocks</span> (dev)</div>
+  <div class="subtitle">Admin-only testing view. Not linked from the public site, never written to data/week-N.json.</div>
+
+  <div id="loginGate" class="loginGate hidden">
+    Not logged in (or session expired). <a href="/admin.html">Log in on the Admin page</a>, then come back here — the session carries over automatically.
+  </div>
+
+  <div id="mainView" class="hidden">
+    <div class="bar">
+      <button id="refreshBtn">Refresh now (real fetch)</button>
+      <span id="statusText" class="status">Loading…</span>
+    </div>
+    <div id="gamesList"></div>
+  </div>
+</div>
+
+<script>
+const SCORES_WORKER_BASE = "https://pfpi-scores-worker.yeti-f3c.workers.dev";
+const SESSION_STORAGE_KEY = "pfpi-admin-session-token";
+const AUTO_REFRESH_MS = 60 * 1000; // just re-checks the endpoint; the worker's own 10-min floor gates real Highlightly spend regardless.
+
+function timeAgo(ts) {
+  if (!ts) return "never";
+  const s = Math.round((Date.now() - ts) / 1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.round(s / 60);
+  return `${m}m ago`;
+}
+
+function renderGames(data) {
+  const list = document.getElementById("gamesList");
+  list.innerHTML = "";
+  const sorted = [...data.games].sort((a, b) => new Date(a.kickoffISO) - new Date(b.kickoffISO));
+  for (const g of sorted) {
+    const isLive = g.hlStatus === "in_progress";
+    const card = document.createElement("div");
+    card.className = "card" + (isLive ? " live" : "");
+    const kickoff = new Date(g.kickoffISO).toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit", timeZoneName: "short" });
+    const badgeClass = isLive ? "badge live" : "badge";
+    const badgeText = g.hlStatus === "final" ? "Final" : isLive ? "Live" : "Scheduled";
+    card.innerHTML = `
+      <div>
+        <div class="matchup">${g.away} @ ${g.home}</div>
+        <div class="meta"><span class="${badgeClass}">${badgeText}</span>${kickoff}</div>
+      </div>
+      <div class="clock ${isLive ? "live" : g.hlStatus === "final" ? "final" : "scheduled"}">
+        ${isLive ? (g.clockReport || "—") : g.hlStatus === "final" ? "Final" : "—"}
+      </div>
+    `;
+    list.appendChild(card);
+  }
+}
+
+async function load(force) {
+  const token = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (!token) {
+    document.getElementById("loginGate").classList.remove("hidden");
+    document.getElementById("mainView").classList.add("hidden");
+    return;
+  }
+  document.getElementById("loginGate").classList.add("hidden");
+  document.getElementById("mainView").classList.remove("hidden");
+
+  const statusEl = document.getElementById("statusText");
+  const btn = document.getElementById("refreshBtn");
+  btn.disabled = true;
+  statusEl.className = "status";
+  statusEl.textContent = force ? "Fetching live from Highlightly…" : "Checking…";
+
+  try {
+    const url = `${SCORES_WORKER_BASE}/admin/live-clocks${force ? "?force=1" : ""}`;
+    const res = await fetch(url, { headers: { "X-Admin-Token": token } });
+    if (res.status === 403) {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      document.getElementById("loginGate").classList.remove("hidden");
+      document.getElementById("mainView").classList.add("hidden");
+      return;
+    }
+    const data = await res.json();
+    if (data.error) {
+      statusEl.className = "status error";
+      statusEl.textContent = data.error;
+    } else {
+      statusEl.textContent = `Week ${data.week} · Highlightly last fetched ${timeAgo(data.fetchedAt)} (10-min floor unless forced) · page checked just now`;
+    }
+    renderGames(data);
+  } catch (e) {
+    statusEl.className = "status error";
+    statusEl.textContent = "Network error — see console.";
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+document.getElementById("refreshBtn").onclick = () => load(true);
+load(false);
+setInterval(() => load(false), AUTO_REFRESH_MS);
+</script>
+</body>
+</html>

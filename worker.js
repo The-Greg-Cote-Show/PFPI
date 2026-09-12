@@ -469,6 +469,119 @@ function enrichKickoffTimes(games, kickoffLookup) {
 }
 
 // ============================================================
+// HIGHLIGHTLY — dev-only live game clock (2026-09-12, per Yeti, admin
+// dev-view tool only -- never written into data/week-N.json or shown on
+// the public site).
+// ============================================================
+// Big Balls has no real live-clock field for the regular season (see
+// normalizeGame() above). Highlightly's `state.report`/`state.clock`/
+// `state.period` DID give a real working live clock during preseason,
+// confirmed against an actual live game 2026-08-27 (see the retired
+// normalizeHighlightlyGame in git history, commit 319c15ce). Confirmed
+// 2026-09-12 that regular-season games carry the identical `state` shape
+// (a scheduled Week 6 game's `state.report` read as a real human-readable
+// date/time string, matching the preseason shape exactly) -- NOT yet
+// confirmed against a real in-progress regular-season game, since none
+// was live at the time; that only happens live during Week 1.
+//
+// Deliberately its own standalone throttle, not reused/coupled to
+// isBigBallsLiveWindow or the kickoff-time refresh above -- this is a
+// distinct concern (an admin manually watching one page during a game,
+// not an always-on public feature), and coupling unrelated things
+// together is exactly what caused the Sunday-quota near-miss the night
+// before (see BUILD_LOG.md). Kept well under Highlightly's 100/day
+// budget on its own: a 10-minute floor over an 11-hour Sunday window is
+// at most ~66 real calls, plus the existing ~8/day kickoff-time refresh
+// -- comfortably under 100 even if left auto-refreshing all day.
+const HIGHLIGHTLY_CLOCK_MIN_INTERVAL_MS = 10 * 60 * 1000;
+const HIGHLIGHTLY_CLOCK_CACHE_TTL_SECONDS = 24 * 60 * 60;
+
+// Same status-detection logic as the retired normalizeHighlightlyGame
+// (git history, commit 319c15ce) -- Highlightly's real completed-game
+// description is "Finished", not "Final" (confirmed live 2026-08-27).
+function deriveHighlightlyClock(g) {
+  const desc = (g.state && g.state.description || "").toLowerCase();
+  const status = (desc.includes("final") || desc.includes("finished")) ? "final"
+    : desc.includes("scheduled") ? "scheduled" : "in_progress";
+  const clockReport = status === "in_progress" ? ((g.state && g.state.report) || null) : null;
+  return { status, clockReport, scoreCurrent: (g.state && g.state.score && g.state.score.current) || null };
+}
+
+async function fetchHighlightlyLiveClocksFromAPI(env) {
+  const res = await fetch(`${HIGHLIGHTLY_BASE}/matches?league=NFL&season=${SEASON}&limit=100`, {
+    headers: { "x-rapidapi-key": env.HIGHLIGHTLY_API_KEY },
+  });
+  if (!res.ok) {
+    console.error(`Highlightly live-clock fetch failed: ${res.status} ${await res.text()}`);
+    return null;
+  }
+  const data = await res.json();
+  const raw = data.data || [];
+  const lookup = {};
+  for (const g of raw) {
+    const home = normalizeTeamCodeFromHighlightly(g.homeTeam && g.homeTeam.abbreviation);
+    const away = normalizeTeamCodeFromHighlightly(g.awayTeam && g.awayTeam.abbreviation);
+    if (!home || !away) continue;
+    lookup[`${away}|${home}`] = deriveHighlightlyClock(g);
+  }
+  return lookup;
+}
+
+// `force` (admin dev-view "Refresh now" button) bypasses the 10-minute
+// floor same as every other force flag in this file -- a deliberate,
+// occasional admin click spending one real call is fine; the floor is
+// there to stop an auto-refreshing tab from running up the budget
+// unattended, not to block a human who wants a fresh read right now.
+async function getHighlightlyLiveClocks(env, force) {
+  if (!env.HIGHLIGHTLY_API_KEY) return { lookup: {}, fetchedAt: null, error: "HIGHLIGHTLY_API_KEY not set." };
+
+  const lastFetchRaw = await env.PFPI_KV.get("highlightly-clock:last-fetch");
+  const dueForRefresh = force || !lastFetchRaw || (Date.now() - Number(lastFetchRaw) > HIGHLIGHTLY_CLOCK_MIN_INTERVAL_MS);
+
+  if (dueForRefresh) {
+    const fetched = await fetchHighlightlyLiveClocksFromAPI(env);
+    if (fetched) {
+      await env.PFPI_KV.put("highlightly-clock:cache", JSON.stringify(fetched), { expirationTtl: HIGHLIGHTLY_CLOCK_CACHE_TTL_SECONDS });
+      await env.PFPI_KV.put("highlightly-clock:last-fetch", String(Date.now()));
+      return { lookup: fetched, fetchedAt: Date.now() };
+    }
+    // Fetch failed -- fall through to whatever's cached rather than show
+    // nothing just because this one attempt failed.
+  }
+
+  const cachedRaw = await env.PFPI_KV.get("highlightly-clock:cache");
+  const cachedFetchAt = await env.PFPI_KV.get("highlightly-clock:last-fetch");
+  return { lookup: cachedRaw ? JSON.parse(cachedRaw) : {}, fetchedAt: cachedFetchAt ? Number(cachedFetchAt) : null };
+}
+
+async function handleLiveClocks(request, env) {
+  const token = request.headers.get("X-Admin-Token");
+  if (!(await verifyAdminSession(token, env))) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+  const url = new URL(request.url);
+  const force = url.searchParams.get("force") === "1";
+
+  const currentWeekRaw = await env.PFPI_KV.get("current-week");
+  const currentWeek = currentWeekRaw ? Number(currentWeekRaw) : computeCurrentWeekFromDate();
+  const scheduleRaw = await env.PFPI_KV.get(`schedule:week:${currentWeek}`);
+  const scheduleGames = scheduleRaw ? JSON.parse(scheduleRaw) : [];
+
+  const { lookup, fetchedAt, error } = await getHighlightlyLiveClocks(env, force);
+
+  const games = scheduleGames.map(g => {
+    const hl = lookup[`${g.away}|${g.home}`] || null;
+    return {
+      id: g.id, away: g.away, home: g.home, kickoffISO: g.kickoffISO,
+      clockReport: hl ? hl.clockReport : null,
+      hlStatus: hl ? hl.status : null,
+    };
+  });
+
+  return jsonResponse({ week: currentWeek, fetchedAt, error: error || null, games }, 200, request);
+}
+
+// ============================================================
 // STANDINGS + tie-split point categories (cumulative correct picks per
 // team per week, Weekly Titles, Weeks Leading, Best Week)
 // ============================================================
@@ -2017,6 +2130,9 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/admin/trigger-poll" && request.method === "POST") {
       return handleTriggerPoll(request, env);
+    }
+    if (url.pathname === "/admin/live-clocks" && request.method === "GET") {
+      return handleLiveClocks(request, env);
     }
     if (url.pathname === "/track" && request.method === "POST") {
       // Everything handleTrack needs is read from the real request HERE,

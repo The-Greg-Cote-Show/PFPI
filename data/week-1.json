@@ -107,9 +107,9 @@
       "away": "BAL",
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -123,7 +123,7 @@
         "Giraffes": "IND"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "Live",
       "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
@@ -132,9 +132,9 @@
       "away": "BUF",
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -148,7 +148,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "Live",
       "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
@@ -157,9 +157,9 @@
       "away": "CHI",
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -173,7 +173,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "Live",
       "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
@@ -282,9 +282,9 @@
       "away": "NO",
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -298,7 +298,7 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "Live",
       "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
@@ -307,9 +307,9 @@
       "away": "NYJ",
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -323,7 +323,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "Live",
       "deadline": "2026-09-12T17:00:00.000Z"
     },
     {

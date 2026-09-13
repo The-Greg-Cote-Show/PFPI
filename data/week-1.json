@@ -82,10 +82,10 @@
       "away": "ATL",
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 13,
-      "awayScore": 7,
-      "winner": null,
+      "status": "final",
+      "homeScore": 20,
+      "awayScore": 13,
+      "winner": "PIT",
       "tie": false,
       "picks": {
         "Lobos": "PIT",
@@ -98,7 +98,7 @@
         "Giraffes": "ATL"
       },
       "picksRevealed": true,
-      "clockReport": "Live",
+      "clockReport": null,
       "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
@@ -107,10 +107,10 @@
       "away": "BAL",
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 13,
-      "awayScore": 28,
-      "winner": null,
+      "status": "final",
+      "homeScore": 23,
+      "awayScore": 41,
+      "winner": "BAL",
       "tie": false,
       "picks": {
         "Lobos": "BAL",
@@ -123,7 +123,7 @@
         "Giraffes": "IND"
       },
       "picksRevealed": true,
-      "clockReport": "Live",
+      "clockReport": null,
       "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
@@ -133,8 +133,8 @@
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 21,
-      "awayScore": 24,
+      "homeScore": 31,
+      "awayScore": 36,
       "winner": null,
       "tie": false,
       "picks": {
@@ -158,8 +158,8 @@
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 24,
-      "awayScore": 24,
+      "homeScore": 31,
+      "awayScore": 52,
       "winner": null,
       "tie": false,
       "picks": {
@@ -182,10 +182,10 @@
       "away": "CLE",
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 24,
-      "awayScore": 0,
-      "winner": null,
+      "status": "final",
+      "homeScore": 34,
+      "awayScore": 10,
+      "winner": "JAX",
       "tie": false,
       "picks": {
         "Lobos": "JAX",
@@ -198,7 +198,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "Live",
+      "clockReport": null,
       "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
@@ -283,8 +283,8 @@
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 7,
-      "awayScore": 0,
+      "homeScore": 24,
+      "awayScore": 24,
       "winner": null,
       "tie": false,
       "picks": {
@@ -307,10 +307,10 @@
       "away": "NYJ",
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 3,
-      "awayScore": 10,
-      "winner": null,
+      "status": "final",
+      "homeScore": 10,
+      "awayScore": 23,
+      "winner": "NYJ",
       "tie": false,
       "picks": {
         "Lobos": "TEN",
@@ -323,7 +323,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "Live",
+      "clockReport": null,
       "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
@@ -332,10 +332,10 @@
       "away": "TB",
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 24,
-      "awayScore": 10,
-      "winner": null,
+      "status": "final",
+      "homeScore": 33,
+      "awayScore": 27,
+      "winner": "CIN",
       "tie": false,
       "picks": {
         "Lobos": "CIN",
@@ -348,7 +348,7 @@
         "Giraffes": "TB"
       },
       "picksRevealed": true,
-      "clockReport": "Live",
+      "clockReport": null,
       "deadline": "2026-09-12T17:00:00.000Z"
     },
     {

@@ -1,61 +1,57 @@
 {
   "standings": {
     "Lobos": {
-      "1": 6
+      "1": 7
     },
     "Roughriders": {
-      "1": 7
+      "1": 8
     },
     "Maniacs": {
-      "1": 7
+      "1": 8
     },
     "Critters": {
-      "1": 6
+      "1": 7
     },
     "Chickens": {
-      "1": 7
+      "1": 8
     },
     "Ferraris": {
-      "1": 7
+      "1": 8
     },
     "Llamas": {
-      "1": 7
+      "1": 8
     },
     "Giraffes": {
-      "1": 4
+      "1": 5
     }
   },
   "standingsPct": {
     "Lobos": {
-      "1": 0.6666666666666666
+      "1": 0.7
     },
     "Roughriders": {
-      "1": 0.7777777777777778
+      "1": 0.8
     },
     "Maniacs": {
-      "1": 0.7777777777777778
+      "1": 0.8
     },
     "Critters": {
-      "1": 0.6666666666666666
+      "1": 0.7
     },
     "Chickens": {
-      "1": 0.7777777777777778
+      "1": 0.8
     },
     "Ferraris": {
-      "1": 0.7777777777777778
+      "1": 0.8
     },
     "Llamas": {
-      "1": 0.7777777777777778
+      "1": 0.8
     },
     "Giraffes": {
-      "1": 0.4444444444444444
+      "1": 0.5
     }
   },
-  "tieNotes": {
-    "1": [
-      "NO @ DET"
-    ]
-  },
+  "tieNotes": {},
   "weeklyTitles": {
     "Lobos": {
       "1": 0
@@ -111,65 +107,65 @@
   "bestWeek": {
     "Lobos": {
       "1": {
-        "correct": 6,
-        "total": 9,
-        "pct": 0.6666666666666666,
+        "correct": 7,
+        "total": 10,
+        "pct": 0.7,
         "week": 1
       }
     },
     "Roughriders": {
       "1": {
-        "correct": 7,
-        "total": 9,
-        "pct": 0.7777777777777778,
+        "correct": 8,
+        "total": 10,
+        "pct": 0.8,
         "week": 1
       }
     },
     "Maniacs": {
       "1": {
-        "correct": 7,
-        "total": 9,
-        "pct": 0.7777777777777778,
+        "correct": 8,
+        "total": 10,
+        "pct": 0.8,
         "week": 1
       }
     },
     "Critters": {
       "1": {
-        "correct": 6,
-        "total": 9,
-        "pct": 0.6666666666666666,
+        "correct": 7,
+        "total": 10,
+        "pct": 0.7,
         "week": 1
       }
     },
     "Chickens": {
       "1": {
-        "correct": 7,
-        "total": 9,
-        "pct": 0.7777777777777778,
+        "correct": 8,
+        "total": 10,
+        "pct": 0.8,
         "week": 1
       }
     },
     "Ferraris": {
       "1": {
-        "correct": 7,
-        "total": 9,
-        "pct": 0.7777777777777778,
+        "correct": 8,
+        "total": 10,
+        "pct": 0.8,
         "week": 1
       }
     },
     "Llamas": {
       "1": {
-        "correct": 7,
-        "total": 9,
-        "pct": 0.7777777777777778,
+        "correct": 8,
+        "total": 10,
+        "pct": 0.8,
         "week": 1
       }
     },
     "Giraffes": {
       "1": {
-        "correct": 4,
-        "total": 9,
-        "pct": 0.4444444444444444,
+        "correct": 5,
+        "total": 10,
+        "pct": 0.5,
         "week": 1
       }
     }
@@ -227,7 +223,7 @@
     }
   },
   "gamesPlayed": {
-    "1": 9
+    "1": 10
   },
   "uniqueHits": {
     "Lobos": {
@@ -306,5 +302,5 @@
     }
   },
   "throughWeek": 1,
-  "updatedAt": "2026-09-13T23:19:58.529Z"
+  "updatedAt": "2026-09-13T23:21:14.507Z"
 }

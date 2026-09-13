@@ -109,7 +109,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 6,
-      "awayScore": 20,
+      "awayScore": 21,
       "winner": null,
       "tie": false,
       "picks": {
@@ -158,7 +158,7 @@
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 14,
+      "homeScore": 21,
       "awayScore": 21,
       "winner": null,
       "tie": false,

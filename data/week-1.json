@@ -132,10 +132,10 @@
       "away": "BUF",
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 31,
       "awayScore": 36,
-      "winner": null,
+      "winner": "BUF",
       "tie": false,
       "picks": {
         "Lobos": "HOU",
@@ -148,7 +148,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "Live",
+      "clockReport": null,
       "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
@@ -157,10 +157,10 @@
       "away": "CHI",
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 31,
       "awayScore": 52,
-      "winner": null,
+      "winner": "CHI",
       "tie": false,
       "picks": {
         "Lobos": "CHI",
@@ -173,7 +173,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "Live",
+      "clockReport": null,
       "deadline": "2026-09-12T17:00:00.000Z"
     },
     {
@@ -282,11 +282,11 @@
       "away": "NO",
       "kickoffISO": "2026-09-13T17:00:00.000Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 24,
       "awayScore": 24,
       "winner": null,
-      "tie": false,
+      "tie": true,
       "picks": {
         "Lobos": "DET",
         "Roughriders": "DET",
@@ -298,7 +298,7 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": "Live",
+      "clockReport": null,
       "deadline": "2026-09-12T17:00:00.000Z"
     },
     {

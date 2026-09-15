@@ -438,6 +438,19 @@ async function initRealData() {
     currentWeek = cur.currentWeek; // one-time sync on initial load only —
                                     // later polls don't override the week
                                     // the visitor has manually selected
+
+    // Deep-link support (2026-09-16, per Yeti): "pfpi.me/?week=N" opens
+    // straight to that week instead of defaulting to the current one --
+    // render() below keeps the address bar in sync (see updateUrlForWeek)
+    // so any week/tab combination a visitor lands on can just be copied
+    // out of the URL bar and shared as-is. Clamped to 1..CURRENT_WEEK so a
+    // stale or bogus link can never point at a week that hasn't happened
+    // yet.
+    const linkedWeek = parseInt(new URLSearchParams(location.search).get("week"), 10);
+    if (Number.isInteger(linkedWeek) && linkedWeek >= 1 && linkedWeek <= CURRENT_WEEK) {
+      currentWeek = linkedWeek;
+    }
+
     const st = await fetchJSON("data/standings.json");
     if (st && st.standings) {
       REAL.standings = st.standings;
@@ -613,6 +626,20 @@ function renderTabs(){
   });
 }
 
+// Keeps "?week=N" in the address bar in sync with whatever week is
+// currently selected (2026-09-16, per Yeti) -- replaceState, not
+// pushState, so clicking through weeks doesn't spam the browser's back
+// button; the URL is just there to be copied/shared, not to be a
+// navigation history. No-ops for the dormant preseason path (its week
+// "number" is the non-numeric PRESEASON_WEEK_KEY, which wouldn't round-trip
+// through ?week= as a real week anyway).
+function updateUrlForWeek(week){
+  if (typeof week !== "number") return;
+  const params = new URLSearchParams(location.search);
+  params.set("week", week);
+  history.replaceState(null, "", location.pathname + "?" + params.toString() + location.hash);
+}
+
 function renderWeekRow(){
   const el = document.getElementById("weekRow"); el.innerHTML = "";
 
@@ -655,7 +682,7 @@ function raccoonSvg(size) {
 }
 
 async function render(){
-  renderTabs(); renderWeekRow();
+  renderTabs(); renderWeekRow(); updateUrlForWeek(currentWeek);
 
   const isPreseason = currentWeek === PRESEASON_WEEK_KEY;
   const isFinal = !isPreseason && currentWeek === NUM_WEEKS;

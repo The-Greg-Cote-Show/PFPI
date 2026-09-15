@@ -480,6 +480,12 @@ button:hover{opacity:.9;}
         <button class="btn digest-btn" id="videoClearBtn" type="button" style="background:var(--panel3);color:var(--text);">Clear</button>
       </div>
       <div class="status" id="videoStatus"></div>
+
+      <div style="margin-top:1.25rem;">
+        <label style="display:block;margin-bottom:.6rem;">Videos set so far</label>
+        <div id="videoList" class="past-weeks-list"></div>
+        <div class="status" id="videoListEmpty">No recap videos set yet.</div>
+      </div>
     </div>
 
     <div class="card hidden" id="digestPastWeeksTab">
@@ -1798,10 +1804,63 @@ async function loadVideoForWeek(week) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Could not load the video.");
     input.value = (data.videos && data.videos[week]) || "";
+    renderVideoList(data.videos || {});
   } catch (e) {
     statusEl.textContent = "Error: " + e.message;
     statusEl.className = "status show";
   }
+}
+
+// Quick-glance list of every week that already has a video set (2026-09-15,
+// per Yeti) -- same "past weeks" row style as the digest archive list below,
+// so Greg/admin can see at a glance what's live without stepping through
+// every week in the dropdown one at a time. Rebuilt from whatever map the
+// most recent GET/POST /admin/videos call already returned -- no separate
+// fetch of its own.
+function renderVideoList(videos) {
+  const listEl = document.getElementById("videoList");
+  const emptyEl = document.getElementById("videoListEmpty");
+  listEl.innerHTML = "";
+  const weeks = Object.keys(videos)
+    .filter(w => videos[w])
+    .sort((a, b) => {
+      if (a === PRESEASON_MP_KEY) return -1;
+      if (b === PRESEASON_MP_KEY) return 1;
+      return parseInt(b, 10) - parseInt(a, 10);
+    });
+  if (weeks.length === 0) {
+    emptyEl.classList.remove("hidden");
+    return;
+  }
+  emptyEl.classList.add("hidden");
+  weeks.forEach(w => {
+    const label = w === PRESEASON_MP_KEY ? "Preseason" : "Week " + w;
+    const row = document.createElement("div");
+    row.className = "past-week-row";
+    const left = document.createElement("span");
+    left.textContent = label;
+    row.appendChild(left);
+    const actions = document.createElement("span");
+    const viewLink = document.createElement("a");
+    viewLink.href = `https://www.youtube.com/watch?v=${encodeURIComponent(videos[w])}`;
+    viewLink.target = "_blank";
+    viewLink.rel = "noopener";
+    viewLink.className = "btn";
+    viewLink.style.cssText = "width:auto;font-size:.72rem;padding:.4rem .8rem;margin-top:0;margin-right:6px;display:inline-block;text-decoration:none;text-align:center;";
+    viewLink.textContent = "View";
+    actions.appendChild(viewLink);
+    const editBtn = document.createElement("button");
+    editBtn.className = "btn";
+    editBtn.type = "button";
+    editBtn.textContent = "Edit";
+    editBtn.addEventListener("click", () => {
+      document.getElementById("digestWeekSelect").value = w;
+      renderDigest();
+    });
+    actions.appendChild(editBtn);
+    row.appendChild(actions);
+    listEl.appendChild(row);
+  });
 }
 
 async function saveVideoForWeek(clear) {
@@ -1822,6 +1881,7 @@ async function saveVideoForWeek(clear) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Could not save the video.");
     input.value = (data.videos && data.videos[week]) || "";
+    renderVideoList(data.videos || {});
     statusEl.textContent = clear ? "Cleared." : "Saved.";
     statusEl.className = "status show";
   } catch (e) {

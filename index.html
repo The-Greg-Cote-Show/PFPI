@@ -439,7 +439,7 @@ async function initRealData() {
                                     // later polls don't override the week
                                     // the visitor has manually selected
 
-    // Deep-link support (2026-09-16, per Yeti): "pfpi.me/?week=N" opens
+    // Deep-link support (2026-09-15, per Yeti): "pfpi.me/?week=N" opens
     // straight to that week instead of defaulting to the current one --
     // render() below keeps the address bar in sync (see updateUrlForWeek)
     // so any week/tab combination a visitor lands on can just be copied
@@ -627,7 +627,7 @@ function renderTabs(){
 }
 
 // Keeps "?week=N" in the address bar in sync with whatever week is
-// currently selected (2026-09-16, per Yeti) -- replaceState, not
+// currently selected (2026-09-15, per Yeti) -- replaceState, not
 // pushState, so clicking through weeks doesn't spam the browser's back
 // button; the URL is just there to be copied/shared, not to be a
 // navigation history. No-ops for the dormant preseason path (its week

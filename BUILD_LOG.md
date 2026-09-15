@@ -9246,3 +9246,98 @@ exactly.
 match what Yeti specified, the coupling that caused the original waste is
 gone, and the one real regression this rewrite could have introduced was
 caught and fixed pre-deploy, not discovered live on Sunday.
+
+## 2026-09-15 — Digest Unique Hits naming, recap video embed, per-week deep links
+
+Big Balls had cleared its overnight backlog by end of day Sunday, so this
+pass covers three separate Yeti requests, all done, deployed, and pushed.
+
+**1. Weekly Digest's Unique Hits block now names the actual game(s), not
+just a count.** Previously listed every one of the 8 teams with a raw
+`hits-opps` count, most of them `0-0`. Now only lists teams that actually
+landed a hit, with the NFL team abbreviation(s) behind each one --
+`Unique Hits: Llamas 1-1 (SF).` instead of all 8 rows -- and prints
+`Unique Hits: None.` when nobody has one yet. Required a real data-model
+change, not just a formatting tweak: `computeStandings()` in `worker.js`
+only ever tracked a running hit *count* per team
+(`uniqueHitsCum`/`uniqueOppsCum`), never which pick produced it, so a new
+cumulative `uniqueHitPicksCum[team]` array (the NFL abbreviation of each
+winning unique pick, in order) was added alongside it and snapshotted into
+`uniqueHits[team][week].picks` every week, same lifecycle as the existing
+two counters. `buildUniqueHitsBlock()` filters to `hits > 0` and appends
+`(picks.join(", "))`. This field also now rides along in the public
+`data/standings.json` (index.html's own Unique Hits leaderboard tab reads
+`st.uniqueHits` too, unaffected by the extra field). **Verified** with a
+standalone Node harness exercising `buildUniqueHitsBlock` directly against
+Yeti's exact worked examples (`Llamas 1-1 (SF)`, the hypothetical `Llamas
+2-2 (SF, MIA)`, and the zero-hits case) before deploying -- all three
+matched exactly. Deployed via `wrangler deploy --config
+wrangler-scores.toml`, Version ID `bdfc8a92-d8ea-4e06-9b71-8a15a235938e`;
+commit `320d7887`.
+
+**Known/open**: digests are frozen-at-generation by design (see the
+2026-08-31 Weekly Digest section above) -- Week 1's digest, and the brief
+text Greg already published from it, were both generated before this fix
+and still show the old all-8-teams format live. Fixing that requires a
+manual step Yeti has to trigger: Recompute Week 1's digest in admin.html,
+then re-run "Insert into brief text" to pull the refreshed version into
+the published report. Week 2 onward gets the new format automatically,
+no action needed.
+
+**2. Weekly recap video embed -- manual-entry version.** Greg's starting
+short YouTube recap videos to pair with the written Commissioner's
+Report; the ask was a per-week embed, not a channel-wide embed or
+playlist (which can't guarantee "the Week 1 video shows up on the Week 1
+tab" once more than one video exists). Built as a standalone
+`week -> YouTube video ID` map, deliberately decoupled from
+`computeStandings`/the digest and from `buildWeekPublicJSON`'s per-week
+score/picks JSON, so setting a video can never collide with those
+automated write paths:
+- `worker.js`: `GET/POST /admin/videos` (same `X-Admin-Token` auth as the
+  digest endpoints), backed by a single `videos` KV key and republished to
+  `data/videos.json` on every write via the existing
+  `commitJSONToGitHub()` helper. `extractYouTubeId()` accepts a bare
+  11-char ID or a full watch/`youtu.be`/embed URL and normalizes to the
+  ID; an empty `videoId` in the POST body clears that week's entry instead
+  of needing a separate delete action.
+- `admin.html`: new "Recap Video" field in the Weekly Digest tab, riding
+  the existing `digestWeekSelect` dropdown rather than a second week
+  picker -- paste a link or ID, Save or Clear.
+- `index.html`: new `.page-row`/`.video-rail` layout -- the video sits in
+  the empty space to the right of the centered 960px `.wrap` column on
+  wide viewports (`position:sticky`), and wraps below the Commissioner's
+  Report on its own full-width line under ~1180px (same flex container,
+  no separate mobile mount point, so there's never a duplicate embed
+  loading). `updateVideoRail()` hides the whole rail (not just the iframe)
+  whenever the selected week has no video set, so there's no empty box.
+  Uses `youtube-nocookie.com` per Google's own privacy-enhanced-mode
+  recommendation.
+- Auto-matching against the channel's real uploads (YouTube Data API) was
+  discussed and explicitly deferred -- manual entry only for now, revisit
+  later per Yeti.
+Deployed via `wrangler deploy --config wrangler-scores.toml`, Version ID
+`6d8097bf-2769-4c2f-80b1-aafbec9ec2cb`; commit `75e7718f`. **Verified
+live**: Yeti set a real video for Week 1 through admin.html himself (real
+commit `5c0cc0a2`, "Update recap video for Week 1 [admin]"), and loading
+`pfpi.me/?week=1` in a real browser showed the "WEEK 1 RECAP" rail
+rendering correctly.
+
+**3. Video quick-glance list.** Follow-up once the above was live: added
+a `renderVideoList()` list under the Recap Video field in admin.html
+showing every week that already has a video set (View link to the real
+YouTube URL, Edit button that jumps the dropdown to that week), same
+`past-week-row` styling as the existing digest archive list, rebuilt from
+whatever map the most recent GET/POST `/admin/videos` call already
+returned rather than a separate fetch. Commit `27515fe3`.
+
+**4. Per-week deep links.** `index.html` now reads `?week=N` off the URL
+on load (clamped to `1..CURRENT_WEEK` so a stale/bogus link can never
+point at a week that hasn't happened yet) and keeps the address bar in
+sync as the visitor clicks through weeks via `history.replaceState`
+(deliberately not `pushState` -- it's meant to be copied/shared, not to
+spam the back-button history). No UI changes needed: any week Greg or a
+family member is looking at is already a shareable `pfpi.me/?week=N`
+link straight out of the URL bar. **Verified live** via the same
+`pfpi.me/?week=1` browser check above -- Week 1's full page (standings,
+games, report, video rail) loaded correctly from the URL param alone.
+Commit `27515fe3` (same as #3).

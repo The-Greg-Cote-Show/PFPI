@@ -644,6 +644,12 @@ async function computeStandings(throughWeek, env) {
   // ever double-count across polls.
   let uniqueHitsCum = {}, uniqueOppsCum = {};
   TEAMS.forEach(t => { uniqueHitsCum[t] = 0; uniqueOppsCum[t] = 0; });
+  // Running list of the NFL team abbreviations behind each team's unique
+  // hits so far this season (cumulative, same shape/lifecycle as
+  // uniqueHitsCum/uniqueOppsCum above) -- lets the digest name which
+  // game(s) each hit came from, not just the count. Per Yeti (2026-09-15).
+  let uniqueHitPicksCum = {};
+  TEAMS.forEach(t => { uniqueHitPicksCum[t] = []; });
   let tenWinWeeksCum = {};
   TEAMS.forEach(t => tenWinWeeksCum[t] = 0);
   const uniqueHits = {}, tenWinWeeks = {};
@@ -717,12 +723,15 @@ async function computeStandings(throughWeek, env) {
         const pick = picksThisWeek[team][game.id];
         if (pick && pickCounts[pick] === 1) {
           uniqueOppsCum[team]++;
-          if (game.winner && pick === game.winner) uniqueHitsCum[team]++;
+          if (game.winner && pick === game.winner) {
+            uniqueHitsCum[team]++;
+            uniqueHitPicksCum[team].push(pick);
+          }
         }
       });
     });
     TEAMS.forEach(t => {
-      uniqueHits[t][String(week)] = { hits: uniqueHitsCum[t], opps: uniqueOppsCum[t] };
+      uniqueHits[t][String(week)] = { hits: uniqueHitsCum[t], opps: uniqueOppsCum[t], picks: [...uniqueHitPicksCum[t]] };
     });
 
     // 10-Win Weeks: a week counts the moment a team's running correct
@@ -904,10 +913,15 @@ function buildTenWinBlock(st, week) {
 
 function buildUniqueHitsBlock(st, week) {
   const wKey = String(week);
-  const entries = TEAMS.map(t => (st.uniqueHits[t] && st.uniqueHits[t][wKey]) || { hits: 0, opps: 0 });
+  const entries = TEAMS.map(t => (st.uniqueHits[t] && st.uniqueHits[t][wKey]) || { hits: 0, opps: 0, picks: [] });
   const named = TEAMS.map((t, i) => ({ team: t, ...entries[i] }));
-  named.sort((a, b) => b.hits - a.hits || b.opps - a.opps);
-  const text = named.map(e => `${e.team} ${e.hits}-${e.opps}`).join(", ");
+  // Per Yeti (2026-09-15): only name teams that actually landed a unique
+  // hit (not every team, and not unique-opportunity misses) -- e.g.
+  // "Llamas 1-1 (SF)" instead of listing all 8 teams including zeroes.
+  const hitters = named.filter(e => e.hits > 0);
+  if (hitters.length === 0) return "Unique Hits: None.";
+  hitters.sort((a, b) => b.hits - a.hits || b.opps - a.opps);
+  const text = hitters.map(e => `${e.team} ${e.hits}-${e.opps} (${e.picks.join(", ")})`).join(", ");
   return `Unique Hits: ${text}.`;
 }
 

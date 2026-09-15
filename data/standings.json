@@ -229,49 +229,59 @@
     "Lobos": {
       "1": {
         "hits": 0,
-        "opps": 1
+        "opps": 1,
+        "picks": []
       }
     },
     "Roughriders": {
       "1": {
         "hits": 0,
-        "opps": 0
+        "opps": 0,
+        "picks": []
       }
     },
     "Maniacs": {
       "1": {
         "hits": 0,
-        "opps": 0
+        "opps": 0,
+        "picks": []
       }
     },
     "Critters": {
       "1": {
         "hits": 0,
-        "opps": 0
+        "opps": 0,
+        "picks": []
       }
     },
     "Chickens": {
       "1": {
         "hits": 0,
-        "opps": 0
+        "opps": 0,
+        "picks": []
       }
     },
     "Ferraris": {
       "1": {
         "hits": 0,
-        "opps": 0
+        "opps": 0,
+        "picks": []
       }
     },
     "Llamas": {
       "1": {
         "hits": 1,
-        "opps": 1
+        "opps": 1,
+        "picks": [
+          "SF"
+        ]
       }
     },
     "Giraffes": {
       "1": {
         "hits": 0,
-        "opps": 2
+        "opps": 2,
+        "picks": []
       }
     }
   },
@@ -302,5 +312,5 @@
     }
   },
   "throughWeek": 1,
-  "updatedAt": "2026-09-15T12:46:14.885Z"
+  "updatedAt": "2026-09-15T16:31:13.717Z"
 }

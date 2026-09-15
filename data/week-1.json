@@ -382,10 +382,10 @@
       "away": "DEN",
       "kickoffISO": "2026-09-15T00:15:00.000Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 31,
       "awayScore": 10,
-      "winner": null,
+      "winner": "KC",
       "tie": false,
       "picks": {
         "Lobos": "KC",
@@ -398,7 +398,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "Live",
+      "clockReport": null,
       "deadline": "2026-09-12T17:00:00.000Z"
     }
   ]

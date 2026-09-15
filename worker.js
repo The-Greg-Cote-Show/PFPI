@@ -1033,6 +1033,75 @@ async function handleDigestRecompute(request, env) {
 }
 
 // ============================================================
+// WEEKLY RECAP VIDEO (2026-09-15, per Yeti) -- a single small KV-backed
+// map of week -> YouTube video ID, manually set by Greg/admin via
+// admin.html once that week's recap video is up. Deliberately its own
+// tiny key/file, decoupled from computeStandings/the digest and from
+// buildWeekPublicJSON's per-week score/picks JSON -- setting a video has
+// nothing to do with scores being polled or a digest being generated, and
+// shouldn't risk colliding with either of those automated write paths.
+// Auto-matching against the channel's real uploads (YouTube Data API) is
+// a possible future step; this is the manual-entry version only.
+// ============================================================
+async function handleVideosGet(request, env) {
+  const token = request.headers.get("X-Admin-Token");
+  if (!(await verifyAnalyticsViewerSession(token, env))) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+  const raw = await env.PFPI_KV.get("videos");
+  const videos = raw ? JSON.parse(raw) : {};
+  return jsonResponse({ videos }, 200, request);
+}
+
+// Accepts either a bare 11-char YouTube video ID or a full URL (watch,
+// youtu.be, or embed form) and returns just the ID -- so whoever's pasting
+// this into admin.html doesn't have to hand-extract it first. Returns null
+// for anything it doesn't recognize (caller rejects the request outright
+// rather than silently store something a browser can't embed).
+function extractYouTubeId(input) {
+  const s = String(input || "").trim();
+  if (/^[\w-]{11}$/.test(s)) return s;
+  const patterns = [
+    /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{11})/,
+  ];
+  for (const re of patterns) {
+    const m = s.match(re);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+async function handleVideosSet(request, env) {
+  const token = request.headers.get("X-Admin-Token");
+  if (!(await verifyAnalyticsViewerSession(token, env))) {
+    return jsonResponse({ error: "Not authorized." }, 403, request);
+  }
+  let body = {};
+  try { body = await request.json(); } catch (e) {}
+  const week = body.week;
+  if (!week) return jsonResponse({ error: "Missing week." }, 400, request);
+
+  const raw = await env.PFPI_KV.get("videos");
+  const videos = raw ? JSON.parse(raw) : {};
+
+  // Empty/blank input clears that week's video (e.g. it was set by mistake,
+  // or needs to come down) rather than requiring a separate delete action.
+  if (body.videoId === undefined || body.videoId === null || String(body.videoId).trim() === "") {
+    delete videos[week];
+  } else {
+    const id = extractYouTubeId(body.videoId);
+    if (!id) {
+      return jsonResponse({ error: "Couldn't recognize that as a YouTube video ID or URL." }, 400, request);
+    }
+    videos[week] = id;
+  }
+
+  await env.PFPI_KV.put("videos", JSON.stringify(videos));
+  await commitJSONToGitHub("data/videos.json", videos, `Update recap video for Week ${week} [admin]`, env);
+  return jsonResponse({ videos }, 200, request);
+}
+
+// ============================================================
 // PER-WEEK PUBLIC JSON (games + picks, matches mockup's SCHEDULE shape)
 // ============================================================
 
@@ -2190,6 +2259,12 @@ export default {
     }
     if (url.pathname === "/admin/digest-recompute" && request.method === "POST") {
       return handleDigestRecompute(request, env);
+    }
+    if (url.pathname === "/admin/videos" && request.method === "GET") {
+      return handleVideosGet(request, env);
+    }
+    if (url.pathname === "/admin/videos" && request.method === "POST") {
+      return handleVideosSet(request, env);
     }
     return jsonResponse({ ok: true, worker: "pfpi-scores-worker" }, 200, request);
   },

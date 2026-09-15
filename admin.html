@@ -470,6 +470,16 @@ button:hover{opacity:.9;}
         <button class="btn digest-btn hidden" id="digestRecomputeBtn" type="button" style="background:var(--panel3);color:var(--text);">Recompute</button>
       </div>
       <div class="status" id="digestStatus"></div>
+
+      <div class="field" style="margin-top:1.25rem;">
+        <label for="videoIdInput">Recap Video (YouTube link or video ID) — shows on this week's tab</label>
+        <input type="text" id="videoIdInput" placeholder="https://youtu.be/... or bare video ID">
+      </div>
+      <div class="digest-actions">
+        <button class="btn digest-btn" id="videoSaveBtn" type="button">Save video</button>
+        <button class="btn digest-btn" id="videoClearBtn" type="button" style="background:var(--panel3);color:var(--text);">Clear</button>
+      </div>
+      <div class="status" id="videoStatus"></div>
     </div>
 
     <div class="card hidden" id="digestPastWeeksTab">
@@ -1768,7 +1778,60 @@ async function renderDigest() {
     statusEl.className = "status show";
   }
   renderDigestPastWeeks();
+  loadVideoForWeek(week);
 }
+
+// Recap video ID/URL (2026-09-15, per Yeti) -- one KV-backed map (worker.js
+// GET/POST /admin/videos) keyed by the same week values as the digest
+// selector above, so this just rides digestWeekSelect's own onchange
+// (renderDigest calls this) instead of maintaining a second week dropdown.
+async function loadVideoForWeek(week) {
+  const input = document.getElementById("videoIdInput");
+  const statusEl = document.getElementById("videoStatus");
+  input.value = "";
+  statusEl.textContent = "";
+  statusEl.className = "status";
+  if (!week) return;
+  try {
+    const res = await fetch(`${SCORES_WORKER_BASE}/admin/videos`, { headers: { "X-Admin-Token": sessionToken } });
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not load the video.");
+    input.value = (data.videos && data.videos[week]) || "";
+  } catch (e) {
+    statusEl.textContent = "Error: " + e.message;
+    statusEl.className = "status show";
+  }
+}
+
+async function saveVideoForWeek(clear) {
+  const statusEl = document.getElementById("videoStatus");
+  const input = document.getElementById("videoIdInput");
+  const week = document.getElementById("digestWeekSelect").value;
+  if (!week) return;
+  if (clear) input.value = "";
+  statusEl.textContent = clear ? "Clearing..." : "Saving...";
+  statusEl.className = "status show";
+  try {
+    const res = await fetch(`${SCORES_WORKER_BASE}/admin/videos`, {
+      method: "POST",
+      headers: { "X-Admin-Token": sessionToken, "Content-Type": "application/json" },
+      body: JSON.stringify({ week, videoId: input.value }),
+    });
+    if (res.status === 401 || res.status === 403) { clearSession("Your session expired — please log in again."); return; }
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Could not save the video.");
+    input.value = (data.videos && data.videos[week]) || "";
+    statusEl.textContent = clear ? "Cleared." : "Saved.";
+    statusEl.className = "status show";
+  } catch (e) {
+    statusEl.textContent = "Error: " + e.message;
+    statusEl.className = "status show";
+  }
+}
+
+document.getElementById("videoSaveBtn").addEventListener("click", () => saveVideoForWeek(false));
+document.getElementById("videoClearBtn").addEventListener("click", () => saveVideoForWeek(true));
 
 document.getElementById("digestRecomputeBtn").addEventListener("click", async () => {
   const btn = document.getElementById("digestRecomputeBtn");

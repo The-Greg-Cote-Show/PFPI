@@ -34,7 +34,26 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .week-btn.final{border-color:var(--gold);}
 .week-btn.final.active{background:var(--gold);color:#08111f;}
 
-.wrap{max-width:960px;margin:0 auto;padding:1.25rem 1.5rem 3rem;}
+/* page-row/video-rail (2026-09-15, per Yeti): the recap video sits in the
+   otherwise-empty space to the right of the centered 960px .wrap column on
+   wide viewports. Same flexbox row as .wrap -- no separate positioning
+   scheme -- so at narrow widths (see media query near the bottom of this
+   block) it simply wraps below .wrap onto its own full-width line instead
+   of needing a second, duplicate mount point for mobile. Hidden entirely
+   (via .has-video, toggled in JS) whenever the selected week has no video
+   set, so it never leaves a blank box. */
+.page-row{display:flex;flex-wrap:wrap;justify-content:center;gap:1.5rem;max-width:1320px;margin:0 auto;}
+.wrap{max-width:960px;margin:0;padding:1.25rem 1.5rem 3rem;flex:1 1 780px;}
+.video-rail{display:none;flex:1 1 280px;max-width:340px;padding-top:1.25rem;}
+.video-rail.has-video{display:block;}
+.video-rail-inner{position:sticky;top:1.25rem;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:.9rem;}
+.video-rail-label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.6rem;}
+.video-rail-frame{position:relative;width:100%;padding-top:56.25%;border-radius:8px;overflow:hidden;background:#000;}
+.video-rail-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
+@media(max-width:1180px){
+  .video-rail{flex-basis:100%;max-width:600px;margin:0 auto;order:99;padding-top:0;}
+  .video-rail-inner{position:static;}
+}
 
 .empty-state{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:2.5rem 1.25rem;text-align:center;color:var(--muted);font-size:.85rem;font-style:italic;}
 .category-header-right{display:flex;flex-direction:column;align-items:flex-end;gap:.5rem;}
@@ -255,6 +274,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
   <div class="week-row" id="weekRow"></div>
 </div>
 
+<div class="page-row">
 <div class="wrap">
   <div class="category-header">
     <div>
@@ -299,6 +319,14 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
   <div class="legend-note" id="legendNote"></div>
   <div class="footer-copyright">&copy;ThatKindaThing Productions, LLC</div>
+</div>
+
+<aside class="video-rail" id="videoRail">
+  <div class="video-rail-inner">
+    <div class="video-rail-label" id="videoRailLabel"></div>
+    <div class="video-rail-frame" id="videoRailFrame"></div>
+  </div>
+</aside>
 </div>
 
 <script>
@@ -378,6 +406,11 @@ const REAL = {
   // here that reads preseason data into any of the five REAL.* fields
   // above, or vice versa.
   preseasonStats: null,
+  // Recap video IDs, keyed by week (string) -- {"1": "dQw4w9WgXcQ", ...}.
+  // Manually set by Greg/admin via admin.html (worker.js's /admin/videos),
+  // published to data/videos.json independent of the score/standings
+  // pipeline -- see updateVideoRail() below for how it's rendered.
+  videos: null,
 };
 
 async function fetchJSON(path) {
@@ -393,6 +426,11 @@ async function fetchJSON(path) {
 }
 
 async function initRealData() {
+  // Independent of data/current.json below -- a video is just a week->ID
+  // map, not tied to whether the season has picked up any real games yet.
+  const videosData = await fetchJSON("data/videos.json");
+  REAL.videos = videosData || {};
+
   const cur = await fetchJSON("data/current.json");
   if (cur && cur.currentWeek) {
     REAL.currentWeek = cur.currentWeek;
@@ -448,6 +486,25 @@ async function loadRealBrief(week) {
   const data = await fetchJSON(`data/brief-week-${week}.json`);
   REAL.briefs[week] = (data && typeof data.text === "string") ? data.text : null;
   return REAL.briefs[week];
+}
+
+// Shows/hides the recap-video rail for the given week -- no video set for
+// that week (the normal case until Greg's posted one) just hides the whole
+// rail via .has-video rather than showing an empty box. youtube-nocookie.com
+// (not youtube.com) per Google's own privacy-enhanced-mode recommendation
+// for embeds -- no functional difference for the viewer.
+function updateVideoRail(week, label) {
+  const rail = document.getElementById("videoRail");
+  const frame = document.getElementById("videoRailFrame");
+  const videoId = REAL.videos && REAL.videos[String(week)];
+  if (!videoId) {
+    rail.classList.remove("has-video");
+    frame.innerHTML = "";
+    return;
+  }
+  document.getElementById("videoRailLabel").textContent = `${label} Recap`;
+  frame.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}" title="${label} Recap" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+  rail.classList.add("has-video");
 }
 
 // Routes to the right source object for a given week -- preseason's own
@@ -659,6 +716,7 @@ async function render(){
     briefBodyEl.textContent = "Greg hasn't published a brief for this week yet.";
     briefBodyEl.className = "brief-body empty";
   }
+  updateVideoRail(currentWeek, isPreseason ? "Preseason" : (isFinal ? "Week " + NUM_WEEKS + " — Final" : "Week " + currentWeek));
 
   const chartPanel = document.getElementById("chartPanel");
   const gamesPanel = document.getElementById("gamesPanel");

@@ -9341,3 +9341,33 @@ link straight out of the URL bar. **Verified live** via the same
 `pfpi.me/?week=1` browser check above -- Week 1's full page (standings,
 games, report, video rail) loaded correctly from the URL param alone.
 Commit `27515fe3` (same as #3).
+
+## 2026-09-16 — Weekly picks email silently stopped sending after Week 1: root cause found and fixed
+
+Yeti reported the Week 2 "picks are open" email never went out. Root cause:
+`handleWeeklyTrigger` (`picks-worker.js`) fires on the Tuesday 7am ET cron
+guard, then reads `getCurrentWeek(env)` to decide which week's email to send
+and to check the `weekly-email-sent:<week>` KV flag. But `getCurrentWeek()`
+falls back to `computeCurrentWeekFromDate()`, which is anchored to
+`SEASON_START_ET` (a Wednesday) -- so the week number doesn't roll over to
+the next week until Wednesday 12am ET, a full day *after* the Tuesday 7am
+trigger fires. Confirmed against real data: `weekly-email-sent:1` was set
+2026-09-08 (Week 1's real send), and `data/current.json` (mirrors the same
+KV value) still read `"currentWeek": 1` all the way through Tuesday 9/15 at
+7pm ET. So when the trigger fired Tuesday 9/15 7am, it read week 1, saw
+week 1's flag already set from the prior week, and silently returned --
+never even looked at week 2. This isn't a one-off: every Tuesday from Week
+2 onward would have hit the identical collision and skipped forever.
+
+Fix: `handleWeeklyTrigger` now falls back to checking `week + 1`'s flag when
+the reported week's flag is already set, and sends for that week instead.
+Deployed via `wrangler deploy` (picks-worker), commit `f2e4a8de` (rebased
+onto origin as `2fd43fd1`).
+
+**Week 2 catch-up:** no mass-send admin tool exists (the existing
+"Resend picks link" tool is per-team, requires a real admin login session,
+so Claude didn't attempt to forge one). Yeti sent Week 2 to all 8 family
+members himself via admin.html's "Resend picks link," one team at a time,
+after the fix was live and `getCurrentWeek()` had rolled over to 2.
+**Verified live** in the sense that Yeti confirmed the resends went out;
+not independently re-verified by Claude beyond the KV/code trace above.

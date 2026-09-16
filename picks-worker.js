@@ -148,11 +148,21 @@ async function verifyToken(token, env) {
 async function handleWeeklyTrigger(env) {
   if (!isTargetLocalTime(7, 2, "America/New_York")) return; // 2 == Tuesday
 
-  const currentWeek = await getCurrentWeek(env);
-
+  // getCurrentWeek() is computeCurrentWeekFromDate() under the hood, anchored
+  // to SEASON_START_ET (a Wednesday) -- so it only rolls over to the new week
+  // number at Wednesday 12am ET, a full day AFTER this Tuesday 7am trigger
+  // fires. Found 2026-09-16: that meant every week after Week 1 read last
+  // week's number here, saw its `weekly-email-sent` flag already set, and
+  // silently skipped forever -- see BUILD_LOG.md. If the flag for the
+  // reported week is already set, the real week to send is the next one.
+  let currentWeek = await getCurrentWeek(env);
+  let alreadySent = await env.PFPI_KV.get(`weekly-email-sent:${currentWeek}`);
+  if (alreadySent) {
+    currentWeek += 1;
+    alreadySent = await env.PFPI_KV.get(`weekly-email-sent:${currentWeek}`);
+  }
   // Never re-send once this week's email has gone out -- also a safety net
   // if the cron cadence ever changes, not just a Tuesday-specific concern.
-  const alreadySent = await env.PFPI_KV.get(`weekly-email-sent:${currentWeek}`);
   if (alreadySent) return;
 
   const schedule = await getWeekSchedule(currentWeek, env);

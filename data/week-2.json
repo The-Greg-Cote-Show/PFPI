@@ -7,10 +7,10 @@
       "away": "DET",
       "kickoffISO": "2026-09-18T00:15:00.000Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 27,
-      "awayScore": 17,
-      "winner": null,
+      "status": "final",
+      "homeScore": 41,
+      "awayScore": 31,
+      "winner": "BUF",
       "tie": false,
       "picks": {
         "Lobos": "BUF",
@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "Live",
+      "clockReport": null,
       "deadline": "2026-09-17T22:15:00.000Z"
     },
     {

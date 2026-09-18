@@ -9371,3 +9371,41 @@ members himself via admin.html's "Resend picks link," one team at a time,
 after the fix was live and `getCurrentWeek()` had rolled over to 2.
 **Verified live** in the sense that Yeti confirmed the resends went out;
 not independently re-verified by Claude beyond the KV/code trace above.
+
+## 2026-09-18 — Public view stuck defaulting to Week 1: root cause found and fixed
+
+Yeti reported pfpi.me's public view was still defaulting to Week 1 on
+9/18, when it should default to Week 2. `data/current.json` itself was
+correct (`"currentWeek": 2`, worker.js's cron pointer update was working
+fine) -- the bug was purely client-side in `index.html`.
+
+Root cause: `index.html` does an instant-paint `render()` on load before
+`data/current.json` has loaded, using the hardcoded fallback
+`CURRENT_WEEK = 1`. That first render calls `updateUrlForWeek()`, which
+immediately writes `?week=1` into the address bar via
+`history.replaceState` -- *before* any real data has arrived. Then, once
+`initRealData()`'s fetch resolves and correctly sets `currentWeek = 2`,
+the per-week deep-link feature (2026-09-15, see above) re-reads
+`location.search` to honor a real `?week=N` link -- but by then the URL
+already said `week=1` (written by that earlier default-state render), so
+it looked indistinguishable from a real deep link and silently clobbered
+`currentWeek` back down to 1. Confirmed live via `pfpi.me` in a real
+browser: `data/current.json` fetch succeeded and returned `currentWeek:
+2`, `CURRENT_WEEK` (the cap) was correctly `2`, but the page's own
+`currentWeek` (the *selected* week) was `1`, and the address bar had been
+silently rewritten to `pfpi.me/?week=1` on a plain `pfpi.me/` load.
+
+Fix: capture the visitor's original `location.search` into
+`INITIAL_URL_PARAMS` once, at script load, before the first render ever
+touches the URL. The deep-link check in `initRealData()` now reads from
+that captured snapshot instead of re-reading `location.search` at the
+later point where it's already been mutated.
+
+Deployed via `git push` (GitHub Pages frontend only -- no worker changes,
+so no `wrangler deploy` needed), commit `6b4c64e7`. **Verified live**:
+after the GitHub Pages/Fastly edge cache (max-age 600s) rolled over,
+confirmed in a real browser that a plain `pfpi.me/` load now shows "Wk 2"
+active, "Through Week 2" in standings, and the URL address bar updates to
+`pfpi.me/?week=2` -- and that an explicit `pfpi.me/?week=1` deep link
+still correctly opens Week 1, so the original 2026-09-15 deep-link
+feature wasn't regressed by the fix.

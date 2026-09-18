@@ -7,9 +7,9 @@
       "away": "DET",
       "kickoffISO": "2026-09-18T00:15:00.000Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 27,
+      "awayScore": 17,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "Live",
       "deadline": "2026-09-17T22:15:00.000Z"
     },
     {

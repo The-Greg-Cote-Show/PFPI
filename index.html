@@ -386,6 +386,15 @@ const PRESEASON_WEEK_KEY = "preseason-3";
 // way, never a guess.
 let CURRENT_WEEK = 1;
 
+// Captured before the instant-paint render() call below ever touches the
+// address bar (it calls updateUrlForWeek(), which writes "?week=1" via
+// history.replaceState as soon as it runs, before data/current.json has
+// loaded). initRealData()'s deep-link check below must read the visitor's
+// ORIGINAL query string, not location.search at that later point -- else
+// that first default-week write looks indistinguishable from a real
+// "?week=1" link and clobbers the real current week once it loads.
+const INITIAL_URL_PARAMS = new URLSearchParams(location.search);
+
 // ── REAL DATA WIRING ──
 // The scores worker (worker.js, cron job) publishes data/current.json,
 // data/standings.json and data/week-N.json into this repo by polling Big
@@ -446,7 +455,7 @@ async function initRealData() {
     // out of the URL bar and shared as-is. Clamped to 1..CURRENT_WEEK so a
     // stale or bogus link can never point at a week that hasn't happened
     // yet.
-    const linkedWeek = parseInt(new URLSearchParams(location.search).get("week"), 10);
+    const linkedWeek = parseInt(INITIAL_URL_PARAMS.get("week"), 10);
     if (Number.isInteger(linkedWeek) && linkedWeek >= 1 && linkedWeek <= CURRENT_WEEK) {
       currentWeek = linkedWeek;
     }

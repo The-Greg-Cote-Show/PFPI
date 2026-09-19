@@ -141,6 +141,12 @@ button:hover{opacity:.9;}
 #commissionerTabs .past-week-row{display:flex;align-items:center;justify-content:space-between;background:var(--panel2);border:1px solid var(--border2);border-radius:8px;padding:.6rem .9rem;font-size:.8rem;}
 #commissionerTabs .past-week-row button{width:auto;font-size:.72rem;padding:.4rem .8rem;margin-top:0;}
 #commissionerTabs .past-week-meta{font-size:.65rem;color:var(--muted);margin-top:2px;}
+
+#commissionerTabs .uho-header{font-size:1rem;font-weight:800;margin-bottom:1rem;}
+#commissionerTabs .uho-outcome{font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap;}
+#commissionerTabs .uho-win{background:rgba(62,207,116,.12);color:var(--green);border:1px solid rgba(62,207,116,.3);}
+#commissionerTabs .uho-loss{background:rgba(224,82,82,.12);color:var(--red);border:1px solid rgba(224,82,82,.3);}
+#commissionerTabs .uho-pending{background:var(--panel3);color:var(--muted);border:1px solid var(--border2);}
 </style>
 </head>
 <body>
@@ -214,6 +220,7 @@ button:hover{opacity:.9;}
   </div>
   <div class="top-tabs hidden" id="commissionerSubTabs">
     <button class="top-tab-btn" data-tab="missing" type="button">Missing Picks</button>
+    <button class="top-tab-btn" data-tab="uniquehits" type="button">Unique Hit Opportunities</button>
     <button class="top-tab-btn" data-tab="digest" type="button">Weekly Digest</button>
     <button class="top-tab-btn" data-tab="publish" type="button">Commissioner's Report</button>
     <button class="top-tab-btn" data-tab="league" type="button">League Email</button>
@@ -458,6 +465,16 @@ button:hover{opacity:.9;}
       <div class="status" id="mpStatus"></div>
     </div>
 
+    <!-- Unique Hit Opportunities (2026-09-19, per Yeti) -- ported verbatim
+         from brief.html's Commissioner Portal, see its own comment for the
+         real definition/reveal rule. No week dropdown -- always the
+         current real week. -->
+    <div class="card hidden" id="uniqueHitsTab">
+      <div class="uho-header" id="uhoHeader">Unique Hit Opportunities</div>
+      <div id="uhoContent"></div>
+      <div class="status" id="uhoStatus"></div>
+    </div>
+
     <div class="card hidden" id="digestTab">
       <div class="field">
         <label for="digestWeekSelect">Week</label>
@@ -608,6 +625,7 @@ async function fetchCurrentWeek() {
 // ============================================================
 
 let digestInitialized = false;
+let uniqueHitsInitialized = false;
 
 // Per Yeti (2026-08-26): a saved browser password shouldn't matter if the
 // page throws the session away on every refresh -- the backend session is
@@ -799,7 +817,7 @@ document.getElementById("resetForm").onsubmit = async (e) => {
 // ============================================================
 
 let activeMainSection = "admin"; // "admin" | "commissioner" | "analytics"
-let activeSubTab = "missing"; // "missing" | "digest" | "publish" | "league" -- remembered across section switches
+let activeSubTab = "missing"; // "missing" | "uniquehits" | "digest" | "publish" | "league" -- remembered across section switches
 
 function switchMainSection(section) {
   activeMainSection = section;
@@ -840,11 +858,16 @@ function updateSubTabVisibility() {
   document.querySelectorAll("#commissionerSubTabs .top-tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === activeSubTab));
   const showSub = activeMainSection === "commissioner";
   document.getElementById("missingPicksTab").classList.toggle("hidden", !(showSub && activeSubTab === "missing"));
+  document.getElementById("uniqueHitsTab").classList.toggle("hidden", !(showSub && activeSubTab === "uniquehits"));
   document.getElementById("digestTab").classList.toggle("hidden", !(showSub && activeSubTab === "digest"));
   document.getElementById("digestPastWeeksTab").classList.toggle("hidden", !(showSub && activeSubTab === "digest"));
   document.getElementById("publishTab").classList.toggle("hidden", !(showSub && activeSubTab === "publish"));
   document.getElementById("reportPastWeeksTab").classList.toggle("hidden", !(showSub && activeSubTab === "publish"));
   document.getElementById("cpLeagueEmailTab").classList.toggle("hidden", !(showSub && activeSubTab === "league"));
+  if (showSub && activeSubTab === "uniquehits" && !uniqueHitsInitialized) {
+    uniqueHitsInitialized = true;
+    renderUniqueHitOpportunities();
+  }
   if (showSub && activeSubTab === "digest" && !digestInitialized) {
     digestInitialized = true;
     populateDigestWeeks(); // ends by calling renderDigest(), which itself refreshes the Past Weeks list
@@ -1644,6 +1667,100 @@ async function sendMissingPicksReminder(btn) {
 }
 
 document.getElementById("mpWeekSelect").addEventListener("change", renderMissingPicks);
+
+// ============================================================
+// UNIQUE HIT OPPORTUNITIES -- ported verbatim from brief.html (2026-09-19,
+// per Yeti). See that file's own copy of this comment for the real
+// definition/reveal rule; kept in sync there, not duplicated logic.
+// ============================================================
+
+function fmtKickoff(iso) {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d.getTime())) return "TBD";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric",
+    hour: "numeric", minute: "2-digit",
+  }).format(d) + " ET";
+}
+
+async function renderUniqueHitOpportunities() {
+  const headerEl = document.getElementById("uhoHeader");
+  const contentEl = document.getElementById("uhoContent");
+  const statusEl = document.getElementById("uhoStatus");
+
+  contentEl.innerHTML = "";
+  statusEl.textContent = "Loading...";
+  statusEl.className = "status show";
+
+  const currentWeek = await fetchCurrentWeek();
+  headerEl.textContent = `Unique Hit Opportunities: Week ${currentWeek}`;
+
+  const [adminGames, publicGames] = await Promise.all([
+    fetchWeekPicksAdmin(currentWeek),
+    fetchWeekGames(currentWeek),
+  ]);
+
+  if (!adminGames || adminGames.length === 0) {
+    statusEl.textContent = "No games published for this week yet.";
+    statusEl.className = "status show";
+    return;
+  }
+
+  const resultById = {};
+  (publicGames || []).forEach(g => { resultById[g.id] = g; });
+
+  const opportunities = [];
+  adminGames.forEach(g => {
+    const allIn = REAL_TEAMS.every(team => g.picks && g.picks[team]);
+    if (!allIn) return;
+
+    const result = resultById[g.id];
+    if (result && result.tie) return;
+
+    const pickCounts = {};
+    REAL_TEAMS.forEach(team => {
+      const pick = g.picks[team];
+      pickCounts[pick] = (pickCounts[pick] || 0) + 1;
+    });
+
+    REAL_TEAMS.forEach(team => {
+      const pick = g.picks[team];
+      if (pickCounts[pick] !== 1) return;
+      let outcome = null; // still pending
+      if (result && result.status === "final" && result.winner) {
+        outcome = pick === result.winner ? "Win" : "Loss";
+      }
+      opportunities.push({ team, pick, home: g.home, away: g.away, kickoffISO: g.kickoffISO, outcome });
+    });
+  });
+
+  opportunities.sort((a, b) => new Date(a.kickoffISO).getTime() - new Date(b.kickoffISO).getTime());
+
+  headerEl.textContent = `Unique Hit Opportunities: Week ${currentWeek}: ${opportunities.length}`;
+
+  if (opportunities.length === 0) {
+    statusEl.textContent = "None revealed yet -- a game only appears here once every real team's pick for it is in.";
+    statusEl.className = "status show";
+    return;
+  }
+  statusEl.textContent = "";
+  statusEl.className = "status";
+
+  contentEl.innerHTML = opportunities.map(o => {
+    const outcomeHtml = o.outcome === "Win" ? `<span class="uho-outcome uho-win">Win</span>`
+      : o.outcome === "Loss" ? `<span class="uho-outcome uho-loss">Loss</span>`
+      : `<span class="uho-outcome uho-pending">Pending</span>`;
+    return `
+      <div class="mp-row">
+        <div class="mp-row-header">
+          <span class="mp-matchup">${TEAM_SHORT[o.team] || o.team} — ${o.pick}</span>
+          ${outcomeHtml}
+        </div>
+        <div class="mp-chips"><span class="mp-chip mp-chip-locked">${o.away} @ ${o.home} — ${fmtKickoff(o.kickoffISO)}</span></div>
+      </div>
+    `;
+  }).join("");
+}
 
 // ============================================================
 // WEEKLY DIGEST -- ported verbatim from brief.html (2026-08-28). A stats

@@ -76,7 +76,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .forgot-link{font-size:.75rem;text-align:center;margin-top:.85rem;}
 .forgot-link a{color:var(--blue);}
 
-#publishScreen,#resetScreen,#dashboardTabs,#missingPicksScreen,#digestScreen,#leagueEmailScreen,#digestPastWeeksScreen,#reportPastWeeksScreen{display:none;}
+#publishScreen,#resetScreen,#dashboardTabs,#missingPicksScreen,#digestScreen,#leagueEmailScreen,#digestPastWeeksScreen,#reportPastWeeksScreen,#uniqueHitsScreen{display:none;}
 /* digestPastWeeksScreen/reportPastWeeksScreen added 2026-09-07 -- these two
    were the only screens NOT in this default-hidden list (unlike their
    correctly-built admin.html Commissioner Portal mirror, where every tab
@@ -132,6 +132,12 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .past-weeks-list{display:flex;flex-direction:column;gap:6px;}
 .past-week-row{display:flex;align-items:center;justify-content:space-between;background:var(--panel2);border:1px solid var(--border2);border-radius:8px;padding:.6rem .9rem;font-size:.8rem;}
 .past-week-row button{width:auto;font-size:.72rem;padding:.4rem .8rem;margin-top:0;}
+
+.uho-header{font-size:1rem;font-weight:800;margin-bottom:1rem;}
+.uho-outcome{font-size:.72rem;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap;}
+.uho-win{background:rgba(62,207,116,.12);color:var(--green);border:1px solid rgba(62,207,116,.3);}
+.uho-loss{background:rgba(224,82,82,.12);color:var(--red);border:1px solid rgba(224,82,82,.3);}
+.uho-pending{background:var(--panel3);color:var(--muted);border:1px solid var(--border2);}
 </style>
 </head>
 <body>
@@ -194,6 +200,7 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 
   <div class="dash-tabs" id="dashboardTabs">
     <button class="dash-tab-btn active" id="dashTabMissing" data-tab="missing">Missing Picks</button>
+    <button class="dash-tab-btn" id="dashTabUniqueHits" data-tab="uniquehits">Unique Hit Opportunities</button>
     <button class="dash-tab-btn" id="dashTabDigest" data-tab="digest">Weekly Digest</button>
     <button class="dash-tab-btn" id="dashTabPublish" data-tab="publish">Commissioner's Report</button>
     <button class="dash-tab-btn" id="dashTabLeagueEmail" data-tab="league">League Email</button>
@@ -208,6 +215,19 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
     </div>
     <div id="mpContent"></div>
     <div class="status" id="mpStatus"></div>
+  </div>
+
+  <!-- Unique Hit Opportunities (2026-09-19, per Yeti): a live snapshot of
+       this week's unique picks (a pick only one team made for that game) --
+       no week dropdown, always the current real week. Each game only
+       appears once every real team's pick for THAT game is in (not gated
+       on the whole week finishing, and not on the game's own deadline) --
+       see renderUniqueHitOpportunities() below for the real definition,
+       which reuses worker.js's own "unique hit" logic. -->
+  <div class="card" id="uniqueHitsScreen">
+    <div class="uho-header" id="uhoHeader">Unique Hit Opportunities</div>
+    <div id="uhoContent"></div>
+    <div class="status" id="uhoStatus"></div>
   </div>
 
   <div class="card" id="digestScreen">
@@ -355,6 +375,7 @@ function clearSession(message) {
   localStorage.removeItem(SESSION_STORAGE_KEY);
   document.getElementById("dashboardTabs").style.display = "none";
   document.getElementById("missingPicksScreen").style.display = "none";
+  document.getElementById("uniqueHitsScreen").style.display = "none";
   document.getElementById("digestScreen").style.display = "none";
   document.getElementById("digestPastWeeksScreen").style.display = "none";
   document.getElementById("publishScreen").style.display = "none";
@@ -962,6 +983,119 @@ async function sendMissingPicksReminder(btn) {
 document.getElementById("mpWeekSelect").addEventListener("change", renderMissingPicks);
 
 // ============================================================
+// UNIQUE HIT OPPORTUNITIES (2026-09-19, per Yeti) -- a live snapshot of the
+// current real week's unique picks: a pick is "unique" for a game if,
+// among the real teams that picked it, exactly one team chose that side --
+// the exact same definition worker.js's own computeStandings/uniqueHits
+// use for the season-long leaderboard (see BUILD_LOG.md, 2026-08-28), just
+// scoped here to the current week and shown per-game/per-team with a live
+// pending state, instead of a season-cumulative count. No week dropdown --
+// always the real current week, per Yeti ("doesn't need to be a dropdown
+// to select the week").
+//
+// Reveal rule (per Yeti): a game only shows here once EVERY real team has
+// a locked/submitted pick for THAT specific game -- not gated on the whole
+// week being picked, and not on that game's own deadline. Counting a
+// partial field risks calling a pick "unique" that turns out not to be
+// once the rest land, so each game reveals independently the moment its
+// own field is complete. Uses fetchWeekPicksAdmin (ungated real picks,
+// same as the Missing Picks tab above) for who-picked-what, and
+// fetchWeekGames (public data/week-N.json) for status/winner/tie, which
+// are never gated even though that file's own `picks` field is.
+// ============================================================
+
+function fmtKickoff(iso) {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d.getTime())) return "TBD";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric",
+    hour: "numeric", minute: "2-digit",
+  }).format(d) + " ET";
+}
+
+async function renderUniqueHitOpportunities() {
+  const headerEl = document.getElementById("uhoHeader");
+  const contentEl = document.getElementById("uhoContent");
+  const statusEl = document.getElementById("uhoStatus");
+
+  contentEl.innerHTML = "";
+  statusEl.textContent = "Loading...";
+  statusEl.className = "status show";
+
+  const currentWeek = await fetchCurrentWeek();
+  headerEl.textContent = `Unique Hit Opportunities: Week ${currentWeek}`;
+
+  const [adminGames, publicGames] = await Promise.all([
+    fetchWeekPicksAdmin(currentWeek),
+    fetchWeekGames(currentWeek),
+  ]);
+
+  if (!adminGames || adminGames.length === 0) {
+    statusEl.textContent = "No games published for this week yet.";
+    statusEl.className = "status show";
+    return;
+  }
+
+  const resultById = {};
+  (publicGames || []).forEach(g => { resultById[g.id] = g; });
+
+  const opportunities = [];
+  adminGames.forEach(g => {
+    const allIn = REAL_TEAMS.every(team => g.picks && g.picks[team]);
+    if (!allIn) return;
+
+    const result = resultById[g.id];
+    // A tied NFL game is nullified for pick'em purposes entirely (same
+    // rule worker.js's own unique-hit computation uses) -- a "unique" pick
+    // on it isn't a real hit opportunity.
+    if (result && result.tie) return;
+
+    const pickCounts = {};
+    REAL_TEAMS.forEach(team => {
+      const pick = g.picks[team];
+      pickCounts[pick] = (pickCounts[pick] || 0) + 1;
+    });
+
+    REAL_TEAMS.forEach(team => {
+      const pick = g.picks[team];
+      if (pickCounts[pick] !== 1) return;
+      let outcome = null; // still pending
+      if (result && result.status === "final" && result.winner) {
+        outcome = pick === result.winner ? "Win" : "Loss";
+      }
+      opportunities.push({ team, pick, home: g.home, away: g.away, kickoffISO: g.kickoffISO, outcome });
+    });
+  });
+
+  opportunities.sort((a, b) => new Date(a.kickoffISO).getTime() - new Date(b.kickoffISO).getTime());
+
+  headerEl.textContent = `Unique Hit Opportunities: Week ${currentWeek}: ${opportunities.length}`;
+
+  if (opportunities.length === 0) {
+    statusEl.textContent = "None revealed yet -- a game only appears here once every real team's pick for it is in.";
+    statusEl.className = "status show";
+    return;
+  }
+  statusEl.textContent = "";
+  statusEl.className = "status";
+
+  contentEl.innerHTML = opportunities.map(o => {
+    const outcomeHtml = o.outcome === "Win" ? `<span class="uho-outcome uho-win">Win</span>`
+      : o.outcome === "Loss" ? `<span class="uho-outcome uho-loss">Loss</span>`
+      : `<span class="uho-outcome uho-pending">Pending</span>`;
+    return `
+      <div class="mp-row">
+        <div class="mp-row-header">
+          <span class="mp-matchup">${TEAM_SHORT[o.team] || o.team} — ${o.pick}</span>
+          ${outcomeHtml}
+        </div>
+        <div class="mp-chips"><span class="mp-chip mp-chip-locked">${o.away} @ ${o.home} — ${fmtKickoff(o.kickoffISO)}</span></div>
+      </div>
+    `;
+  }).join("");
+}
+
+// ============================================================
 // WEEKLY DIGEST — a stats scaffold matching Greg's real house style, pulled
 // from the same real computed data the public charts use (worker.js's
 // computeStandings). Standings, Weekly Titles, Weeks Leading, and Best Week
@@ -1326,6 +1460,7 @@ document.getElementById("digestInsertBtn").addEventListener("click", () => {
 
 let digestInitialized = false;
 let reportPastWeeksInitialized = false;
+let uniqueHitsInitialized = false;
 
 document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -1333,6 +1468,7 @@ document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(btn => {
     btn.classList.add("active");
     const tab = btn.dataset.tab;
     document.getElementById("missingPicksScreen").style.display = tab === "missing" ? "block" : "none";
+    document.getElementById("uniqueHitsScreen").style.display = tab === "uniquehits" ? "block" : "none";
     document.getElementById("digestScreen").style.display = tab === "digest" ? "block" : "none";
     document.getElementById("digestPastWeeksScreen").style.display = tab === "digest" ? "block" : "none";
     document.getElementById("publishScreen").style.display = tab === "publish" ? "block" : "none";
@@ -1343,6 +1479,10 @@ document.querySelectorAll("#dashboardTabs .dash-tab-btn").forEach(btn => {
     // div in DOM order (that div lives outside `.wrap`) -- hide it while
     // Analytics is active so its own wide footer is the only one showing.
     document.getElementById("narrowFooter").style.display = tab === "analytics" ? "none" : "block";
+    if (tab === "uniquehits" && !uniqueHitsInitialized) {
+      uniqueHitsInitialized = true;
+      renderUniqueHitOpportunities();
+    }
     if (tab === "digest" && !digestInitialized) {
       digestInitialized = true;
       populateDigestWeeks(); // ends by calling renderDigest(), which itself refreshes the Past Weeks list

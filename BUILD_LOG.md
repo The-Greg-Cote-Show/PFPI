@@ -9409,3 +9409,58 @@ active, "Through Week 2" in standings, and the URL address bar updates to
 `pfpi.me/?week=2` -- and that an explicit `pfpi.me/?week=1` deep link
 still correctly opens Week 1, so the original 2026-09-15 deep-link
 feature wasn't regressed by the fix.
+
+## 2026-09-19 — New tab: Unique Hit Opportunities (Commissioner Portal + Acting Commissioner mirror)
+
+Per Yeti: a new dashboard tab showing a live snapshot of the current real
+week's "unique hit opportunities" -- a pick is "unique" for a game if,
+among the real teams that picked it, exactly one team chose that side.
+Reuses the exact same definition worker.js's own `computeStandings`
+already uses for the season-long Unique Hits leaderboard (see the
+2026-08-28 entry above), just scoped to the current week and shown
+per-game/per-team (team, matchup, kickoff date/time, Win/Loss once
+final) instead of a season-cumulative count. No week dropdown, per Yeti
+("doesn't need to be a dropdown to select the week") -- always the real
+current week, listed in chronological (kickoff) order.
+
+**Reveal rule, per Yeti's own follow-up mid-build:** "This can't happen
+until all picks for a game are in... Once all picks for a game are
+submitted, then you can reveal the Unique Hit opportunities. Doesn't
+need to wait for all games to be picked, though -- just all picks for a
+game updates the tally." So each game reveals independently the moment
+every one of the 8 real teams has a locked/submitted pick for THAT
+specific game -- not gated on the whole week finishing, and not on that
+game's own deadline (a game could reveal here well before its deadline
+if everyone happens to submit early). Counting a partial field would
+risk calling a pick "unique" that turns out not to be once the rest
+land, so this is strictly all-8-or-nothing per game.
+
+A tied NFL game is excluded entirely once known (same "nullified for
+pick'em purposes" rule worker.js's own unique-hit computation uses) --
+a unique pick on a game that ends in a tie isn't a real hit opportunity.
+
+**No backend changes** -- purely a new client-side view built entirely
+from two endpoints both pages already had: `fetchWeekPicksAdmin` (GET
+`/admin/week-picks`, ungated real per-team picks, same source the
+Missing Picks tab uses) for who-picked-what per game, and
+`fetchWeekGames` (public `data/week-N.json`) for `status`/`winner`/`tie`
+per game -- those fields are never gated even though that file's own
+`picks` field is. Matched by game `id`, which both ultimately derive
+from the same `normalizeGame()`.
+
+**Standing instruction, per Yeti:** from now on, anything built for the
+Commissioner Portal (brief.html) also gets mirrored into the Acting
+Commissioner section of admin.html (`#commissionerTabs`), and vice
+versa -- both were updated together here, same as every other tab in
+that section (Missing Picks, Weekly Digest, Commissioner's Report,
+League Email).
+
+Files touched: `brief.html` (new `#uniqueHitsScreen` tab/panel,
+`renderUniqueHitOpportunities()`/`fmtKickoff()`), `admin.html` (new
+`#uniqueHitsTab` sub-tab under Acting Commissioner, same two functions
+ported verbatim, `updateSubTabVisibility()` wired in). No worker.js or
+picks-worker.js changes. Verified by parsing both files' inline scripts
+with `new Function()` (no syntax errors) and cross-checking every
+`getElementById` call against the DOM (no missing ids) -- not yet
+verified live in a real logged-in browser session (needs a week with a
+fully-submitted game to show a non-empty result).

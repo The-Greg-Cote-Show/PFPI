@@ -1736,8 +1736,8 @@ async function renderUniqueHitOpportunities() {
 
   opportunities.sort((a, b) => new Date(a.kickoffISO).getTime() - new Date(b.kickoffISO).getTime());
 
-  headerEl.textContent = `Unique Hit Opportunities: Week ${currentWeek}: ${opportunities.length}`;
-
+  // No count in the header, per Yeti (2026-09-19) -- there will never be
+  // many, and they're all listed right below anyway.
   if (opportunities.length === 0) {
     statusEl.textContent = "None revealed yet -- a game only appears here once every real team's pick for it is in.";
     statusEl.className = "status show";

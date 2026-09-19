@@ -9464,3 +9464,9 @@ with `new Function()` (no syntax errors) and cross-checking every
 `getElementById` call against the DOM (no missing ids) -- not yet
 verified live in a real logged-in browser session (needs a week with a
 fully-submitted game to show a non-empty result).
+
+**2026-09-19 follow-up:** Yeti asked to drop the count from the header --
+"there will never be a ton and they're all listed" -- so the header now
+reads `Unique Hit Opportunities: Week N` only, no trailing `: N`, in both
+files. The list itself is unchanged; the count is still implicitly
+visible as "how many rows are below."

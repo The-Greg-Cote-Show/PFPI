@@ -98,7 +98,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "5:19 - 2nd",
+      "clockReport": "5:01 - 2nd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "2:00 - 2nd",
+      "clockReport": "1:19 - 2nd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -134,7 +134,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 14,
-      "awayScore": 3,
+      "awayScore": 6,
       "winner": null,
       "tie": false,
       "picks": {
@@ -148,7 +148,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "0:02 - 2nd",
+      "clockReport": "Halftime",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

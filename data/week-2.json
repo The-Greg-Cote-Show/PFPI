@@ -48,7 +48,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "1:11 - 4th",
+      "clockReport": "0:18 - 4th",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -82,10 +82,10 @@
       "away": "CIN",
       "kickoffISO": "2026-09-20T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 6,
       "awayScore": 20,
-      "winner": null,
+      "winner": "CIN",
       "tie": false,
       "picks": {
         "Lobos": "HOU",
@@ -98,7 +98,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "0:12 - 4th",
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -148,7 +148,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "10:04 - 1st",
+      "clockReport": "9:39 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

@@ -23,7 +23,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "1:46 - 4th",
+      "clockReport": "1:05 - 4th",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -57,10 +57,10 @@
       "away": "PHI",
       "kickoffISO": "2026-09-20T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 20,
       "awayScore": 24,
-      "winner": null,
+      "winner": "PHI",
       "tie": false,
       "picks": {
         "Lobos": "PHI",
@@ -73,7 +73,7 @@
         "Giraffes": "PHI"
       },
       "picksRevealed": true,
-      "clockReport": "0:04 - 4th",
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "3:51 - 4th",
+      "clockReport": "3:09 - 4th",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -198,7 +198,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "3:04 - 4th",
+      "clockReport": "2:16 - 4th",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

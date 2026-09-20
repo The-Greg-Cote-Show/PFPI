@@ -7,10 +7,10 @@
       "away": "CAR",
       "kickoffISO": "2026-09-20T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 3,
       "awayScore": 34,
-      "winner": null,
+      "winner": "CAR",
       "tie": false,
       "picks": {
         "Lobos": "CAR",
@@ -23,7 +23,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "0:42 - 4th",
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "2:53 - 4th",
+      "clockReport": "2:48 - 4th",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "14:19 - 1st",
+      "clockReport": "13:36 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -148,7 +148,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "14:19 - 1st",
+      "clockReport": "13:16 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

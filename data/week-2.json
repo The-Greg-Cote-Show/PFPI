@@ -2,31 +2,6 @@
   "week": 2,
   "games": [
     {
-      "id": "2026_02_CAR_ATL",
-      "home": "ATL",
-      "away": "CAR",
-      "kickoffISO": "2026-09-20T17:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 3,
-      "awayScore": 34,
-      "winner": "CAR",
-      "tie": false,
-      "picks": {
-        "Lobos": "CAR",
-        "Roughriders": "CAR",
-        "Maniacs": "CAR",
-        "Critters": "CAR",
-        "Chickens": "CAR",
-        "Ferraris": "CAR",
-        "Llamas": "CAR",
-        "Giraffes": "CAR"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-09-19T17:00:00.000Z"
-    },
-    {
       "id": "2026_02_GB_NYJ",
       "home": "NYJ",
       "away": "GB",
@@ -77,31 +52,6 @@
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
-      "id": "2026_02_CIN_HOU",
-      "home": "HOU",
-      "away": "CIN",
-      "kickoffISO": "2026-09-20T17:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 6,
-      "awayScore": 20,
-      "winner": "CIN",
-      "tie": false,
-      "picks": {
-        "Lobos": "HOU",
-        "Roughriders": "HOU",
-        "Maniacs": "HOU",
-        "Critters": "CIN",
-        "Chickens": "CIN",
-        "Ferraris": "CIN",
-        "Llamas": "HOU",
-        "Giraffes": "CIN"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-09-19T17:00:00.000Z"
-    },
-    {
       "id": "2026_02_JAX_DEN",
       "home": "DEN",
       "away": "JAX",
@@ -123,7 +73,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "8:44 - 1st",
+      "clockReport": "8:03 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -148,7 +98,32 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "8:57 - 1st",
+      "clockReport": "8:12 - 1st",
+      "deadline": "2026-09-19T17:00:00.000Z"
+    },
+    {
+      "id": "2026_02_CAR_ATL",
+      "home": "ATL",
+      "away": "CAR",
+      "kickoffISO": "2026-09-20T17:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 3,
+      "awayScore": 34,
+      "winner": "CAR",
+      "tie": false,
+      "picks": {
+        "Lobos": "CAR",
+        "Roughriders": "CAR",
+        "Maniacs": "CAR",
+        "Critters": "CAR",
+        "Chickens": "CAR",
+        "Ferraris": "CAR",
+        "Llamas": "CAR",
+        "Giraffes": "CAR"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -246,6 +221,31 @@
         "Ferraris": "BAL",
         "Llamas": "BAL",
         "Giraffes": "BAL"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-09-19T17:00:00.000Z"
+    },
+    {
+      "id": "2026_02_CIN_HOU",
+      "home": "HOU",
+      "away": "CIN",
+      "kickoffISO": "2026-09-20T17:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 6,
+      "awayScore": 20,
+      "winner": "CIN",
+      "tie": false,
+      "picks": {
+        "Lobos": "HOU",
+        "Roughriders": "HOU",
+        "Maniacs": "HOU",
+        "Critters": "CIN",
+        "Chickens": "CIN",
+        "Ferraris": "CIN",
+        "Llamas": "HOU",
+        "Giraffes": "CIN"
       },
       "picksRevealed": true,
       "clockReport": null,

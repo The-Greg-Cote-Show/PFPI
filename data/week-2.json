@@ -2,31 +2,6 @@
   "week": 2,
   "games": [
     {
-      "id": "2026_02_WAS_DAL",
-      "home": "DAL",
-      "away": "WAS",
-      "kickoffISO": "2026-09-20T20:25Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 37,
-      "awayScore": 20,
-      "winner": "DAL",
-      "tie": false,
-      "picks": {
-        "Lobos": "DAL",
-        "Roughriders": "DAL",
-        "Maniacs": "DAL",
-        "Critters": "DAL",
-        "Chickens": "DAL",
-        "Ferraris": "DAL",
-        "Llamas": "DAL",
-        "Giraffes": "DAL"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-09-19T17:00:00.000Z"
-    },
-    {
       "id": "2026_02_CAR_ATL",
       "home": "ATL",
       "away": "CAR",
@@ -271,6 +246,31 @@
         "Ferraris": "LAC",
         "Llamas": "LAC",
         "Giraffes": "LV"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-09-19T17:00:00.000Z"
+    },
+    {
+      "id": "2026_02_WAS_DAL",
+      "home": "DAL",
+      "away": "WAS",
+      "kickoffISO": "2026-09-20T20:25Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 37,
+      "awayScore": 20,
+      "winner": "DAL",
+      "tie": false,
+      "picks": {
+        "Lobos": "DAL",
+        "Roughriders": "DAL",
+        "Maniacs": "DAL",
+        "Critters": "DAL",
+        "Chickens": "DAL",
+        "Ferraris": "DAL",
+        "Llamas": "DAL",
+        "Giraffes": "DAL"
       },
       "picksRevealed": true,
       "clockReport": null,

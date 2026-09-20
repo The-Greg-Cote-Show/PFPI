@@ -23,7 +23,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "13:14 - 3rd",
+      "clockReport": "12:22 - 3rd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -58,7 +58,7 @@
       "kickoffISO": "2026-09-20T17:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 10,
+      "homeScore": 16,
       "awayScore": 17,
       "winner": null,
       "tie": false,
@@ -73,7 +73,7 @@
         "Giraffes": "PHI"
       },
       "picksRevealed": true,
-      "clockReport": "1:45 - 3rd",
+      "clockReport": "0:57 - 3rd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "4:38 - 3rd",
+      "clockReport": "3:50 - 3rd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "8:44 - 3rd",
+      "clockReport": "7:44 - 3rd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -134,7 +134,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 16,
-      "awayScore": 6,
+      "awayScore": 9,
       "winner": null,
       "tie": false,
       "picks": {
@@ -173,7 +173,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "1:49 - 3rd",
+      "clockReport": "1:41 - 3rd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -198,7 +198,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "10:51 - 3rd",
+      "clockReport": "9:51 - 3rd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

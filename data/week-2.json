@@ -48,7 +48,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "8:58 - 4th",
+      "clockReport": "8:16 - 4th",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -82,10 +82,10 @@
       "away": "MIA",
       "kickoffISO": "2026-09-20T20:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 35,
       "awayScore": 13,
-      "winner": null,
+      "winner": "SF",
       "tie": false,
       "picks": {
         "Lobos": "SF",
@@ -98,7 +98,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "0:38 - 4th",
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

@@ -48,7 +48,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "2:23 - 3rd",
+      "clockReport": "1:33 - 3rd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -59,7 +59,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 14,
-      "awayScore": 10,
+      "awayScore": 17,
       "winner": null,
       "tie": false,
       "picks": {
@@ -73,7 +73,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "4:40 - 3rd",
+      "clockReport": "3:53 - 3rd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -133,7 +133,7 @@
       "kickoffISO": "2026-09-20T20:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 21,
+      "homeScore": 27,
       "awayScore": 6,
       "winner": null,
       "tie": false,
@@ -148,7 +148,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "6:32 - 3rd",
+      "clockReport": "5:46 - 3rd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

@@ -23,7 +23,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "2:00 - 4th",
+      "clockReport": "1:53 - 4th",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -32,10 +32,10 @@
       "away": "MIN",
       "kickoffISO": "2026-09-20T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 3,
       "awayScore": 9,
-      "winner": null,
+      "winner": "MIN",
       "tie": false,
       "picks": {
         "Lobos": "CHI",
@@ -48,7 +48,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "0:01 - 4th",
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "4:49 - 4th",
+      "clockReport": "4:32 - 4th",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -198,7 +198,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "3:08 - 4th",
+      "clockReport": "3:04 - 4th",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

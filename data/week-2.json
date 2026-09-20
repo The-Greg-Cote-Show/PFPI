@@ -7,10 +7,10 @@
       "away": "CLE",
       "kickoffISO": "2026-09-20T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 19,
       "awayScore": 23,
-      "winner": null,
+      "winner": "CLE",
       "tie": false,
       "picks": {
         "Lobos": "TB",
@@ -23,7 +23,7 @@
         "Giraffes": "TB"
       },
       "picksRevealed": true,
-      "clockReport": "0:18 - 4th",
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "End of 3rd",
+      "clockReport": "15:00 - 4th",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -84,7 +84,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 17,
-      "awayScore": 10,
+      "awayScore": 13,
       "winner": null,
       "tie": false,
       "picks": {
@@ -98,7 +98,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "13:07 - 3rd",
+      "clockReport": "12:50 - 3rd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -148,7 +148,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "3:54 - 3rd",
+      "clockReport": "3:49 - 3rd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

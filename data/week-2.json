@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 0,
-      "awayScore": 0,
+      "awayScore": 7,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "10:57 - 1st",
+      "clockReport": "10:48 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "7:42 - 1st",
+      "clockReport": "7:36 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "PHI"
       },
       "picksRevealed": true,
-      "clockReport": "5:15 - 1st",
+      "clockReport": "5:11 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "9:26 - 1st",
+      "clockReport": "9:11 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "13:34 - 1st",
+      "clockReport": "13:20 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -134,7 +134,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 3,
-      "awayScore": 0,
+      "awayScore": 3,
       "winner": null,
       "tie": false,
       "picks": {
@@ -148,7 +148,7 @@
         "Giraffes": "TB"
       },
       "picksRevealed": true,
-      "clockReport": "7:29 - 1st",
+      "clockReport": "7:12 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -173,7 +173,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "6:32 - 1st",
+      "clockReport": "5:53 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -198,7 +198,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "10:58 - 1st",
+      "clockReport": "10:08 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

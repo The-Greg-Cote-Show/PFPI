@@ -2,31 +2,6 @@
   "week": 2,
   "games": [
     {
-      "id": "2026_02_GB_NYJ",
-      "home": "NYJ",
-      "away": "GB",
-      "kickoffISO": "2026-09-20T17:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 17,
-      "awayScore": 20,
-      "winner": "GB",
-      "tie": false,
-      "picks": {
-        "Lobos": "GB",
-        "Roughriders": "GB",
-        "Maniacs": "GB",
-        "Critters": "NYJ",
-        "Chickens": "NYJ",
-        "Ferraris": "NYJ",
-        "Llamas": "NYJ",
-        "Giraffes": "NYJ"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-09-19T17:00:00.000Z"
-    },
-    {
       "id": "2026_02_CLE_TB",
       "home": "TB",
       "away": "CLE",
@@ -98,7 +73,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "14:15 - 2nd",
+      "clockReport": "13:13 - 2nd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -123,7 +98,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "4:56 - 1st",
+      "clockReport": "4:18 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -173,7 +148,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "0:07 - 1st",
+      "clockReport": "End of 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -271,6 +246,31 @@
         "Ferraris": "PIT",
         "Llamas": "NE",
         "Giraffes": "PIT"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-09-19T17:00:00.000Z"
+    },
+    {
+      "id": "2026_02_GB_NYJ",
+      "home": "NYJ",
+      "away": "GB",
+      "kickoffISO": "2026-09-20T17:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 17,
+      "awayScore": 20,
+      "winner": "GB",
+      "tie": false,
+      "picks": {
+        "Lobos": "GB",
+        "Roughriders": "GB",
+        "Maniacs": "GB",
+        "Critters": "NYJ",
+        "Chickens": "NYJ",
+        "Ferraris": "NYJ",
+        "Llamas": "NYJ",
+        "Giraffes": "NYJ"
       },
       "picksRevealed": true,
       "clockReport": null,

@@ -2,31 +2,6 @@
   "week": 2,
   "games": [
     {
-      "id": "2026_02_CLE_TB",
-      "home": "TB",
-      "away": "CLE",
-      "kickoffISO": "2026-09-20T17:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 19,
-      "awayScore": 23,
-      "winner": "CLE",
-      "tie": false,
-      "picks": {
-        "Lobos": "TB",
-        "Roughriders": "TB",
-        "Maniacs": "TB",
-        "Critters": "TB",
-        "Chickens": "TB",
-        "Ferraris": "TB",
-        "Llamas": "TB",
-        "Giraffes": "TB"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-09-19T17:00:00.000Z"
-    },
-    {
       "id": "2026_02_JAX_DEN",
       "home": "DEN",
       "away": "JAX",
@@ -48,7 +23,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "11:42 - 4th",
+      "clockReport": "11:10 - 4th",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -73,7 +48,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "15:00 - 4th",
+      "clockReport": "14:21 - 4th",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -123,7 +98,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "11:33 - 3rd",
+      "clockReport": "10:56 - 3rd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -133,7 +108,7 @@
       "kickoffISO": "2026-09-20T20:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 28,
+      "homeScore": 35,
       "awayScore": 6,
       "winner": null,
       "tie": false,
@@ -148,7 +123,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "3:49 - 3rd",
+      "clockReport": "3:10 - 3rd",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {
@@ -271,6 +246,31 @@
         "Ferraris": "NYJ",
         "Llamas": "NYJ",
         "Giraffes": "NYJ"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-09-19T17:00:00.000Z"
+    },
+    {
+      "id": "2026_02_CLE_TB",
+      "home": "TB",
+      "away": "CLE",
+      "kickoffISO": "2026-09-20T17:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 19,
+      "awayScore": 23,
+      "winner": "CLE",
+      "tie": false,
+      "picks": {
+        "Lobos": "TB",
+        "Roughriders": "TB",
+        "Maniacs": "TB",
+        "Critters": "TB",
+        "Chickens": "TB",
+        "Ferraris": "TB",
+        "Llamas": "TB",
+        "Giraffes": "TB"
       },
       "picksRevealed": true,
       "clockReport": null,

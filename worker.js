@@ -1,14 +1,26 @@
 // ============================================================
 // PFPI Live Scores / Schedule Worker
 // Built fresh from PFPI_architecture_sketch_v1.md (no reference code existed
-// for this piece). Cron polls Big Balls Sports Data -> writes JSON -> commits
-// to the GitHub repo via the Contents API -> served statically via GitHub
-// Pages. Visitors never hit this Worker for reads; the only thing it talks
-// to on a schedule is Big Balls and GitHub. It also writes a small schedule
-// cache into the shared PFPI_KV namespace (kickoff times only) so the picks
-// worker can compute per-game deadlines without depending on GitHub Pages'
-// commit-to-CDN propagation lag, which the architecture doc flags as
-// variable/untested.
+// for this piece). Cron polls a score/schedule provider -> writes JSON ->
+// commits to the GitHub repo via the Contents API -> served statically via
+// GitHub Pages. Visitors never hit this Worker for reads; the only things it
+// talks to on a schedule are that provider and GitHub. It also writes a small
+// schedule cache into the shared PFPI_KV namespace (kickoff times only) so
+// the picks worker can compute per-game deadlines without depending on
+// GitHub Pages' commit-to-CDN propagation lag, which the architecture doc
+// flags as variable/untested.
+//
+// PROVIDER, UPDATED 2026-09-20: ESPN's unofficial scoreboard API is now
+// PRIMARY (see the ESPN section below, added that day) -- Big Balls Sports
+// Data (below) is now the FALLBACK, used only when ESPN fails a given
+// week/tick. Reason: Big Balls cut its free tier to 500 polls/day for any
+// GitHub-linked account, nowhere near enough for a live NFL Sunday's
+// cadence; ESPN's endpoint has no published rate limit and, as a bonus,
+// supplies a real kickoff time-of-day directly (Big Balls never did --
+// see its own gap notice just below), which is what the Highlightly
+// kickoff-enrichment hack further down existed to work around in the
+// first place. Everything Big-Balls-specific below is retained exactly as
+// built -- still real, still load-bearing the moment ESPN has a bad day.
 //
 // VERIFIED AGAINST REAL RESPONSES (2026-08-25, once BIG_BALLS_API_KEY was
 // set) — see BUILD_LOG.md. Checked both an upcoming 2026 week (all-null
@@ -120,6 +132,166 @@ function normalizeGame(raw) {
     // real live game 2026-08-27).
     home, away, homeScore, awayScore, status, kickoffISO, winner, tie, hasRealTime: false, clockReport: null,
   };
+}
+
+// ============================================================
+// ESPN (unofficial) scoreboard — PRIMARY schedule/score source (added
+// 2026-09-20, per Yeti). Big Balls cut its free tier to 500 polls/day for
+// any account linked to GitHub -- nowhere near enough for a full NFL
+// Sunday's live-score cadence. ESPN's own public scoreboard (undocumented,
+// no auth, no published rate limit) supplies real schedule (an ACTUAL
+// kickoff time-of-day, unlike Big Balls -- see normalizeGame()'s own gap
+// notice above) AND real live/final status/scores in a single call.
+// Confirmed against a real live Week 3 slate 2026-09-20 (`?week=3&year=
+// 2026&seasontype=2` returned the identical 16-game slate already
+// published in data/week-3.json, including the BAL@DAL London neutral-site
+// game). Everything below this section (Big Balls + Highlightly) is now
+// the FALLBACK path, used only when ESPN fails -- see pollAndPublish.
+//
+// THE ONE THING THAT MATTERS: the User-Agent header. This is NOT IP-based
+// blocking -- it's an Akamai bot-management rule keyed on User-Agent alone,
+// confirmed by holding IP constant and varying only UA: curl's own default
+// UA and python-requests' default UA both get 200 + real data; a browser
+// UA, Node's default UA, and no UA at all all get 403. Don't send a
+// Referer or try to look more "browser-like" -- that's the opposite of
+// what works here. Look like a plain script, not a browser.
+// ============================================================
+
+const ESPN_SCOREBOARD_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard";
+
+// Same two mismatches already confirmed for Highlightly (see
+// HIGHLIGHTLY_TO_BIGBALLS_CODE further below) -- ESPN uses the identical
+// "LAR"/"WSH" codes (confirmed live 2026-09-20: "WSH @ DAL" in a real
+// response). Normalized to Big Balls' own codes so a game's `id` (built
+// from these, see normalizeEspnGame below) and its team-code strings never
+// change shape depending on which provider happened to answer a given
+// tick -- a mid-week provider failover must never orphan an already-saved
+// pick keyed on the old id.
+const ESPN_TO_BIGBALLS_CODE = { LAR: "LA", WSH: "WAS" };
+function normalizeEspnTeamCode(code) {
+  const upper = (code || "").toUpperCase().trim();
+  return ESPN_TO_BIGBALLS_CODE[upper] || upper;
+}
+
+// Returns raw ESPN events for one PFPI week, or null on any failure
+// (network error, non-200, or a malformed body) -- callers fall back to
+// Big Balls on null, never on a partial/malformed result passed through
+// silently. `week` is passed explicitly via `?week=` -- ESPN's own default
+// (no `week` param) scoreboard reflects ESPN's internal calendar, which is
+// NOT guaranteed to agree with PFPI's own week count (confirmed live
+// 2026-09-20: a same-day, no-params call returned "week 2" while every
+// other real signal -- including PFPI's own already-published
+// data/week-3.json -- agreed it was week 3).
+async function fetchEspnWeek(week) {
+  try {
+    const res = await fetch(`${ESPN_SCOREBOARD_URL}?week=${week}&year=${SEASON}&seasontype=2`, {
+      // Plain-script UA -- see the header note above. This is the entire fix.
+      headers: { "User-Agent": "curl/8.14.1", "Accept": "application/json" },
+    });
+    if (!res.ok) {
+      console.error(`ESPN fetch failed for week ${week}: ${res.status} ${await res.text()}`);
+      return null;
+    }
+    const data = await res.json();
+    return Array.isArray(data.events) ? data.events : null;
+  } catch (err) {
+    console.error(`ESPN fetch threw for week ${week}: ${err.message}`);
+    return null;
+  }
+}
+
+// Mirrors normalizeGame()'s output shape exactly (id format, field names)
+// so downstream code (buildWeekPublicJSON, picks-worker.js's schedule
+// reads, the frontend) never has to know which provider answered a given
+// tick. `week` must be PFPI's own week number, never ESPN's own `week`
+// field (see fetchEspnWeek's own note) -- it's what builds `id`, and that
+// id must stay byte-identical to what Big Balls would have produced for
+// the exact same game (`${SEASON}_${WW}_${AWAY}_${HOME}`, confirmed
+// against real committed data/week-N.json files), since `id` is the key
+// picks are saved under.
+function normalizeEspnGame(event, week) {
+  const comp = event.competitions && event.competitions[0];
+  if (!comp) return null;
+  const homeC = comp.competitors && comp.competitors.find(c => c.homeAway === "home");
+  const awayC = comp.competitors && comp.competitors.find(c => c.homeAway === "away");
+  if (!homeC || !awayC) return null;
+
+  const home = normalizeEspnTeamCode(homeC.team && homeC.team.abbreviation);
+  const away = normalizeEspnTeamCode(awayC.team && awayC.team.abbreviation);
+
+  // ESPN's real status.type.state vocabulary: "pre"/"in"/"post" -- mapped
+  // onto this system's existing scheduled/in_progress/final, same as
+  // STORED_MATCH_STATUS_MAP does for Big Balls' own second endpoint below.
+  const state = comp.status && comp.status.type && comp.status.type.state;
+  const status = state === "post" ? "final" : state === "in" ? "in_progress" : "scheduled";
+
+  // CONFIRMED LIVE 2026-09-20: ESPN reports `score: "0"` (a real string,
+  // not null/absent) for games that haven't kicked off yet -- NOT null the
+  // way Big Balls' normalizeGame() represents an unscored game. The
+  // frontend's own score display (index.html) uses `??`, which only
+  // treats null/undefined as "no score yet" -- a plain 0 would render as a
+  // real "0-0" scoreline for a game that hasn't started. Forced back to
+  // null here for any not-yet-started game so that never happens; a
+  // genuinely live 0-0 game (state "in") still shows its real 0.
+  const homeScore = status === "scheduled" ? null
+    : (homeC.score !== undefined && homeC.score !== null && homeC.score !== "" ? Number(homeC.score) : null);
+  const awayScore = status === "scheduled" ? null
+    : (awayC.score !== undefined && awayC.score !== null && awayC.score !== "" ? Number(awayC.score) : null);
+  const { tie, winner } = computeTieAndWinner(status, home, away, homeScore, awayScore);
+
+  return {
+    id: `${SEASON}_${String(week).padStart(2, "0")}_${away}_${home}`,
+    // ESPN's own event id -- unlike Big Balls' matchId, never used for a
+    // second-endpoint join (ESPN gives live status in this same call).
+    // Kept only for log/debug traceability.
+    matchId: event.id || null,
+    home, away, homeScore, awayScore, status,
+    kickoffISO: comp.date || event.date,
+    winner, tie,
+    hasRealTime: true, // real kickoff time-of-day straight from ESPN -- no Highlightly enrichment needed on this path.
+    // ESPN's own human-readable live status string (e.g. "8:45 - 4th",
+    // "Halftime") -- more robust than hand-building one from
+    // period+displayClock, since it already covers halftime/end-of-period
+    // wording. Not yet confirmed against a real in-progress game (none was
+    // live at build time, 2026-09-20 midday) -- confirmed against real
+    // scheduled and final games only; flagged, not silently assumed.
+    clockReport: status === "in_progress" ? (comp.status.type.shortDetail || null) : null,
+  };
+}
+
+// Fetches + normalizes one PFPI week from ESPN in one call, or null if
+// ESPN couldn't usefully answer for this week at all (network failure,
+// non-200, unrecognized shape, or zero parseable games) -- callers fall
+// back to Big Balls on null, never trust a partial result.
+async function fetchEspnNormalizedWeek(week) {
+  const events = await fetchEspnWeek(week);
+  if (!events) return null;
+  const games = events.map(e => normalizeEspnGame(e, week)).filter(Boolean);
+  if (games.length === 0) {
+    console.error(`ESPN returned zero usable games for week ${week} -- treating as a failure, falling back to Big Balls.`);
+    return null;
+  }
+  return games;
+}
+
+// Protects an already-confirmed final (from an earlier tick's
+// `results:week:{week}` cache) from being downgraded back to non-final by
+// a transient bad read on a LATER tick -- same protection enrichLiveScores
+// already has for the Big Balls fallback path (added there 2026-09-10
+// after a real Big Balls regression), applied here for ESPN's own
+// primary path since the same class of provider glitch could in principle
+// happen to either provider. Only the outcome fields come from the cache;
+// home/away/kickoffISO/hasRealTime stay this tick's own fresh ESPN values.
+function mergeWithKnownFinals(freshGames, knownFinalsById) {
+  return freshGames.map(g => {
+    const known = knownFinalsById.get(g.id);
+    if (!known) return g;
+    return {
+      ...g,
+      homeScore: known.homeScore, awayScore: known.awayScore, status: known.status,
+      tie: known.tie, winner: known.winner, clockReport: known.clockReport ?? g.clockReport,
+    };
+  });
 }
 
 // ============================================================
@@ -1414,9 +1586,11 @@ async function checkPendingBriefConfirmations(env) {
 
 // `force` (added 2026-08-28, only ever set true by the admin manual-poll-
 // trigger endpoint below) bypasses every throttle gate in this function --
-// Big Balls' window check, Highlightly's window check, and the 5-minute
-// merge/publish gate -- so a manual click always does something real
-// immediately, rather than silently no-op'ing outside the normal cadence.
+// the live-window check (isBigBallsLiveWindow -- name predates ESPN, but
+// it's provider-agnostic: just reads the cached schedule), Highlightly's
+// window check, and the 5-minute merge/publish gate -- so a manual click
+// always does something real immediately, rather than silently no-op'ing
+// outside the normal cadence.
 async function pollAndPublish(env, force = false) {
   await checkPendingBriefConfirmations(env);
 
@@ -1424,46 +1598,60 @@ async function pollAndPublish(env, force = false) {
   await env.PFPI_KV.put("current-week", String(currentWeek));
 
   const now = new Date();
-  const inLiveWindow = env.BIG_BALLS_API_KEY ? await isBigBallsLiveWindow(now, env) : false;
+  // ESPN needs no API key/secret at all, so the live-window check (which
+  // just reads whatever's cached in `schedule:week:*`, regardless of which
+  // provider wrote it) and the rest of this function no longer gate on
+  // BIG_BALLS_API_KEY being set -- that used to be a real single point of
+  // failure (an unset/revoked Big Balls key silently skipped ALL polling
+  // and publishing, not just the fallback path).
+  const inLiveWindow = await isBigBallsLiveWindow(now, env);
   const isFifteenMinMark = now.getUTCMinutes() % 15 === 0;
 
-  if (!env.BIG_BALLS_API_KEY) {
-    console.error("Skipping Big Balls poll: BIG_BALLS_API_KEY not set. No regular-season score/schedule data fetched or published this tick.");
-  } else if (!force && !inLiveWindow && !isFifteenMinMark) {
+  if (!force && !inLiveWindow && !isFifteenMinMark) {
     // Throttled: outside a live window and not a 15-min mark this tick
     // (publish cadence only -- see isBigBallsLiveWindow's own comment).
   } else {
     const nextWeek = Math.min(currentWeek + 1, 18);
     const weeksToPublish = [currentWeek, nextWeek];
 
-    // ---- SCHEDULE POLL: /v1/nfl/games, ~3x/day (see SCHEDULE_POLL_ET_HOURS) ----
-    // REWRITTEN 2026-09-11 (second pass, per Yeti): decoupled from the
-    // live-score check below entirely. The schedule barely ever changes
-    // mid-week, so there's no reason to keep re-fetching it every minute
-    // just because a live-score tick also needs to run -- that coupling
-    // was the actual source of the ~2,070-2,100 call/day worst case this
-    // file's first pass (a few hours earlier tonight) only partially
-    // fixed. Also bootstraps immediately if either week's schedule cache
-    // is simply missing (a fresh deploy, or a brand-new week that hasn't
-    // been polled yet), rather than waiting up to ~8 hours for the next
-    // scheduled slot.
+    // ---- SCHEDULE POLL: ESPN primary, Big Balls fallback, ~3x/day (see
+    // SCHEDULE_POLL_ET_HOURS) plus immediate bootstrap on a missing cache ----
+    // ESPN has no published rate limit, so there's no real budget reason to
+    // throttle it this coarsely any more (the live-score check below
+    // already refreshes the CURRENT week's schedule cache every tick) --
+    // this cadence is kept purely because next week's schedule genuinely
+    // doesn't need to be checked more often than that, and because a
+    // fallback to Big Balls (which DOES have a real budget to protect)
+    // still needs to stay this infrequent.
     const cacheMissing = (
       await Promise.all(weeksToPublish.map(w => env.PFPI_KV.get(`schedule:week:${w}`)))
     ).some(v => !v);
 
     if (force || isScheduledPollHour(now) || cacheMissing) {
-      await preloadFullSeasonScheduleIfNeeded(env);
-      const kickoffLookup = await getHighlightlyKickoffLookup(env, force);
-
+      let kickoffLookup; // Highlightly fallback lookup -- fetched lazily, only if ESPN actually fails for some week this tick.
       for (const week of weeksToPublish) {
+        const espnGames = await fetchEspnNormalizedWeek(week);
+        if (espnGames) {
+          await env.PFPI_KV.put(
+            `schedule:week:${week}`,
+            JSON.stringify(espnGames.map(g => ({
+              id: g.id, home: g.home, away: g.away, kickoffISO: g.kickoffISO,
+              hasRealTime: g.hasRealTime, matchId: g.matchId,
+            })))
+          );
+          continue;
+        }
+        // ESPN failed for this week -- fall back to the original Big
+        // Balls + Highlightly path, exactly as it worked before ESPN existed.
+        if (!env.BIG_BALLS_API_KEY) {
+          console.error(`Skipping week ${week} schedule poll: ESPN failed and BIG_BALLS_API_KEY not set.`);
+          continue;
+        }
+        await preloadFullSeasonScheduleIfNeeded(env);
+        if (kickoffLookup === undefined) kickoffLookup = await getHighlightlyKickoffLookup(env, force);
         const raw = await fetchBigBallsWeek(week, env);
         if (!raw) continue;
         const normalized = enrichKickoffTimes(raw.map(normalizeGame), kickoffLookup);
-        // Schedule cache: kickoff times for the picks worker's deadline
-        // math, plus (2026-09-11) hasRealTime/matchId so the live-score
-        // check and the publish step below can both fully reconstruct a
-        // game from this cache alone, with zero further /v1/nfl/games
-        // calls between schedule-poll ticks.
         await env.PFPI_KV.put(
           `schedule:week:${week}`,
           JSON.stringify(normalized.map(g => ({
@@ -1474,34 +1662,55 @@ async function pollAndPublish(env, force = false) {
       }
     }
 
-    // ---- LIVE-SCORE CHECK: /v1/stored/matches, current week only ----
+    // ---- LIVE-SCORE CHECK: ESPN primary, current week only ----
     // Runs on every tick that reaches this point (see the outer throttle
-    // above) -- enrichLiveScores only ever spends a real call when a game
-    // has genuinely kicked off and isn't already cached final, so this
-    // naturally costs nothing on an idle day and exactly one real check
-    // per live minute during actual live play, with no separate interval
-    // to tune. Never done for next week -- it can't possibly have a live
-    // or finishing game yet.
+    // above). ESPN gives schedule + live status/score in ONE call, so on
+    // the happy path this also refreshes `schedule:week:{currentWeek}`
+    // with the freshest possible kickoff time -- a strict improvement over
+    // the old 3x/day-plus-Highlightly-hack cadence, now just a byproduct
+    // of calling ESPN this often anyway. Falls back to the original Big
+    // Balls stored-matches join (enrichLiveScores) only when ESPN fails
+    // this tick. Never done for next week -- it can't possibly have a
+    // live or finishing game yet.
     //
-    // IMPORTANT: `enriched` (not a re-read from KV) is what feeds the
-    // current week's publish step below. Only FINAL games get persisted to
-    // `results:week` -- a genuinely in-progress, not-yet-final score only
-    // ever exists in this tick's own memory, so re-deriving current week's
-    // games from KV after this point (the way next week safely can, since
-    // it never has live data at all) would silently drop every live score
-    // back to blank until the game ends. Caught this exact regression
-    // while writing this rewrite, before it ever shipped.
+    // IMPORTANT: `currentWeekGames` (not a re-read from KV) is what feeds
+    // the current week's publish step below. Only FINAL games get
+    // persisted to `results:week` -- a genuinely in-progress, not-yet-final
+    // score only ever exists in this tick's own memory, so re-deriving
+    // current week's games from KV after this point (the way next week
+    // safely can, since it never has live data at all) would silently drop
+    // every live score back to blank until the game ends.
+    const existingResultsRaw = await env.PFPI_KV.get(`results:week:${currentWeek}`);
+    const knownFinalsById = new Map(
+      (existingResultsRaw ? JSON.parse(existingResultsRaw) : []).map(g => [g.id, g])
+    );
+
     let currentWeekGames = null;
-    const currentScheduleRaw = await env.PFPI_KV.get(`schedule:week:${currentWeek}`);
-    if (currentScheduleRaw) {
-      const baseGames = JSON.parse(currentScheduleRaw).map(g => ({
-        ...g, homeScore: null, awayScore: null, status: "scheduled", winner: null, tie: false, clockReport: null,
-      }));
-      const existingResultsRaw = await env.PFPI_KV.get(`results:week:${currentWeek}`);
-      const knownFinalsById = new Map(
-        (existingResultsRaw ? JSON.parse(existingResultsRaw) : []).map(g => [g.id, g])
+    const espnCurrentWeek = await fetchEspnNormalizedWeek(currentWeek);
+    if (espnCurrentWeek) {
+      await env.PFPI_KV.put(
+        `schedule:week:${currentWeek}`,
+        JSON.stringify(espnCurrentWeek.map(g => ({
+          id: g.id, home: g.home, away: g.away, kickoffISO: g.kickoffISO,
+          hasRealTime: g.hasRealTime, matchId: g.matchId,
+        })))
       );
-      currentWeekGames = await enrichLiveScores(baseGames, knownFinalsById, env);
+      // Same downgrade protection enrichLiveScores already has for the Big
+      // Balls path -- see mergeWithKnownFinals' own comment.
+      currentWeekGames = mergeWithKnownFinals(espnCurrentWeek, knownFinalsById);
+    } else if (env.BIG_BALLS_API_KEY) {
+      const currentScheduleRaw = await env.PFPI_KV.get(`schedule:week:${currentWeek}`);
+      if (currentScheduleRaw) {
+        const baseGames = JSON.parse(currentScheduleRaw).map(g => ({
+          ...g, homeScore: null, awayScore: null, status: "scheduled", winner: null, tie: false, clockReport: null,
+        }));
+        currentWeekGames = await enrichLiveScores(baseGames, knownFinalsById, env);
+      }
+    } else {
+      console.error(`Skipping week ${currentWeek} live-score check: ESPN failed and BIG_BALLS_API_KEY not set.`);
+    }
+
+    if (currentWeekGames) {
       const finals = currentWeekGames.filter(g => g.status === "final");
       if (finals.length > 0) {
         await env.PFPI_KV.put(`results:week:${currentWeek}`, JSON.stringify(finals));

@@ -9470,3 +9470,92 @@ fully-submitted game to show a non-empty result).
 reads `Unique Hit Opportunities: Week N` only, no trailing `: N`, in both
 files. The list itself is unchanged; the count is still implicitly
 visible as "how many rows are below."
+
+## 2026-09-20 — ESPN unofficial scoreboard added as PRIMARY score/schedule
+source; Big Balls demoted to fallback (worker.js)
+
+Trigger: Big Balls cut its free tier to 500 polls/day for any account
+linked to GitHub -- nowhere near enough for a live NFL Sunday's polling
+cadence (this Worker's cron fires every minute). Per Yeti, adapted a
+working ESPN integration from a sister project (his college-football
+league), which had already worked through the real gotchas.
+
+**The endpoint:** `https://site.api.espn.com/apis/site/v2/sports/
+football/nfl/scoreboard?week={W}&year=2026&seasontype=2`. Undocumented,
+no auth, no published rate limit. One call returns real schedule AND
+real live/final status/scores for the whole week -- unlike Big Balls,
+which needed two separate endpoints (`/v1/nfl/games` for schedule,
+`/v1/stored/matches` for live status) because neither alone had both.
+
+**The one thing that mattered: the User-Agent header.** Not IP-based --
+an Akamai bot-management rule keyed on UA alone. A plain-script UA
+(`curl/8.14.1`) gets 200 + real data; a browser UA or no UA gets 403.
+Confirmed both from a local dev machine AND from the real deployed
+Cloudflare Worker (`wrangler tail` against a live production tick,
+2026-09-20 ~1:00 AM ET) -- the sister project's own handoff notes
+specifically warned not to trust a local-only test here, since their
+original wrong "it's an IP block" conclusion came from exactly that
+mistake.
+
+**Also fixes a real, separate gap for free:** Big Balls never exposed a
+kickoff time-of-day at all (only a date), which is why the Highlightly
+kickoff-enrichment hack (further up this log, 2026-09-03) existed. ESPN
+gives a real kickoff timestamp directly, so every game now gets
+`hasRealTime: true` immediately rather than waiting on Highlightly's
+3-hour refresh cycle. Highlightly's kickoff/live-clock code is untouched
+and still runs -- it's still needed on the Big Balls fallback path.
+
+**Architecture:** new `normalizeEspnGame()`/`fetchEspnNormalizedWeek()`
+in worker.js, built to produce the byte-identical output shape
+`normalizeGame()` (Big Balls) already produces, including the exact same
+`id` format (`${SEASON}_${WW}_${AWAY}_${HOME}`) -- verified against the
+real, already-committed data/week-3.json (all 16 ids matched exactly,
+including the two team-code mismatches, LAR->LA and WSH->WAS, that
+Highlightly's own team-code map already had to handle). This matters
+because `id` is the key picks are saved under -- a provider failover
+mid-week must never orphan an already-submitted pick.
+
+`pollAndPublish`'s two Big-Balls-specific blocks (schedule poll,
+live-score check) were rewritten to try ESPN first and fall back to the
+original Big Balls + Highlightly code -- unchanged -- only on an ESPN
+failure (network error, non-200, or zero parseable games). Also removed
+the old "skip everything if BIG_BALLS_API_KEY isn't set" top-level gate,
+which was a real single point of failure (a revoked/missing Big Balls
+key used to silently stop ALL polling and publishing, not just its own
+fallback path) -- ESPN needs no key at all, so that's no longer
+necessary.
+
+**Real bug caught before shipping:** ESPN reports `score: "0"` (a real
+string, not null) for games that haven't kicked off yet, unlike Big
+Balls which uses null for an unscored game. index.html's score display
+uses `??`, which only treats null/undefined as "no score" -- a bare 0
+would have rendered as a genuine "0-0" scoreline for every not-yet-
+started game. Fixed by forcing scores back to null for any game whose
+ESPN status is "pre" (scheduled); a genuinely live 0-0 game (status
+"in") still shows its real 0.
+
+**Verified live, not just locally:** deployed via `wrangler deploy
+--config wrangler-scores.toml`, then `wrangler tail`'d a real production
+cron tick. No ESPN-failure errors logged; the resulting automated commit
+(`data/week-2.json`, `data/week-3.json`, `data/standings.json`,
+`data/current.json`) showed every game with `hasRealTime: true`, correct
+scores (Week 2's BUF 41 - DET 31 final matched ESPN's real response
+exactly), correct nulls for not-yet-started games, and Week 2's
+already-submitted picks (e.g. `2026_02_DET_BUF`) intact under the same
+ids. No live game was in progress at verification time (~1 AM ET Sunday,
+hours before the 1 PM slate) -- the in-progress/live-clock path
+(`clockReport` from ESPN's `status.type.shortDetail`) is implemented per
+the same real ESPN response shape but not yet confirmed against an
+actual live game; flagged, not silently assumed.
+
+**Not done tonight, worth a look later:** ESPN's real live clock
+(`displayClock`/`period`) could also replace/supplement the Highlightly
+live-clock dev tool (`handleLiveClocks`, 2026-09-12) -- see the "PFPI
+clock API alternatives wanted" note; Highlightly's still fine for now
+and this wasn't asked for tonight, so it wasn't touched.
+
+Files touched: `worker.js` only (new ESPN section + `pollAndPublish`
+schedule-poll/live-score-check rewrite). No frontend or picks-worker.js
+changes -- the whole switch is provider-transparent to every downstream
+consumer by construction (identical KV cache shape, identical public
+JSON shape, identical `id` format).

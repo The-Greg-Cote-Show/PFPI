@@ -2,6 +2,31 @@
   "week": 2,
   "games": [
     {
+      "id": "2026_02_IND_KC",
+      "home": "KC",
+      "away": "IND",
+      "kickoffISO": "2026-09-21T00:20Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 7,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "KC",
+        "Roughriders": "KC",
+        "Maniacs": "KC",
+        "Critters": "KC",
+        "Chickens": "KC",
+        "Ferraris": "KC",
+        "Llamas": "KC",
+        "Giraffes": "KC"
+      },
+      "picksRevealed": true,
+      "clockReport": "7:43 - 1st",
+      "deadline": "2026-09-19T17:00:00.000Z"
+    },
+    {
       "id": "2026_02_CAR_ATL",
       "home": "ATL",
       "away": "CAR",
@@ -324,31 +349,6 @@
       },
       "picksRevealed": true,
       "clockReport": null,
-      "deadline": "2026-09-19T17:00:00.000Z"
-    },
-    {
-      "id": "2026_02_IND_KC",
-      "home": "KC",
-      "away": "IND",
-      "kickoffISO": "2026-09-21T00:20Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 0,
-      "awayScore": 7,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "KC",
-        "Roughriders": "KC",
-        "Maniacs": "KC",
-        "Critters": "KC",
-        "Chickens": "KC",
-        "Ferraris": "KC",
-        "Llamas": "KC",
-        "Giraffes": "KC"
-      },
-      "picksRevealed": true,
-      "clockReport": "8:25 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

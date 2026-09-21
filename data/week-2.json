@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 30,
-      "awayScore": 27,
+      "awayScore": 30,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "3:15 - OT",
+      "clockReport": "3:11 - OT",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

@@ -8,7 +8,7 @@
       "kickoffISO": "2026-09-22T00:15Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 0,
+      "homeScore": 6,
       "awayScore": 0,
       "winner": null,
       "tie": false,
@@ -23,7 +23,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "0:58 - 1st",
+      "clockReport": "0:11 - 1st",
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

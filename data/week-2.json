@@ -7,10 +7,10 @@
       "away": "NYG",
       "kickoffISO": "2026-09-22T00:15Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 28,
       "awayScore": 6,
-      "winner": null,
+      "winner": "LA",
       "tie": false,
       "picks": {
         "Lobos": "LA",
@@ -23,7 +23,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "0:38 - 4th",
+      "clockReport": null,
       "deadline": "2026-09-19T17:00:00.000Z"
     },
     {

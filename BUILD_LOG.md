@@ -9602,7 +9602,7 @@ asked for: "Apologies for the second email, but we had to correct the
 subject line to reflect week 3." It expires on its own; nothing re-arms
 it, so it cannot resurface on Week 4's real send or any later one.
 
-Deployed via `wrangler deploy` (picks-worker), commit TBD. Real Week 3
+Deployed via `wrangler deploy` (picks-worker), commit `cb7fa3c6`. Real Week 3
 resend to all 8 family members still needs Yeti to run it through
 admin.html's "Resend picks link," one team at a time, same as the Week 2
 catch-up -- Claude doesn't hold an admin session/token and won't forge

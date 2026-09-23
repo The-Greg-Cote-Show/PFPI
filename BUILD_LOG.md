@@ -9559,3 +9559,53 @@ schedule-poll/live-score-check rewrite). No frontend or picks-worker.js
 changes -- the whole switch is provider-transparent to every downstream
 consumer by construction (identical KV cache shape, identical public
 JSON shape, identical `id` format).
+
+## 2026-09-23 — Weekly picks email sent "Week 2" the night before Week 3
+actually opened: root cause found, real fix, one-time correction resend
+
+Yeti reported the Tuesday 9/22 weekly picks-open email said "PFPI Week 2
+picks are open" when it should have said Week 3. Root cause: the
+2026-09-16 fix to `handleWeeklyTrigger` (picks-worker.js) only bumped the
+week number when the *reported* (stale, pre-rollover) week's own
+`weekly-email-sent` flag was already set -- using that flag as a proxy
+for "we're a day early, the real week is one more." That proxy silently
+breaks the moment a week's real send happens through any OTHER path than
+this trigger. Exactly that happened for Week 2: its real send was Yeti's
+manual per-team "Resend picks link" admin-tool catch-up (2026-09-16, see
+that entry above), which reuses `sendPicksEmail` but never touches the
+`weekly-email-sent` flag. So when this trigger fired Tuesday 9/22 7am ET
+(the day before Week 3's real Wednesday rollover), it read the stale
+week (2), found its flag still unset, never incremented, and sent "Week
+2 picks are open" again -- one day before Week 3 actually opened.
+Confirmed against real KV: `weekly-email-sent:1` and `weekly-email-sent:2`
+both `"sent"`, `weekly-email-sent:3` never set, `current-week` correctly
+`3` as of today (9/23, after the real rollover).
+
+**Real fix, not another patch on the same heuristic:** the trigger only
+ever fires Tuesday 7am ET, always exactly one calendar day before the
+Wednesday rollover -- so the week whose picks should open is *always*
+raw-week-plus-one at this trigger, unconditionally. `handleWeeklyTrigger`
+now computes the week directly off tomorrow's date
+(`computeCurrentWeekFromDate(new Date(Date.now() + 24h))`) instead of
+today's, so it no longer depends on any flag, or on how last week's email
+actually went out, to pick the right week. The `weekly-email-sent:<week>`
+flag is now purely a same-day duplicate-send guard, nothing more.
+
+**One-time apology, per Yeti's explicit ask:** rather than hardcode a
+one-off apology line into the reusable `sendPicksEmail` template
+permanently, added a `picks-email-correction-notice` KV flag that, when
+present, gets prepended to the top of whatever picks email goes out next
+(mass Tuesday send or per-team admin resend alike). Armed it once via
+`wrangler kv key put ... --ttl 21600` (6 hours -- comfortably covers a
+same-sitting run through all 8 family members) with the exact text Yeti
+asked for: "Apologies for the second email, but we had to correct the
+subject line to reflect week 3." It expires on its own; nothing re-arms
+it, so it cannot resurface on Week 4's real send or any later one.
+
+Deployed via `wrangler deploy` (picks-worker), commit TBD. Real Week 3
+resend to all 8 family members still needs Yeti to run it through
+admin.html's "Resend picks link," one team at a time, same as the Week 2
+catch-up -- Claude doesn't hold an admin session/token and won't forge
+one (see "PFPI auto-mode KV write boundary" precedent). **Not yet
+verified live** -- code deployed and correction-notice flag confirmed
+armed in remote KV, but no real email has gone out yet as of this entry.

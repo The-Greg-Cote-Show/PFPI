@@ -151,16 +151,25 @@ async function handleWeeklyTrigger(env) {
   // getCurrentWeek() is computeCurrentWeekFromDate() under the hood, anchored
   // to SEASON_START_ET (a Wednesday) -- so it only rolls over to the new week
   // number at Wednesday 12am ET, a full day AFTER this Tuesday 7am trigger
-  // fires. Found 2026-09-16: that meant every week after Week 1 read last
-  // week's number here, saw its `weekly-email-sent` flag already set, and
-  // silently skipped forever -- see BUILD_LOG.md. If the flag for the
-  // reported week is already set, the real week to send is the next one.
-  let currentWeek = await getCurrentWeek(env);
-  let alreadySent = await env.PFPI_KV.get(`weekly-email-sent:${currentWeek}`);
-  if (alreadySent) {
-    currentWeek += 1;
-    alreadySent = await env.PFPI_KV.get(`weekly-email-sent:${currentWeek}`);
-  }
+  // fires. That means the week whose picks should open is ALWAYS raw+1 at
+  // this trigger, unconditionally -- computed directly off tomorrow's date
+  // rather than off today's, so it never depends on today's raw week number
+  // at all.
+  //
+  // Found 2026-09-16: the first fix here instead incremented only when the
+  // reported week's `weekly-email-sent` flag was already set, using that as
+  // a proxy for "yes, we're a day early, bump it." Found 2026-09-22 that
+  // proxy breaks the moment a week's real send happens by some OTHER path
+  // than this trigger (e.g. Yeti's per-team "Resend picks link" admin-tool
+  // catch-up for Week 2, 2026-09-16 -- see BUILD_LOG.md) -- that path never
+  // sets the flag, so this trigger's own Tuesday-before-Week-3 firing found
+  // Week 2's flag still unset, never incremented, and sent "Week 2 picks
+  // are open" the night before Week 3 actually opened. Computing off
+  // tomorrow's date instead needs no flag at all to pick the right week --
+  // the `weekly-email-sent` flag below is now purely a same-day duplicate
+  // guard, not part of deciding which week this is.
+  const currentWeek = computeCurrentWeekFromDate(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const alreadySent = await env.PFPI_KV.get(`weekly-email-sent:${currentWeek}`);
   // Never re-send once this week's email has gone out -- also a safety net
   // if the cron cadence ever changes, not just a Tuesday-specific concern.
   if (alreadySent) return;
@@ -248,7 +257,20 @@ function formatWeekDeadlines(schedule) {
 async function sendPicksEmail(toEmail, team, week, link, deadlineSummary, env) {
   const teamName = fullTeamName(team);
   const subject = `PFPI Week ${week} picks are open`;
-  const text = `Hi, ${teamName}\n\nYour Week ${week} picks are ready. You don't have to do them all at once, pick a few now and come back for the rest before each game's deadline.\n\nUse this link any time this week, you can save and come back before each game's deadline:\n\n${link}\n\nJust remember: once you click Submit, any games you've picked in that submission are locked in for good. You can still come back and submit picks for the games you haven't gotten to yet, right up until each one's own deadline, but a submitted pick can't be changed afterward.\n\n${deadlineSummary}\n\nGood luck.`;
+  let text = `Hi, ${teamName}\n\nYour Week ${week} picks are ready. You don't have to do them all at once, pick a few now and come back for the rest before each game's deadline.\n\nUse this link any time this week, you can save and come back before each game's deadline:\n\n${link}\n\nJust remember: once you click Submit, any games you've picked in that submission are locked in for good. You can still come back and submit picks for the games you haven't gotten to yet, right up until each one's own deadline, but a submitted pick can't be changed afterward.\n\n${deadlineSummary}\n\nGood luck.`;
+
+  // One-time correction notice (2026-09-23): armed with a short TTL in KV
+  // only for the Week 3 catch-up resend (see BUILD_LOG.md -- the Week 2
+  // mislabeling bug above), so it rides along on whichever picks email
+  // goes out next -- the mass Tuesday send or a per-team admin resend,
+  // same as any other sendPicksEmail call -- and expires on its own within
+  // hours rather than needing to be manually unset. Never re-armed for any
+  // other week, so it can't resurface later by accident.
+  const correctionNotice = await env.PFPI_KV.get("picks-email-correction-notice");
+  if (correctionNotice) {
+    text = `${correctionNotice}\n\n${text}`;
+  }
+
   return sendPfpiEmail(toEmail, subject, text, env, undefined, "commissioner");
 }
 

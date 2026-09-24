@@ -9609,3 +9609,33 @@ catch-up -- Claude doesn't hold an admin session/token and won't forge
 one (see "PFPI auto-mode KV write boundary" precedent). **Not yet
 verified live** -- code deployed and correction-notice flag confirmed
 armed in remote KV, but no real email has gone out yet as of this entry.
+
+**Same-session follow-up: found and fixed a real DST bug in
+`computeCurrentWeekFromDate` while spot-checking week boundaries.**
+Yeti asked to confirm Wed Nov 25, 2026 lands in Week 12 (it does -- 11
+full weeks past the Sep 9 anchor). While verifying that by hand, found
+`computeCurrentWeekFromDate` (shared.js) computed week boundaries via raw
+`now - start` millisecond subtraction against a fixed `-04:00` (EDT)
+anchor -- correct through October, but once DST falls back to EST on Nov
+1, every week boundary from Week 9 onward landed about an hour *before*
+real ET midnight (confirmed: the old formula rolled Week 12 over at
+11:00pm ET Nov 24, not midnight Nov 25). Harmless in practice here since
+every consumer of this value (Tuesday 7am email trigger, hourly cron
+pointer update) runs hours after any midnight rollover regardless, but a
+real latent bug, not just a hypothetical.
+
+Fixed by reworking the function to compare ET *calendar dates* (via the
+same `getEasternDateParts` helper `computeGameDeadline` already uses)
+instead of raw elapsed milliseconds -- counts whole calendar days between
+the season-start ET date and the target ET date, so it can never drift
+across a DST changeover again. Verified with explicit before/after probes
+straddling Nov 1's fall-back: 11:59pm ET Nov 24 now correctly still reads
+Week 11, 12:00am ET Nov 25 correctly flips to Week 12. Weeks 1-8 (all
+before the DST change) produce identical results to the old formula, so
+this isn't a behavior change for anything that's already happened this
+season.
+
+Deployed via `wrangler deploy` (picks-worker) and `wrangler deploy
+--config wrangler-scores.toml` (scores-worker) -- shared.js is bundled
+into both, so both needed redeploying even though only picks-worker's own
+code changed earlier tonight.

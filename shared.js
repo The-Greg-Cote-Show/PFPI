@@ -358,12 +358,26 @@ export async function commitJSONToGitHub(path, jsonObj, message, env) {
   return true;
 }
 
+// Calendar-day count between two ET calendar dates (Y/M/D parts), via
+// Date.UTC on the date parts themselves -- never touches real elapsed
+// milliseconds, so it can't drift across the EDT/EST changeover the way
+// raw `now - start` subtraction does (found 2026-09-23: that raw-ms version
+// drifted week boundaries an hour early for every week starting after the
+// November DST fall-back, since it kept adding fixed 7*24h chunks to a
+// fixed -04:00 (EDT) anchor even once the real clock had moved to -05:00).
+function easternCalendarDaysBetween(fromParts, toParts) {
+  const from = Date.UTC(parseInt(fromParts.year, 10), parseInt(fromParts.month, 10) - 1, parseInt(fromParts.day, 10));
+  const to = Date.UTC(parseInt(toParts.year, 10), parseInt(toParts.month, 10) - 1, parseInt(toParts.day, 10));
+  return Math.round((to - from) / (24 * 60 * 60 * 1000));
+}
+
 // Falls back to a date-based formula when KV hasn't been seeded yet (should
 // be rare in practice, since the scores worker seeds current-week on every
 // cron tick regardless of whether the Big Balls key is set).
 export function computeCurrentWeekFromDate(now = new Date()) {
-  const start = new Date(SEASON_START_ET);
-  const msPerWeek = 7 * 24 * 60 * 60 * 1000;
-  const weeksElapsed = Math.floor((now - start) / msPerWeek);
+  const startParts = getEasternDateParts(new Date(SEASON_START_ET));
+  const nowParts = getEasternDateParts(now);
+  const daysElapsed = easternCalendarDaysBetween(startParts, nowParts);
+  const weeksElapsed = Math.floor(daysElapsed / 7);
   return Math.max(1, Math.min(NUM_WEEKS, weeksElapsed + 1));
 }

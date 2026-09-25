@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 7,
-      "awayScore": 24,
+      "awayScore": 27,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "GB"
       },
       "picksRevealed": true,
-      "clockReport": "12:31 - 4th",
+      "clockReport": "10:57 - 4th",
       "deadline": "2026-09-24T22:15:00.000Z"
     },
     {

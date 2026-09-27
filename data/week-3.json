@@ -58,7 +58,7 @@
       "kickoffISO": "2026-09-27T20:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 10,
+      "homeScore": 13,
       "awayScore": 17,
       "winner": null,
       "tie": false,
@@ -73,7 +73,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "0:27 - 2nd",
+      "clockReport": "0:18 - 2nd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {

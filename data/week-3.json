@@ -23,7 +23,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "3:43 - 1st",
+      "clockReport": "2:56 - 1st",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "MIN"
       },
       "picksRevealed": true,
-      "clockReport": "4:02 - 1st",
+      "clockReport": "3:22 - 1st",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -84,7 +84,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 0,
-      "awayScore": 0,
+      "awayScore": 3,
       "winner": null,
       "tie": false,
       "picks": {
@@ -98,7 +98,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "7:38 - 1st",
+      "clockReport": "7:35 - 1st",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {

@@ -23,7 +23,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "1:05 - 4th",
+      "clockReport": "1:00 - 4th",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -58,7 +58,7 @@
       "kickoffISO": "2026-09-27T20:05Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 0,
+      "homeScore": 7,
       "awayScore": 0,
       "winner": null,
       "tie": false,
@@ -73,7 +73,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "8:40 - 1st",
+      "clockReport": "8:26 - 1st",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {

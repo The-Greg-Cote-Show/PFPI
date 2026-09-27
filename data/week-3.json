@@ -7,10 +7,10 @@
       "away": "LAC",
       "kickoffISO": "2026-09-27T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 24,
       "awayScore": 16,
-      "winner": null,
+      "winner": "BUF",
       "tie": false,
       "picks": {
         "Lobos": "BUF",
@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "0:31 - 4th",
+      "clockReport": null,
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "3:57 - 4th",
+      "clockReport": "3:52 - 4th",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -248,7 +248,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "10:29 - 1st",
+      "clockReport": "10:22 - 1st",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {

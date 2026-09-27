@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 24,
-      "awayScore": 13,
+      "awayScore": 16,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "1:59 - 4th",
+      "clockReport": "1:56 - 4th",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -232,9 +232,9 @@
       "away": "ARI",
       "kickoffISO": "2026-09-27T20:05Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -248,7 +248,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "15:00 - 1st",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -257,9 +257,9 @@
       "away": "MIN",
       "kickoffISO": "2026-09-27T20:05Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -273,7 +273,7 @@
         "Giraffes": "MIN"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "15:00 - 1st",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {

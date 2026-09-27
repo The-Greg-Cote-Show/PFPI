@@ -73,7 +73,7 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": "15:00 - 3rd",
+      "clockReport": "14:10 - 3rd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -159,7 +159,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 17,
-      "awayScore": 16,
+      "awayScore": 17,
       "winner": null,
       "tie": false,
       "picks": {
@@ -198,7 +198,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "1:50 - 2nd",
+      "clockReport": "1:40 - 2nd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -223,7 +223,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "0:06 - 2nd",
+      "clockReport": "Halftime",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {

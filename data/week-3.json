@@ -2,31 +2,6 @@
   "week": 3,
   "games": [
     {
-      "id": "2026_03_ARI_SF",
-      "home": "SF",
-      "away": "ARI",
-      "kickoffISO": "2026-09-27T20:05Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 36,
-      "awayScore": 30,
-      "winner": "SF",
-      "tie": false,
-      "picks": {
-        "Lobos": "SF",
-        "Roughriders": "SF",
-        "Maniacs": "SF",
-        "Critters": "SF",
-        "Chickens": "SF",
-        "Ferraris": "SF",
-        "Llamas": "SF",
-        "Giraffes": "SF"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-09-26T17:00:00.000Z"
-    },
-    {
       "id": "2026_03_MIN_TB",
       "home": "TB",
       "away": "MIN",
@@ -34,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 16,
-      "awayScore": 20,
+      "awayScore": 23,
       "winner": null,
       "tie": false,
       "picks": {
@@ -48,7 +23,7 @@
         "Giraffes": "MIN"
       },
       "picksRevealed": true,
-      "clockReport": "0:37 - 4th",
+      "clockReport": "0:33 - 4th",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -73,7 +48,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "3:11 - 4th",
+      "clockReport": "2:49 - 4th",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -321,6 +296,31 @@
         "Ferraris": "JAX",
         "Llamas": "NE",
         "Giraffes": "JAX"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-09-26T17:00:00.000Z"
+    },
+    {
+      "id": "2026_03_ARI_SF",
+      "home": "SF",
+      "away": "ARI",
+      "kickoffISO": "2026-09-27T20:05Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 36,
+      "awayScore": 30,
+      "winner": "SF",
+      "tie": false,
+      "picks": {
+        "Lobos": "SF",
+        "Roughriders": "SF",
+        "Maniacs": "SF",
+        "Critters": "SF",
+        "Chickens": "SF",
+        "Ferraris": "SF",
+        "Llamas": "SF",
+        "Giraffes": "SF"
       },
       "picksRevealed": true,
       "clockReport": null,

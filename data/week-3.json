@@ -48,7 +48,7 @@
         "Giraffes": "MIN"
       },
       "picksRevealed": true,
-      "clockReport": "2:57 - 3rd",
+      "clockReport": "2:13 - 3rd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -83,7 +83,7 @@
       "kickoffISO": "2026-09-27T20:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 26,
+      "homeScore": 27,
       "awayScore": 16,
       "winner": null,
       "tie": false,

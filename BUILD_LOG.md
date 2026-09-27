@@ -9675,6 +9675,14 @@ Changes:
 Giraffes' two addresses (Critters + Ferraris parents) intentionally left as
 is -- Gracelin is a child, her parents are meant to get her emails.
 
-**Not yet deployed** -- `wrangler deploy` was blocked by the auto-mode
-classifier; needs Yeti to run it, then push the frontend (worker first, so
-the page never reads a missing `live` field).
+Deployed 2026-09-26 at Yeti's go-ahead: `wrangler deploy` (picks-worker,
+version e7d68422) first, then frontend pushed (worker first so the page
+never reads a missing `live` field). **Not verified end-to-end** -- the
+unique-hit block and duplicate guard sit behind the admin/Greg session
+check, and Claude doesn't hold a session token, so no test send was made.
+
+**Open question:** Yeti is confirming with Greg on 2026-09-27 whether he
+sent that email by hand (the .eml evidence says it came through the League
+Email tool as commissioner, but who clicked Send isn't logged). Yeti likes
+the duplicate-send guard and wants it kept regardless; may adjust other
+parts after talking to Greg.

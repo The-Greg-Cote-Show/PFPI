@@ -7,10 +7,10 @@
       "away": "ARI",
       "kickoffISO": "2026-09-27T20:05Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 36,
       "awayScore": 30,
-      "winner": null,
+      "winner": "SF",
       "tie": false,
       "picks": {
         "Lobos": "SF",
@@ -23,7 +23,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "0:33 - 4th",
+      "clockReport": null,
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -84,7 +84,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 27,
-      "awayScore": 28,
+      "awayScore": 34,
       "winner": null,
       "tie": false,
       "picks": {
@@ -98,7 +98,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "7:10 - 4th",
+      "clockReport": "6:22 - 4th",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {

@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "14:21 - 2nd",
+      "clockReport": "13:37 - 2nd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -58,7 +58,7 @@
       "kickoffISO": "2026-09-27T17:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 0,
+      "homeScore": 3,
       "awayScore": 0,
       "winner": null,
       "tie": false,
@@ -73,7 +73,7 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": "10:21 - 2nd",
+      "clockReport": "9:35 - 2nd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -109,7 +109,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 7,
-      "awayScore": 13,
+      "awayScore": 14,
       "winner": null,
       "tie": false,
       "picks": {
@@ -123,7 +123,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "12:55 - 2nd",
+      "clockReport": "12:58 - 2nd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -198,7 +198,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "2:09 - 1st",
+      "clockReport": "0:54 - 1st",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {

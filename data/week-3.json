@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 10,
-      "awayScore": 10,
+      "awayScore": 13,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "7:00 - 3rd",
+      "clockReport": "6:12 - 3rd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -34,7 +34,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 10,
-      "awayScore": 3,
+      "awayScore": 6,
       "winner": null,
       "tie": false,
       "picks": {
@@ -48,7 +48,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "13:31 - 3rd",
+      "clockReport": "13:22 - 3rd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": "4:59 - 3rd",
+      "clockReport": "4:25 - 3rd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "IND"
       },
       "picksRevealed": true,
-      "clockReport": "10:48 - 3rd",
+      "clockReport": "10:00 - 3rd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "8:21 - 3rd",
+      "clockReport": "8:05 - 3rd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -133,7 +133,7 @@
       "kickoffISO": "2026-09-27T17:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 9,
+      "homeScore": 12,
       "awayScore": 0,
       "winner": null,
       "tie": false,
@@ -148,7 +148,7 @@
         "Giraffes": "TEN"
       },
       "picksRevealed": true,
-      "clockReport": "7:49 - 3rd",
+      "clockReport": "6:56 - 3rd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -173,7 +173,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "13:11 - 3rd",
+      "clockReport": "12:29 - 3rd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {
@@ -223,7 +223,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "11:22 - 3rd",
+      "clockReport": "9:59 - 3rd",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {

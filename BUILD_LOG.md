@@ -9639,3 +9639,42 @@ Deployed via `wrangler deploy` (picks-worker) and `wrangler deploy
 --config wrangler-scores.toml` (scores-worker) -- shared.js is bundled
 into both, so both needed redeploying even though only picks-worker's own
 code changed earlier tonight.
+
+## 2026-09-26 — Unique Hit league email sent twice to everyone: cause + server-side block
+
+Yeti reported that after all Week 4 picks were in, every family member got
+**two** copies of an email "PFPI Week 3 Unique Hit opportunities" at 1:04pm
+ET. Investigation: no automated path sends anything unique-hit related
+(checked every sendPfpiEmail call site in both workers, deployed versions
+match git, no scheduled routines, no stray KV queues). Yeti's bcc copy
+(.eml) showed `From: PFPI Commissioner <commissioner@mail.pfpi.me>`, plain
+text body `1: Tati's LLamas (WAS).` + the "Reply to Greg" footer -- i.e. a
+hand-typed message sent through the **League Email** tool
+(`/admin/send-league-email`) under the commissioner identity, then sent a
+second time within the same minute.
+
+Likely reason for the second send (not provable -- no request logs): the
+success message on all three League Email panels was hardcoded to say
+"While the live-email switch is off, these all redirect to Yeti's inbox
+instead of real family addresses" -- false since `emails-live-for-everyone`
+is `true` -- and the subject/message fields stayed filled with the button
+re-enabled, so a re-send was one click + OK away.
+
+Changes:
+- `picks-worker.js` `handleSendLeagueEmail`: rejects (400) any league email
+  whose subject or message matches `/unique[\s\-_]*hit/i`, per Yeti "no
+  unique hit email should be sent to anyone." Server-side, so it covers
+  brief.html and both admin.html panels.
+- Same handler: rejects (409) an identical subject+message re-sent within
+  10 minutes of a successful send (`league-email-recent:<sha256>` KV key,
+  600s TTL), regardless of page/login.
+- Response now includes `live`; brief.html + admin.html success text reads
+  it ("Delivered to the real family addresses -- no need to send again." vs
+  the redirect wording), and both clear subject/message after a success.
+
+Giraffes' two addresses (Critters + Ferraris parents) intentionally left as
+is -- Gracelin is a child, her parents are meant to get her emails.
+
+**Not yet deployed** -- `wrangler deploy` was blocked by the auto-mode
+classifier; needs Yeti to run it, then push the frontend (worker first, so
+the page never reads a missing `live` field).

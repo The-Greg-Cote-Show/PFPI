@@ -1550,7 +1550,10 @@ document.getElementById("leagueEmailSendBtn").addEventListener("click", async ()
       statusEl.className = "status err show";
       return;
     }
-    statusEl.textContent = `Sent to ${data.sentCount} recipient(s)${data.failedCount ? `, ${data.failedCount} failed` : ""}. While the live-email switch is off, these all redirect to Yeti's inbox instead of real family addresses.`;
+    statusEl.textContent = `Sent to ${data.sentCount} recipient(s)${data.failedCount ? `, ${data.failedCount} failed` : ""}. ${data.live ? "Delivered to the real family addresses -- no need to send again." : "The live-email switch is off, so these were redirected to Yeti's inbox instead of real family addresses."}`;
+    // Cleared after a real send (2026-09-26) so a second click can't re-send the same email.
+    subjectEl.value = "";
+    messageEl.value = "";
     statusEl.className = "status ok show";
   } catch (e) {
     btn.disabled = false;

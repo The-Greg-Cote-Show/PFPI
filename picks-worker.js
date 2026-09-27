@@ -17,6 +17,7 @@ import {
   computeCurrentWeekFromDate,
   commitJSONToGitHub,
   sendPfpiEmail,
+  emailsLiveForEveryone,
   fullTeamName,
   isTargetLocalTime,
   NUM_WEEKS,
@@ -608,6 +609,24 @@ async function handleSendLeagueEmail(request, env) {
     return jsonResponse({ error: "Subject and message are required." }, 400, request);
   }
 
+  // 2026-09-26, per Yeti: a hand-typed "PFPI Week 3 Unique Hit
+  // opportunities" league email went to every family member (twice) after
+  // all picks were in. Unique Hit info must never be emailed to anyone --
+  // blocked here server-side so it holds for all three League Email panels
+  // (brief.html, admin.html native + Commissioner mirror), not just the UI.
+  if (/unique[\s\-_]*hit/i.test(`${trimmedSubject}\n${trimmedMessage}`)) {
+    return jsonResponse({ error: "League emails can't include Unique Hit information. Nothing was sent." }, 400, request);
+  }
+
+  // Same incident: the identical email went out twice within the same
+  // minute. Rejects an exact re-send (same subject + message) for 10
+  // minutes after a successful one, regardless of which page/login sends it.
+  const dupKey = `league-email-recent:${await sha256Hex(`${trimmedSubject}\n${trimmedMessage}`)}`;
+  if (await env.PFPI_KV.get(dupKey)) {
+    return jsonResponse({ error: "This exact email was already sent to the league in the last 10 minutes. Nothing was sent again." }, 409, request);
+  }
+  await env.PFPI_KV.put(dupKey, "sent", { expirationTtl: 600 });
+
   let sentCount = 0;
   let failedCount = 0;
   for (const emails of Object.values(LEAGUE_ROSTER)) {
@@ -617,7 +636,16 @@ async function handleSendLeagueEmail(request, env) {
     }
   }
 
-  return jsonResponse({ sent: true, sentCount, failedCount }, 200, request);
+  // `live` lets the frontend say truthfully whether this reached the real
+  // family or was redirected to Yeti (the old hardcoded "switch is off"
+  // text kept claiming redirect even after the switch went live).
+  const live = await emailsLiveForEveryone(env);
+  return jsonResponse({ sent: true, sentCount, failedCount, live }, 200, request);
+}
+
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
 async function getTrainingPicks(token, env) {

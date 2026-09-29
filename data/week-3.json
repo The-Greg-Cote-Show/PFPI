@@ -8,7 +8,7 @@
       "kickoffISO": "2026-09-29T00:15Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 20,
+      "homeScore": 26,
       "awayScore": 7,
       "winner": null,
       "tie": false,
@@ -23,7 +23,7 @@
         "Giraffes": "PHI"
       },
       "picksRevealed": true,
-      "clockReport": "8:09 - 4th",
+      "clockReport": "7:19 - 4th",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {

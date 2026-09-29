@@ -7,10 +7,10 @@
       "away": "PHI",
       "kickoffISO": "2026-09-29T00:15Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 27,
       "awayScore": 7,
-      "winner": null,
+      "winner": "CHI",
       "tie": false,
       "picks": {
         "Lobos": "PHI",
@@ -23,7 +23,7 @@
         "Giraffes": "PHI"
       },
       "picksRevealed": true,
-      "clockReport": "0:39 - 4th",
+      "clockReport": null,
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {

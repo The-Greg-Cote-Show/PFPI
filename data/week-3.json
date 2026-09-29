@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 10,
-      "awayScore": 0,
+      "awayScore": 7,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "PHI"
       },
       "picksRevealed": true,
-      "clockReport": "0:19 - 2nd",
+      "clockReport": "Halftime",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {

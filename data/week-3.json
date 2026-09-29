@@ -7,9 +7,9 @@
       "away": "PHI",
       "kickoffISO": "2026-09-29T00:15Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "PHI"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "15:00 - 1st",
       "deadline": "2026-09-26T17:00:00.000Z"
     },
     {

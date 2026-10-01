@@ -12,8 +12,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "PIT",
+        "Roughriders": "CLE",
+        "Maniacs": "PIT",
+        "Critters": "CLE",
+        "Chickens": "PIT",
+        "Ferraris": "PIT",
+        "Llamas": "CLE",
+        "Giraffes": "PIT"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-01T22:15:00.000Z"
     },

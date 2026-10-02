@@ -8,7 +8,7 @@
       "kickoffISO": "2026-10-02T00:15Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 0,
+      "homeScore": 7,
       "awayScore": 7,
       "winner": null,
       "tie": false,
@@ -23,7 +23,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "13:07 - 2nd",
+      "clockReport": "12:14 - 2nd",
       "deadline": "2026-10-01T22:15:00.000Z"
     },
     {

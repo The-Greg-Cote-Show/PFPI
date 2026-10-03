@@ -37,8 +37,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "IND",
+        "Roughriders": "WAS",
+        "Maniacs": "IND",
+        "Critters": "IND",
+        "Chickens": "IND",
+        "Ferraris": "IND",
+        "Llamas": "IND",
+        "Giraffes": "IND"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -53,8 +62,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "BUF",
+        "Roughriders": "BUF",
+        "Maniacs": "BUF",
+        "Critters": "BUF",
+        "Chickens": "BUF",
+        "Ferraris": "BUF",
+        "Llamas": "BUF",
+        "Giraffes": "BUF"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -69,8 +87,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "CHI",
+        "Roughriders": "CHI",
+        "Maniacs": "CHI",
+        "Critters": "CHI",
+        "Chickens": "CHI",
+        "Ferraris": "CHI",
+        "Llamas": "CHI",
+        "Giraffes": "CHI"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -85,8 +112,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "JAX",
+        "Roughriders": "CIN",
+        "Maniacs": "JAX",
+        "Critters": "CIN",
+        "Chickens": "JAX",
+        "Ferraris": "CIN",
+        "Llamas": "CIN",
+        "Giraffes": "CIN"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -101,8 +137,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "ARI",
+        "Roughriders": "NYG",
+        "Maniacs": "ARI",
+        "Critters": "ARI",
+        "Chickens": "ARI",
+        "Ferraris": "ARI",
+        "Llamas": "ARI",
+        "Giraffes": "NYG"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -117,8 +162,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "LA",
+        "Roughriders": "LA",
+        "Maniacs": "LA",
+        "Critters": "LA",
+        "Chickens": "LA",
+        "Ferraris": "LA",
+        "Llamas": "LA",
+        "Giraffes": "PHI"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -133,8 +187,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "GB",
+        "Roughriders": "GB",
+        "Maniacs": "GB",
+        "Critters": "GB",
+        "Chickens": "GB",
+        "Ferraris": "GB",
+        "Llamas": "GB",
+        "Giraffes": "GB"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -149,8 +212,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "BAL",
+        "Roughriders": "BAL",
+        "Maniacs": "BAL",
+        "Critters": "BAL",
+        "Chickens": "BAL",
+        "Ferraris": "BAL",
+        "Llamas": "BAL",
+        "Giraffes": "BAL"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -165,8 +237,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "HOU",
+        "Roughriders": "HOU",
+        "Maniacs": "DAL",
+        "Critters": "HOU",
+        "Chickens": "HOU",
+        "Ferraris": "HOU",
+        "Llamas": "HOU",
+        "Giraffes": "DAL"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -181,8 +262,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "MIN",
+        "Roughriders": "MIN",
+        "Maniacs": "MIN",
+        "Critters": "MIN",
+        "Chickens": "MIN",
+        "Ferraris": "MIN",
+        "Llamas": "MIN",
+        "Giraffes": "MIN"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -197,8 +287,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "KC",
+        "Roughriders": "KC",
+        "Maniacs": "KC",
+        "Critters": "KC",
+        "Chickens": "KC",
+        "Ferraris": "KC",
+        "Llamas": "KC",
+        "Giraffes": "KC"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -213,8 +312,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "SF",
+        "Roughriders": "SF",
+        "Maniacs": "SF",
+        "Critters": "SF",
+        "Chickens": "SF",
+        "Ferraris": "SF",
+        "Llamas": "SF",
+        "Giraffes": "SF"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -229,8 +337,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "SEA",
+        "Roughriders": "SEA",
+        "Maniacs": "SEA",
+        "Critters": "LAC",
+        "Chickens": "SEA",
+        "Ferraris": "SEA",
+        "Llamas": "SEA",
+        "Giraffes": "SEA"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -245,8 +362,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "DET",
+        "Roughriders": "DET",
+        "Maniacs": "DET",
+        "Critters": "CAR",
+        "Chickens": "CAR",
+        "Ferraris": "DET",
+        "Llamas": "DET",
+        "Giraffes": "DET"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
@@ -261,8 +387,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "NO",
+        "Roughriders": "NO",
+        "Maniacs": "NO",
+        "Critters": "NO",
+        "Chickens": "NO",
+        "Ferraris": "NO",
+        "Llamas": "ATL",
+        "Giraffes": "NO"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     }

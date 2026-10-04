@@ -7,10 +7,10 @@
       "away": "IND",
       "kickoffISO": "2026-10-04T13:30Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 13,
       "awayScore": 30,
-      "winner": null,
+      "winner": "IND",
       "tie": false,
       "picks": {
         "Lobos": "IND",
@@ -23,7 +23,7 @@
         "Giraffes": "IND"
       },
       "picksRevealed": true,
-      "clockReport": "0:33 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

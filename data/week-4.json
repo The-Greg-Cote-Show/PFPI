@@ -7,10 +7,10 @@
       "away": "KC",
       "kickoffISO": "2026-10-04T20:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 27,
       "awayScore": 30,
-      "winner": null,
+      "winner": "KC",
       "tie": false,
       "picks": {
         "Lobos": "KC",
@@ -23,7 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "0:01 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -32,10 +32,10 @@
       "away": "LAC",
       "kickoffISO": "2026-10-04T20:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 30,
       "awayScore": 23,
-      "winner": null,
+      "winner": "SEA",
       "tie": false,
       "picks": {
         "Lobos": "SEA",
@@ -48,7 +48,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "0:32 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

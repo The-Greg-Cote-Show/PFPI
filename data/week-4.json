@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "1:05 - 4th",
+      "clockReport": "1:00 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "1:56 - 4th",
+      "clockReport": "1:44 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "0:26 - 4th",
+      "clockReport": "0:18 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "PHI"
       },
       "picksRevealed": true,
-      "clockReport": "1:32 - 4th",
+      "clockReport": "1:22 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -107,10 +107,10 @@
       "away": "TEN",
       "kickoffISO": "2026-10-04T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 24,
       "awayScore": 18,
-      "winner": null,
+      "winner": "BAL",
       "tie": false,
       "picks": {
         "Lobos": "BAL",
@@ -123,7 +123,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "1:12 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

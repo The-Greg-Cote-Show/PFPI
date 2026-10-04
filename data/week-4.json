@@ -33,7 +33,7 @@
       "kickoffISO": "2026-10-04T20:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 16,
+      "homeScore": 19,
       "awayScore": 17,
       "winner": null,
       "tie": false,
@@ -48,7 +48,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "5:45 - 4th",
+      "clockReport": "4:53 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

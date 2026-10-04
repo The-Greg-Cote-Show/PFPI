@@ -8,7 +8,7 @@
       "kickoffISO": "2026-10-04T13:30Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 3,
+      "homeScore": 6,
       "awayScore": 0,
       "winner": null,
       "tie": false,
@@ -23,7 +23,7 @@
         "Giraffes": "IND"
       },
       "picksRevealed": true,
-      "clockReport": "7:49 - 1st",
+      "clockReport": "7:05 - 1st",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

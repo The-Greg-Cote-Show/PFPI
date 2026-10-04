@@ -23,7 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "1:16 - 4th",
+      "clockReport": "1:11 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -32,10 +32,10 @@
       "away": "DEN",
       "kickoffISO": "2026-10-04T20:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 24,
       "awayScore": 14,
-      "winner": null,
+      "winner": "SF",
       "tie": false,
       "picks": {
         "Lobos": "SF",
@@ -48,7 +48,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "0:35 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

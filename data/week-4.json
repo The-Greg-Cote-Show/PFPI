@@ -2,31 +2,6 @@
   "week": 4,
   "games": [
     {
-      "id": "2026_04_IND_WAS",
-      "home": "WAS",
-      "away": "IND",
-      "kickoffISO": "2026-10-04T13:30Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 13,
-      "awayScore": 30,
-      "winner": "IND",
-      "tie": false,
-      "picks": {
-        "Lobos": "IND",
-        "Roughriders": "WAS",
-        "Maniacs": "IND",
-        "Critters": "IND",
-        "Chickens": "IND",
-        "Ferraris": "IND",
-        "Llamas": "IND",
-        "Giraffes": "IND"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-03T17:00:00.000Z"
-    },
-    {
       "id": "2026_04_NE_BUF",
       "home": "BUF",
       "away": "NE",
@@ -48,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "13:28 - 1st",
+      "clockReport": "12:47 - 1st",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -98,7 +73,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "13:05 - 1st",
+      "clockReport": "12:27 - 1st",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -123,7 +98,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "12:30 - 1st",
+      "clockReport": "11:12 - 1st",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -148,7 +123,7 @@
         "Giraffes": "PHI"
       },
       "picksRevealed": true,
-      "clockReport": "12:43 - 1st",
+      "clockReport": "12:09 - 1st",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -173,7 +148,7 @@
         "Giraffes": "GB"
       },
       "picksRevealed": true,
-      "clockReport": "13:09 - 1st",
+      "clockReport": "12:26 - 1st",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -198,7 +173,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "13:30 - 1st",
+      "clockReport": "12:48 - 1st",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -223,7 +198,32 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "12:52 - 1st",
+      "clockReport": "11:34 - 1st",
+      "deadline": "2026-10-03T17:00:00.000Z"
+    },
+    {
+      "id": "2026_04_IND_WAS",
+      "home": "WAS",
+      "away": "IND",
+      "kickoffISO": "2026-10-04T13:30Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 13,
+      "awayScore": 30,
+      "winner": "IND",
+      "tie": false,
+      "picks": {
+        "Lobos": "IND",
+        "Roughriders": "WAS",
+        "Maniacs": "IND",
+        "Critters": "IND",
+        "Chickens": "IND",
+        "Ferraris": "IND",
+        "Llamas": "IND",
+        "Giraffes": "IND"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

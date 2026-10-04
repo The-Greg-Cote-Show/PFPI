@@ -23,32 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "1:13 - 4th",
-      "deadline": "2026-10-03T17:00:00.000Z"
-    },
-    {
-      "id": "2026_04_NYJ_CHI",
-      "home": "CHI",
-      "away": "NYJ",
-      "kickoffISO": "2026-10-04T17:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 23,
-      "awayScore": 12,
-      "winner": "CHI",
-      "tie": false,
-      "picks": {
-        "Lobos": "CHI",
-        "Roughriders": "CHI",
-        "Maniacs": "CHI",
-        "Critters": "CHI",
-        "Chickens": "CHI",
-        "Ferraris": "CHI",
-        "Llamas": "CHI",
-        "Giraffes": "CHI"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "1:05 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -123,32 +98,7 @@
         "Giraffes": "PHI"
       },
       "picksRevealed": true,
-      "clockReport": "1:37 - 4th",
-      "deadline": "2026-10-03T17:00:00.000Z"
-    },
-    {
-      "id": "2026_04_GB_TB",
-      "home": "TB",
-      "away": "GB",
-      "kickoffISO": "2026-10-04T17:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 14,
-      "awayScore": 17,
-      "winner": "GB",
-      "tie": false,
-      "picks": {
-        "Lobos": "GB",
-        "Roughriders": "GB",
-        "Maniacs": "GB",
-        "Critters": "GB",
-        "Chickens": "GB",
-        "Ferraris": "GB",
-        "Llamas": "GB",
-        "Giraffes": "GB"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "1:32 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -202,6 +152,31 @@
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
+      "id": "2026_04_MIA_MIN",
+      "home": "MIN",
+      "away": "MIA",
+      "kickoffISO": "2026-10-04T20:05Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "MIN",
+        "Roughriders": "MIN",
+        "Maniacs": "MIN",
+        "Critters": "MIN",
+        "Chickens": "MIN",
+        "Ferraris": "MIN",
+        "Llamas": "MIN",
+        "Giraffes": "MIN"
+      },
+      "picksRevealed": true,
+      "clockReport": "13:55 - 1st",
+      "deadline": "2026-10-03T17:00:00.000Z"
+    },
+    {
       "id": "2026_04_IND_WAS",
       "home": "WAS",
       "away": "IND",
@@ -227,28 +202,53 @@
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
-      "id": "2026_04_MIA_MIN",
-      "home": "MIN",
-      "away": "MIA",
-      "kickoffISO": "2026-10-04T20:05Z",
+      "id": "2026_04_NYJ_CHI",
+      "home": "CHI",
+      "away": "NYJ",
+      "kickoffISO": "2026-10-04T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 0,
-      "awayScore": 0,
-      "winner": null,
+      "status": "final",
+      "homeScore": 23,
+      "awayScore": 12,
+      "winner": "CHI",
       "tie": false,
       "picks": {
-        "Lobos": "MIN",
-        "Roughriders": "MIN",
-        "Maniacs": "MIN",
-        "Critters": "MIN",
-        "Chickens": "MIN",
-        "Ferraris": "MIN",
-        "Llamas": "MIN",
-        "Giraffes": "MIN"
+        "Lobos": "CHI",
+        "Roughriders": "CHI",
+        "Maniacs": "CHI",
+        "Critters": "CHI",
+        "Chickens": "CHI",
+        "Ferraris": "CHI",
+        "Llamas": "CHI",
+        "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "13:55 - 1st",
+      "clockReport": null,
+      "deadline": "2026-10-03T17:00:00.000Z"
+    },
+    {
+      "id": "2026_04_GB_TB",
+      "home": "TB",
+      "away": "GB",
+      "kickoffISO": "2026-10-04T17:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 14,
+      "awayScore": 17,
+      "winner": "GB",
+      "tie": false,
+      "picks": {
+        "Lobos": "GB",
+        "Roughriders": "GB",
+        "Maniacs": "GB",
+        "Critters": "GB",
+        "Chickens": "GB",
+        "Ferraris": "GB",
+        "Llamas": "GB",
+        "Giraffes": "GB"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

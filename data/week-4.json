@@ -83,7 +83,7 @@
       "kickoffISO": "2026-10-04T17:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 25,
+      "homeScore": 27,
       "awayScore": 24,
       "winner": null,
       "tie": false,
@@ -123,7 +123,7 @@
         "Giraffes": "PHI"
       },
       "picksRevealed": true,
-      "clockReport": "5:43 - 3rd",
+      "clockReport": "5:01 - 3rd",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -173,7 +173,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "3:34 - 3rd",
+      "clockReport": "3:31 - 3rd",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -198,7 +198,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "4:26 - 3rd",
+      "clockReport": "3:52 - 3rd",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

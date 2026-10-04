@@ -2,31 +2,6 @@
   "week": 4,
   "games": [
     {
-      "id": "2026_04_PIT_CLE",
-      "home": "CLE",
-      "away": "PIT",
-      "kickoffISO": "2026-10-02T00:15Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 27,
-      "awayScore": 24,
-      "winner": "CLE",
-      "tie": false,
-      "picks": {
-        "Lobos": "PIT",
-        "Roughriders": "CLE",
-        "Maniacs": "PIT",
-        "Critters": "CLE",
-        "Chickens": "PIT",
-        "Ferraris": "PIT",
-        "Llamas": "CLE",
-        "Giraffes": "PIT"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-01T22:15:00.000Z"
-    },
-    {
       "id": "2026_04_IND_WAS",
       "home": "WAS",
       "away": "IND",
@@ -375,6 +350,31 @@
       "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
+    },
+    {
+      "id": "2026_04_PIT_CLE",
+      "home": "CLE",
+      "away": "PIT",
+      "kickoffISO": "2026-10-02T00:15Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 27,
+      "awayScore": 24,
+      "winner": "CLE",
+      "tie": false,
+      "picks": {
+        "Lobos": "PIT",
+        "Roughriders": "CLE",
+        "Maniacs": "PIT",
+        "Critters": "CLE",
+        "Chickens": "PIT",
+        "Ferraris": "PIT",
+        "Llamas": "CLE",
+        "Giraffes": "PIT"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-01T22:15:00.000Z"
     },
     {
       "id": "2026_04_ATL_NO",

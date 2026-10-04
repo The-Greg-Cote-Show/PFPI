@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 13,
-      "awayScore": 27,
+      "awayScore": 30,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "IND"
       },
       "picksRevealed": true,
-      "clockReport": "5:52 - 4th",
+      "clockReport": "5:48 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

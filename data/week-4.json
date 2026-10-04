@@ -48,7 +48,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "12:16 - 3rd",
+      "clockReport": "11:35 - 3rd",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "13:03 - 3rd",
+      "clockReport": "12:23 - 3rd",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -184,7 +184,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 16,
-      "awayScore": 12,
+      "awayScore": 13,
       "winner": null,
       "tie": false,
       "picks": {

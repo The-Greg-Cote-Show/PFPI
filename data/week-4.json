@@ -34,7 +34,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 17,
-      "awayScore": 6,
+      "awayScore": 12,
       "winner": null,
       "tie": false,
       "picks": {
@@ -48,7 +48,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "4:49 - 4th",
+      "clockReport": "4:05 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -59,7 +59,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 30,
-      "awayScore": 19,
+      "awayScore": 20,
       "winner": null,
       "tie": false,
       "picks": {
@@ -73,7 +73,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "7:52 - 4th",
+      "clockReport": "7:48 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

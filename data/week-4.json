@@ -23,7 +23,7 @@
         "Giraffes": "MIN"
       },
       "picksRevealed": true,
-      "clockReport": "9:06 - 3rd",
+      "clockReport": "9:01 - 3rd",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "12:51 - 3rd",
+      "clockReport": "12:31 - 3rd",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -84,7 +84,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 20,
-      "awayScore": 3,
+      "awayScore": 6,
       "winner": null,
       "tie": false,
       "picks": {
@@ -98,7 +98,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "0:18 - 2nd",
+      "clockReport": "Halftime",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

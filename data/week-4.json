@@ -23,32 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "1:11 - 4th",
-      "deadline": "2026-10-03T17:00:00.000Z"
-    },
-    {
-      "id": "2026_04_DEN_SF",
-      "home": "SF",
-      "away": "DEN",
-      "kickoffISO": "2026-10-04T20:25Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 24,
-      "awayScore": 14,
-      "winner": "SF",
-      "tie": false,
-      "picks": {
-        "Lobos": "SF",
-        "Roughriders": "SF",
-        "Maniacs": "SF",
-        "Critters": "SF",
-        "Chickens": "SF",
-        "Ferraris": "SF",
-        "Llamas": "SF",
-        "Giraffes": "SF"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "0:47 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -321,6 +296,31 @@
         "Ferraris": "MIN",
         "Llamas": "MIN",
         "Giraffes": "MIN"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-03T17:00:00.000Z"
+    },
+    {
+      "id": "2026_04_DEN_SF",
+      "home": "SF",
+      "away": "DEN",
+      "kickoffISO": "2026-10-04T20:25Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 24,
+      "awayScore": 14,
+      "winner": "SF",
+      "tie": false,
+      "picks": {
+        "Lobos": "SF",
+        "Roughriders": "SF",
+        "Maniacs": "SF",
+        "Critters": "SF",
+        "Chickens": "SF",
+        "Ferraris": "SF",
+        "Llamas": "SF",
+        "Giraffes": "SF"
       },
       "picksRevealed": true,
       "clockReport": null,

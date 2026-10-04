@@ -2,31 +2,6 @@
   "week": 4,
   "games": [
     {
-      "id": "2026_04_MIA_MIN",
-      "home": "MIN",
-      "away": "MIA",
-      "kickoffISO": "2026-10-04T20:05Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 15,
-      "awayScore": 10,
-      "winner": "MIN",
-      "tie": false,
-      "picks": {
-        "Lobos": "MIN",
-        "Roughriders": "MIN",
-        "Maniacs": "MIN",
-        "Critters": "MIN",
-        "Chickens": "MIN",
-        "Ferraris": "MIN",
-        "Llamas": "MIN",
-        "Giraffes": "MIN"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-03T17:00:00.000Z"
-    },
-    {
       "id": "2026_04_KC_LV",
       "home": "LV",
       "away": "KC",
@@ -73,7 +48,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "8:52 - 4th",
+      "clockReport": "8:10 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -98,7 +73,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "9:12 - 4th",
+      "clockReport": "8:38 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -321,6 +296,31 @@
         "Ferraris": "HOU",
         "Llamas": "HOU",
         "Giraffes": "DAL"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-03T17:00:00.000Z"
+    },
+    {
+      "id": "2026_04_MIA_MIN",
+      "home": "MIN",
+      "away": "MIA",
+      "kickoffISO": "2026-10-04T20:05Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 15,
+      "awayScore": 10,
+      "winner": "MIN",
+      "tie": false,
+      "picks": {
+        "Lobos": "MIN",
+        "Roughriders": "MIN",
+        "Maniacs": "MIN",
+        "Critters": "MIN",
+        "Chickens": "MIN",
+        "Ferraris": "MIN",
+        "Llamas": "MIN",
+        "Giraffes": "MIN"
       },
       "picksRevealed": true,
       "clockReport": null,

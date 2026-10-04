@@ -8,7 +8,7 @@
       "kickoffISO": "2026-10-04T20:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 25,
+      "homeScore": 27,
       "awayScore": 30,
       "winner": null,
       "tie": false,
@@ -73,7 +73,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "2:54 - 4th",
+      "clockReport": "2:23 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

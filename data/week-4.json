@@ -7,10 +7,10 @@
       "away": "NE",
       "kickoffISO": "2026-10-04T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 26,
       "awayScore": 29,
-      "winner": null,
+      "winner": "NE",
       "tie": false,
       "picks": {
         "Lobos": "BUF",
@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "0:39 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "1:05 - 4th",
+      "clockReport": "1:01 - 4th",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {
@@ -173,7 +173,7 @@
         "Giraffes": "MIN"
       },
       "picksRevealed": true,
-      "clockReport": "12:50 - 1st",
+      "clockReport": "11:48 - 1st",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

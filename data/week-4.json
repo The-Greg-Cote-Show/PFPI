@@ -2,31 +2,6 @@
   "week": 4,
   "games": [
     {
-      "id": "2026_04_DET_CAR",
-      "home": "CAR",
-      "away": "DET",
-      "kickoffISO": "2026-10-05T00:20Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 32,
-      "awayScore": 26,
-      "winner": "CAR",
-      "tie": false,
-      "picks": {
-        "Lobos": "DET",
-        "Roughriders": "DET",
-        "Maniacs": "DET",
-        "Critters": "CAR",
-        "Chickens": "CAR",
-        "Ferraris": "DET",
-        "Llamas": "DET",
-        "Giraffes": "DET"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-03T17:00:00.000Z"
-    },
-    {
       "id": "2026_04_IND_WAS",
       "home": "WAS",
       "away": "IND",
@@ -346,6 +321,31 @@
         "Ferraris": "SEA",
         "Llamas": "SEA",
         "Giraffes": "SEA"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-03T17:00:00.000Z"
+    },
+    {
+      "id": "2026_04_DET_CAR",
+      "home": "CAR",
+      "away": "DET",
+      "kickoffISO": "2026-10-05T00:20Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 32,
+      "awayScore": 26,
+      "winner": "CAR",
+      "tie": false,
+      "picks": {
+        "Lobos": "DET",
+        "Roughriders": "DET",
+        "Maniacs": "DET",
+        "Critters": "CAR",
+        "Chickens": "CAR",
+        "Ferraris": "DET",
+        "Llamas": "DET",
+        "Giraffes": "DET"
       },
       "picksRevealed": true,
       "clockReport": null,

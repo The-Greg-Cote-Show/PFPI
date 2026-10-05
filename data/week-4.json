@@ -8,7 +8,7 @@
       "kickoffISO": "2026-10-05T00:20Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 13,
+      "homeScore": 16,
       "awayScore": 13,
       "winner": null,
       "tie": false,
@@ -23,7 +23,7 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": "0:35 - 2nd",
+      "clockReport": "0:28 - 2nd",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

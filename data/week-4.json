@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 13,
-      "awayScore": 6,
+      "awayScore": 12,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": "2:18 - 2nd",
+      "clockReport": "2:14 - 2nd",
       "deadline": "2026-10-03T17:00:00.000Z"
     },
     {

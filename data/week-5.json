@@ -7,11 +7,11 @@
       "away": "NYG",
       "kickoffISO": "2026-10-11T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 27,
       "awayScore": 27,
       "winner": null,
-      "tie": false,
+      "tie": true,
       "picks": {
         "Lobos": "WAS",
         "Roughriders": "WAS",
@@ -23,7 +23,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "0:55 - OT",
+      "clockReport": null,
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": "14:52 - 2nd",
+      "clockReport": "14:09 - 2nd",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": "4:24 - 1st",
+      "clockReport": "3:45 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

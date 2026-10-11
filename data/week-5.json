@@ -7,10 +7,10 @@
       "away": "DEN",
       "kickoffISO": "2026-10-11T20:05Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 17,
       "awayScore": 23,
-      "winner": null,
+      "winner": "DEN",
       "tie": false,
       "picks": {
         "Lobos": "LAC",
@@ -23,7 +23,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": "0:03 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": "2:27 - 4th",
+      "clockReport": "2:23 - 4th",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

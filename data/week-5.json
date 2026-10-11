@@ -48,7 +48,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "8:05 - OT",
+      "clockReport": "7:57 - OT",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -257,9 +257,9 @@
       "away": "DET",
       "kickoffISO": "2026-10-11T20:25Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -273,7 +273,7 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "15:00 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -298,7 +298,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "15:00 - 1st",
+      "clockReport": "14:13 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

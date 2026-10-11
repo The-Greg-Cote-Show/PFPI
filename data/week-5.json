@@ -33,7 +33,7 @@
       "kickoffISO": "2026-10-11T20:05Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 0,
+      "homeScore": 3,
       "awayScore": 7,
       "winner": null,
       "tie": false,
@@ -48,7 +48,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": "8:58 - 2nd",
+      "clockReport": "8:18 - 2nd",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

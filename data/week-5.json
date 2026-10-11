@@ -23,7 +23,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "4:05 - 4th",
+      "clockReport": "3:18 - 4th",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -32,10 +32,10 @@
       "away": "HOU",
       "kickoffISO": "2026-10-11T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 3,
       "awayScore": 26,
-      "winner": null,
+      "winner": "HOU",
       "tie": false,
       "picks": {
         "Lobos": "HOU",
@@ -48,7 +48,7 @@
         "Giraffes": "HOU"
       },
       "picksRevealed": true,
-      "clockReport": "0:19 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -133,7 +133,7 @@
       "kickoffISO": "2026-10-11T17:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 10,
+      "homeScore": 16,
       "awayScore": 12,
       "winner": null,
       "tie": false,
@@ -148,7 +148,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "3:10 - 4th",
+      "clockReport": "3:01 - 4th",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -198,7 +198,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "7:20 - 4th",
+      "clockReport": "7:15 - 4th",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

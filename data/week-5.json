@@ -7,10 +7,10 @@
       "away": "DET",
       "kickoffISO": "2026-10-11T20:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 21,
       "awayScore": 45,
-      "winner": null,
+      "winner": "DET",
       "tie": false,
       "picks": {
         "Lobos": "DET",
@@ -23,7 +23,7 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": "0:21 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "4:01 - 4th",
+      "clockReport": "3:22 - 4th",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 16,
-      "awayScore": 14,
+      "awayScore": 17,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "0:12 - 4th",
+      "clockReport": "0:08 - 4th",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "11:25 - 1st",
+      "clockReport": "10:43 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "14:03 - 1st",
+      "clockReport": "13:25 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -108,7 +108,7 @@
       "kickoffISO": "2026-10-11T17:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 0,
+      "homeScore": 6,
       "awayScore": 0,
       "winner": null,
       "tie": false,
@@ -123,7 +123,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "12:02 - 1st",
+      "clockReport": "11:23 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -148,7 +148,7 @@
         "Giraffes": "MIN"
       },
       "picksRevealed": true,
-      "clockReport": "12:28 - 1st",
+      "clockReport": "11:03 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -173,7 +173,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "10:49 - 1st",
+      "clockReport": "9:29 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -198,7 +198,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "10:26 - 1st",
+      "clockReport": "9:47 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -223,7 +223,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "13:00 - 1st",
+      "clockReport": "12:33 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

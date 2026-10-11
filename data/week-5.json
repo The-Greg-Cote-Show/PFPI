@@ -7,10 +7,10 @@
       "away": "PHI",
       "kickoffISO": "2026-10-11T13:30Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 16,
+      "status": "final",
+      "homeScore": 19,
       "awayScore": 17,
-      "winner": null,
+      "winner": "JAX",
       "tie": false,
       "picks": {
         "Lobos": "JAX",
@@ -23,7 +23,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "0:01 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "7:58 - 1st",
+      "clockReport": "7:10 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "HOU"
       },
       "picksRevealed": true,
-      "clockReport": "10:31 - 1st",
+      "clockReport": "9:54 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "12:35 - 1st",
+      "clockReport": "11:51 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -223,7 +223,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "10:23 - 1st",
+      "clockReport": "9:47 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

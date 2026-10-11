@@ -48,7 +48,7 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": "4:22 - 3rd",
+      "clockReport": "3:40 - 3rd",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -58,7 +58,7 @@
       "kickoffISO": "2026-10-11T20:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 22,
+      "homeScore": 23,
       "awayScore": 21,
       "winner": null,
       "tie": false,

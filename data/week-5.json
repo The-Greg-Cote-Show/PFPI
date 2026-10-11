@@ -2,31 +2,6 @@
   "week": 5,
   "games": [
     {
-      "id": "2026_05_DEN_LAC",
-      "home": "LAC",
-      "away": "DEN",
-      "kickoffISO": "2026-10-11T20:05Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 17,
-      "awayScore": 23,
-      "winner": "DEN",
-      "tie": false,
-      "picks": {
-        "Lobos": "LAC",
-        "Roughriders": "DEN",
-        "Maniacs": "LAC",
-        "Critters": "DEN",
-        "Chickens": "DEN",
-        "Ferraris": "DEN",
-        "Llamas": "DEN",
-        "Giraffes": "DEN"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-10T17:00:00.000Z"
-    },
-    {
       "id": "2026_05_DET_ARI",
       "home": "ARI",
       "away": "DET",
@@ -48,7 +23,7 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": "1:17 - 4th",
+      "clockReport": "0:21 - 4th",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -73,7 +48,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "4:44 - 4th",
+      "clockReport": "4:01 - 4th",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -296,6 +271,31 @@
         "Ferraris": "WAS",
         "Llamas": "WAS",
         "Giraffes": "NYG"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-10T17:00:00.000Z"
+    },
+    {
+      "id": "2026_05_DEN_LAC",
+      "home": "LAC",
+      "away": "DEN",
+      "kickoffISO": "2026-10-11T20:05Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 17,
+      "awayScore": 23,
+      "winner": "DEN",
+      "tie": false,
+      "picks": {
+        "Lobos": "LAC",
+        "Roughriders": "DEN",
+        "Maniacs": "LAC",
+        "Critters": "DEN",
+        "Chickens": "DEN",
+        "Ferraris": "DEN",
+        "Llamas": "DEN",
+        "Giraffes": "DEN"
       },
       "picksRevealed": true,
       "clockReport": null,

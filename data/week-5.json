@@ -7,10 +7,10 @@
       "away": "SF",
       "kickoffISO": "2026-10-11T20:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 29,
       "awayScore": 32,
-      "winner": null,
+      "winner": "SF",
       "tie": false,
       "picks": {
         "Lobos": "SEA",
@@ -23,7 +23,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "End of 4th",
+      "clockReport": null,
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

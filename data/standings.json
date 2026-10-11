@@ -115,7 +115,11 @@
       "5": 0.547945205479452
     }
   },
-  "tieNotes": {},
+  "tieNotes": {
+    "5": [
+      "NYG @ WAS"
+    ]
+  },
   "weeklyTitles": {
     "Lobos": {
       "1": 0,
@@ -915,5 +919,5 @@
     }
   },
   "throughWeek": 5,
-  "updatedAt": "2026-10-11T20:45:09.697Z"
+  "updatedAt": "2026-10-11T20:46:15.053Z"
 }

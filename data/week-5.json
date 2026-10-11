@@ -2,31 +2,6 @@
   "week": 5,
   "games": [
     {
-      "id": "2026_05_SF_SEA",
-      "home": "SEA",
-      "away": "SF",
-      "kickoffISO": "2026-10-11T20:25Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 29,
-      "awayScore": 32,
-      "winner": "SF",
-      "tie": false,
-      "picks": {
-        "Lobos": "SEA",
-        "Roughriders": "SF",
-        "Maniacs": "SEA",
-        "Critters": "SF",
-        "Chickens": "SEA",
-        "Ferraris": "SEA",
-        "Llamas": "SEA",
-        "Giraffes": "SF"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-10T17:00:00.000Z"
-    },
-    {
       "id": "2026_05_PHI_JAX",
       "home": "JAX",
       "away": "PHI",
@@ -296,6 +271,31 @@
         "Ferraris": "DET",
         "Llamas": "DET",
         "Giraffes": "DET"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-10T17:00:00.000Z"
+    },
+    {
+      "id": "2026_05_SF_SEA",
+      "home": "SEA",
+      "away": "SF",
+      "kickoffISO": "2026-10-11T20:25Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 29,
+      "awayScore": 32,
+      "winner": "SF",
+      "tie": false,
+      "picks": {
+        "Lobos": "SEA",
+        "Roughriders": "SF",
+        "Maniacs": "SEA",
+        "Critters": "SF",
+        "Chickens": "SEA",
+        "Ferraris": "SEA",
+        "Llamas": "SEA",
+        "Giraffes": "SF"
       },
       "picksRevealed": true,
       "clockReport": null,

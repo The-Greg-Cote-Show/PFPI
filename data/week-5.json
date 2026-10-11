@@ -58,7 +58,7 @@
       "kickoffISO": "2026-10-11T17:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 7,
+      "homeScore": 10,
       "awayScore": 21,
       "winner": null,
       "tie": false,
@@ -73,7 +73,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "6:11 - 3rd",
+      "clockReport": "5:13 - 3rd",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "8:00 - 3rd",
+      "clockReport": "6:43 - 3rd",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -148,7 +148,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "2:29 - 3rd",
+      "clockReport": "2:21 - 3rd",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -173,7 +173,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "2:13 - 3rd",
+      "clockReport": "2:04 - 3rd",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -198,7 +198,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "6:35 - 3rd",
+      "clockReport": "5:33 - 3rd",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

@@ -7,10 +7,10 @@
       "away": "CHI",
       "kickoffISO": "2026-10-11T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 31,
       "awayScore": 7,
-      "winner": null,
+      "winner": "GB",
       "tie": false,
       "picks": {
         "Lobos": "GB",
@@ -23,7 +23,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "0:36 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "1:30 - 4th",
+      "clockReport": "1:22 - 4th",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "1:48 - 4th",
+      "clockReport": "1:41 - 4th",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "2:00 - 4th",
+      "clockReport": "1:14 - 4th",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -134,7 +134,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 27,
-      "awayScore": 20,
+      "awayScore": 27,
       "winner": null,
       "tie": false,
       "picks": {
@@ -148,7 +148,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "1:48 - 4th",
+      "clockReport": "1:43 - 4th",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {
@@ -248,7 +248,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": "14:53 - 1st",
+      "clockReport": "13:34 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

@@ -7,10 +7,10 @@
       "away": "BAL",
       "kickoffISO": "2026-10-12T00:20Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 23,
       "awayScore": 30,
-      "winner": null,
+      "winner": "BAL",
       "tie": false,
       "picks": {
         "Lobos": "ATL",
@@ -23,7 +23,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "2:05 - OT",
+      "clockReport": null,
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

@@ -2,6 +2,31 @@
   "week": 5,
   "games": [
     {
+      "id": "2026_05_BAL_ATL",
+      "home": "ATL",
+      "away": "BAL",
+      "kickoffISO": "2026-10-12T00:20Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "ATL",
+        "Roughriders": "ATL",
+        "Maniacs": "BAL",
+        "Critters": "ATL",
+        "Chickens": "ATL",
+        "Ferraris": "ATL",
+        "Llamas": "ATL",
+        "Giraffes": "BAL"
+      },
+      "picksRevealed": true,
+      "clockReport": "11:39 - 1st",
+      "deadline": "2026-10-10T17:00:00.000Z"
+    },
+    {
       "id": "2026_05_PHI_JAX",
       "home": "JAX",
       "away": "PHI",
@@ -299,31 +324,6 @@
       },
       "picksRevealed": true,
       "clockReport": null,
-      "deadline": "2026-10-10T17:00:00.000Z"
-    },
-    {
-      "id": "2026_05_BAL_ATL",
-      "home": "ATL",
-      "away": "BAL",
-      "kickoffISO": "2026-10-12T00:20Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 0,
-      "awayScore": 0,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "ATL",
-        "Roughriders": "ATL",
-        "Maniacs": "BAL",
-        "Critters": "ATL",
-        "Chickens": "ATL",
-        "Ferraris": "ATL",
-        "Llamas": "ATL",
-        "Giraffes": "BAL"
-      },
-      "picksRevealed": true,
-      "clockReport": "12:23 - 1st",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

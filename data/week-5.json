@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 17,
-      "awayScore": 9,
+      "awayScore": 15,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "7:45 - 3rd",
+      "clockReport": "6:53 - 3rd",
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

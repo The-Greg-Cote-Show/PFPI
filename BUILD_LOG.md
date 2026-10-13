@@ -9686,3 +9686,26 @@ sent that email by hand (the .eml evidence says it came through the League
 Email tool as commissioner, but who clicked Send isn't logged). Yeti likes
 the duplicate-send guard and wants it kept regardless; may adjust other
 parts after talking to Greg.
+
+## 2026-10-13 — Mom's Maniacs second address + Tuesday resend-week fix
+
+Per Yeti: Mom's Maniacs now gets every email at **both**
+`lawyermom59@aol.com` and `ehc@kubickidraper.com`.
+- `shared.js` FAMILY_MEMBERS: Maniacs `.email` is now an array (same
+  array path Gracelin's Giraffes already uses -- weekly picks email,
+  resend, confirmation cc all handle it).
+- `picks-worker.js` LEAGUE_ROSTER: second address added (League Email
+  tool). TRAINING_ROUTES left alone (Week 1 training only).
+
+Bug found while doing the Week 6 resend: `handleResendPicksLink` used
+`getCurrentWeek()`, but `current-week` stays on the old week until Wed
+12am ET while the Tuesday 7am send has already opened the next week. A
+Tuesday resend would have sent a **Week 5** link (KV confirmed
+`current-week`=5, `weekly-email-sent:6`=sent at 7:30am). Fix: if
+`weekly-email-sent:<week+1>` exists, resend that week.
+
+**Status: committed, NOT deployed** -- `wrangler deploy` was blocked by
+the Claude Code permission classifier; Yeti to deploy both workers
+(`wrangler deploy` + `wrangler deploy --config wrangler-scores.toml`),
+then use admin.html "Resend picks link" -> Maniacs to send Week 6 to both
+addresses. No frontend change.

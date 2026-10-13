@@ -62,7 +62,8 @@ export function fullTeamName(team) {
 export const FAMILY_MEMBERS = [
   { team: "Lobos", email: "upsetbird@aol.com", name: "Greg's Lobos" },
   { team: "Roughriders", email: "cote7714@gmail.com", name: "Dick's Roughriders" },
-  { team: "Maniacs", email: "lawyermom59@aol.com", name: "Mom's Maniacs" },
+  // Second address added 2026-10-13, per Yeti (Mom asked for both).
+  { team: "Maniacs", email: ["lawyermom59@aol.com", "ehc@kubickidraper.com"], name: "Mom's Maniacs" },
   { team: "Critters", email: "ccote215@gmail.com", name: "Chris' Critters" },
   { team: "Chickens", email: "mcote0363@gmail.com", name: "Mike's Chickens" },
   { team: "Ferraris", email: "christineiferrara@gmail.com", name: "Christie's Ferraris" },

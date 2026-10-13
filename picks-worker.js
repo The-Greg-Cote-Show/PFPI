@@ -569,7 +569,7 @@ const LEAGUE_ROSTER = {
   Critters:    ["ccote215@gmail.com"],
   Ferraris:    ["christineiferrara@gmail.com"],
   Roughriders: ["cote7714@gmail.com"],
-  Maniacs:     ["lawyermom59@aol.com"],
+  Maniacs:     ["lawyermom59@aol.com", "ehc@kubickidraper.com"], // 2nd added 2026-10-13
   Giraffes:    ["ccote215@gmail.com", "christineiferrara@gmail.com"],
   Lobos:       ["upsetbird@aol.com"],
   Chickens:    ["mcote0363@gmail.com"],
@@ -1090,7 +1090,13 @@ async function handleResendPicksLink(request, env) {
     return jsonResponse({ error: `"${team}" is not a real roster team.` }, 400, request);
   }
 
-  const week = await getCurrentWeek(env);
+  // On Tuesdays the Tuesday-7am mass send has already opened NEXT week's
+  // picks, but current-week doesn't roll over until Wednesday 12am ET --
+  // so a same-day resend would hand out last week's link (found
+  // 2026-10-13 resending Week 6 to Maniacs). If next week's picks email
+  // has already gone out, resend that one instead.
+  let week = await getCurrentWeek(env);
+  if (await env.PFPI_KV.get(`weekly-email-sent:${week + 1}`)) week += 1;
   const schedule = await getWeekSchedule(week, env);
   const deadlineSummary = formatWeekDeadlines(schedule);
   const token = await generateWeeklyToken(team, week, env);

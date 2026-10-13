@@ -7,10 +7,10 @@
       "away": "BUF",
       "kickoffISO": "2026-10-13T00:15Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 34,
-      "awayScore": 34,
-      "winner": null,
+      "awayScore": 37,
+      "winner": "BUF",
       "tie": false,
       "picks": {
         "Lobos": "LA",
@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "2:00 - OT",
+      "clockReport": null,
       "deadline": "2026-10-10T17:00:00.000Z"
     },
     {

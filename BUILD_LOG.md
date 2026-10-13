@@ -9704,8 +9704,8 @@ Tuesday resend would have sent a **Week 5** link (KV confirmed
 `current-week`=5, `weekly-email-sent:6`=sent at 7:30am). Fix: if
 `weekly-email-sent:<week+1>` exists, resend that week.
 
-**Status: committed, NOT deployed** -- `wrangler deploy` was blocked by
-the Claude Code permission classifier; Yeti to deploy both workers
-(`wrangler deploy` + `wrangler deploy --config wrangler-scores.toml`),
-then use admin.html "Resend picks link" -> Maniacs to send Week 6 to both
-addresses. No frontend change.
+**Deployed 2026-10-13 by Yeti** (Claude's own deploy was blocked by the
+permission classifier): picks-worker version b92d33a5, scores-worker
+version 021c9cd6. Week 6 resend to Maniacs is done by Yeti via admin.html
+"Resend picks link" -- result not yet confirmed back to Claude. No
+frontend change.

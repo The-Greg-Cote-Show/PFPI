@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 0,
-      "awayScore": 0,
+      "awayScore": 3,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "6:39 - 1st",
+      "clockReport": "6:31 - 1st",
       "deadline": "2026-10-15T22:15:00.000Z"
     },
     {

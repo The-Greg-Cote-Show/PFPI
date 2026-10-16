@@ -7,10 +7,10 @@
       "away": "SEA",
       "kickoffISO": "2026-10-16T00:15Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 17,
       "awayScore": 14,
-      "winner": null,
+      "winner": "DEN",
       "tie": false,
       "picks": {
         "Lobos": "SEA",
@@ -23,7 +23,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "4:53 - OT",
+      "clockReport": null,
       "deadline": "2026-10-15T22:15:00.000Z"
     },
     {

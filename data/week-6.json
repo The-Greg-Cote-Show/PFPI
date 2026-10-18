@@ -23,7 +23,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "0:47 - 2nd",
+      "clockReport": "0:32 - 2nd",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -148,7 +148,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "2:35 - 2nd",
+      "clockReport": "2:07 - 2nd",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -159,7 +159,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 13,
-      "awayScore": 0,
+      "awayScore": 3,
       "winner": null,
       "tie": false,
       "picks": {
@@ -173,7 +173,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "0:03 - 2nd",
+      "clockReport": "Halftime",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {

@@ -98,7 +98,7 @@
         "Giraffes": "NE"
       },
       "picksRevealed": true,
-      "clockReport": "6:52 - 3rd",
+      "clockReport": "5:31 - 3rd",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "7:35 - 3rd",
+      "clockReport": "6:55 - 3rd",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -134,7 +134,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 7,
-      "awayScore": 10,
+      "awayScore": 13,
       "winner": null,
       "tie": false,
       "picks": {

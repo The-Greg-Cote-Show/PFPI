@@ -32,10 +32,10 @@
       "away": "NYJ",
       "kickoffISO": "2026-10-18T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 26,
       "awayScore": 19,
-      "winner": null,
+      "winner": "NE",
       "tie": false,
       "picks": {
         "Lobos": "NE",
@@ -48,7 +48,7 @@
         "Giraffes": "NE"
       },
       "picksRevealed": true,
-      "clockReport": "0:32 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -58,7 +58,7 @@
       "kickoffISO": "2026-10-18T17:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 24,
+      "homeScore": 27,
       "awayScore": 34,
       "winner": null,
       "tie": false,
@@ -73,7 +73,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "2:28 - 4th",
+      "clockReport": "2:04 - 4th",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "6:26 - 4th",
+      "clockReport": "5:52 - 4th",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {

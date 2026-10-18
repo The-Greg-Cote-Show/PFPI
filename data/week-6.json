@@ -73,7 +73,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "0:12 - 4th",
+      "clockReport": "0:06 - 4th",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "2:00 - 4th",
+      "clockReport": "1:15 - 4th",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -134,7 +134,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 3,
-      "awayScore": 0,
+      "awayScore": 3,
       "winner": null,
       "tie": false,
       "picks": {
@@ -148,7 +148,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": "5:46 - 1st",
+      "clockReport": "5:37 - 1st",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {

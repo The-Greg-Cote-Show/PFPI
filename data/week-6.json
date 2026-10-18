@@ -7,10 +7,10 @@
       "away": "LAC",
       "kickoffISO": "2026-10-18T20:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 22,
       "awayScore": 6,
-      "winner": null,
+      "winner": "KC",
       "tie": false,
       "picks": {
         "Lobos": "KC",
@@ -23,7 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "0:56 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "1:56 - 4th",
+      "clockReport": "1:43 - 4th",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {

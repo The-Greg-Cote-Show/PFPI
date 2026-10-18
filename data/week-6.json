@@ -23,7 +23,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "3:34 - 4th",
+      "clockReport": "3:12 - 4th",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "NE"
       },
       "picksRevealed": true,
-      "clockReport": "0:59 - 4th",
+      "clockReport": "0:51 - 4th",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "4:16 - 4th",
+      "clockReport": "4:13 - 4th",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -207,9 +207,9 @@
       "away": "ARI",
       "kickoffISO": "2026-10-18T20:05Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -223,7 +223,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "15:00 - 1st",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {

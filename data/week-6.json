@@ -2,56 +2,6 @@
   "week": 6,
   "games": [
     {
-      "id": "2026_06_NO_NYG",
-      "home": "NYG",
-      "away": "NO",
-      "kickoffISO": "2026-10-18T17:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 27,
-      "awayScore": 34,
-      "winner": "NO",
-      "tie": false,
-      "picks": {
-        "Lobos": "NYG",
-        "Roughriders": "NYG",
-        "Maniacs": "NYG",
-        "Critters": "NO",
-        "Chickens": "NYG",
-        "Ferraris": "NYG",
-        "Llamas": "NYG",
-        "Giraffes": "NYG"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-17T17:00:00.000Z"
-    },
-    {
-      "id": "2026_06_CAR_PHI",
-      "home": "PHI",
-      "away": "CAR",
-      "kickoffISO": "2026-10-18T17:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 14,
-      "awayScore": 25,
-      "winner": "CAR",
-      "tie": false,
-      "picks": {
-        "Lobos": "PHI",
-        "Roughriders": "PHI",
-        "Maniacs": "PHI",
-        "Critters": "PHI",
-        "Chickens": "CAR",
-        "Ferraris": "PHI",
-        "Llamas": "PHI",
-        "Giraffes": "CAR"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-17T17:00:00.000Z"
-    },
-    {
       "id": "2026_06_PIT_TB",
       "home": "TB",
       "away": "PIT",
@@ -73,7 +23,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "1:20 - OT",
+      "clockReport": "1:16 - OT",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -148,7 +98,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "6:18 - 1st",
+      "clockReport": "5:59 - 1st",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -271,6 +221,56 @@
         "Ferraris": "NE",
         "Llamas": "NE",
         "Giraffes": "NE"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-17T17:00:00.000Z"
+    },
+    {
+      "id": "2026_06_NO_NYG",
+      "home": "NYG",
+      "away": "NO",
+      "kickoffISO": "2026-10-18T17:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 27,
+      "awayScore": 34,
+      "winner": "NO",
+      "tie": false,
+      "picks": {
+        "Lobos": "NYG",
+        "Roughriders": "NYG",
+        "Maniacs": "NYG",
+        "Critters": "NO",
+        "Chickens": "NYG",
+        "Ferraris": "NYG",
+        "Llamas": "NYG",
+        "Giraffes": "NYG"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-17T17:00:00.000Z"
+    },
+    {
+      "id": "2026_06_CAR_PHI",
+      "home": "PHI",
+      "away": "CAR",
+      "kickoffISO": "2026-10-18T17:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 14,
+      "awayScore": 25,
+      "winner": "CAR",
+      "tie": false,
+      "picks": {
+        "Lobos": "PHI",
+        "Roughriders": "PHI",
+        "Maniacs": "PHI",
+        "Critters": "PHI",
+        "Chickens": "CAR",
+        "Ferraris": "PHI",
+        "Llamas": "PHI",
+        "Giraffes": "CAR"
       },
       "picksRevealed": true,
       "clockReport": null,

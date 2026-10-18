@@ -48,7 +48,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "15:00 - 2nd",
+      "clockReport": "14:57 - 2nd",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "IND"
       },
       "picksRevealed": true,
-      "clockReport": "14:01 - 2nd",
+      "clockReport": "13:15 - 2nd",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -158,7 +158,7 @@
       "kickoffISO": "2026-10-18T17:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 3,
+      "homeScore": 10,
       "awayScore": 0,
       "winner": null,
       "tie": false,
@@ -173,7 +173,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "15:00 - 2nd",
+      "clockReport": "14:52 - 2nd",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {

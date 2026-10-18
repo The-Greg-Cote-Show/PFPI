@@ -23,7 +23,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "2:54 - 4th",
+      "clockReport": "2:50 - 4th",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -57,10 +57,10 @@
       "away": "TEN",
       "kickoffISO": "2026-10-18T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 20,
       "awayScore": 26,
-      "winner": null,
+      "winner": "TEN",
       "tie": false,
       "picks": {
         "Lobos": "IND",
@@ -73,7 +73,7 @@
         "Giraffes": "IND"
       },
       "picksRevealed": true,
-      "clockReport": "0:13 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "3:29 - 4th",
+      "clockReport": "2:56 - 4th",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -148,7 +148,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "6:38 - 4th",
+      "clockReport": "6:28 - 4th",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -173,7 +173,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "1:00 - 4th",
+      "clockReport": "0:40 - 4th",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -223,7 +223,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": "13:35 - 1st",
+      "clockReport": "12:58 - 1st",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {

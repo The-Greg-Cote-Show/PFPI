@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 7,
-      "awayScore": 20,
+      "awayScore": 21,
       "winner": null,
       "tie": false,
       "picks": {
@@ -48,7 +48,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "0:21 - 2nd",
+      "clockReport": "0:13 - 2nd",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "NE"
       },
       "picksRevealed": true,
-      "clockReport": "1:23 - 2nd",
+      "clockReport": "0:50 - 2nd",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -148,7 +148,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "6:51 - 2nd",
+      "clockReport": "5:52 - 2nd",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {

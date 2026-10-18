@@ -48,7 +48,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "12:41 - 3rd",
+      "clockReport": "11:20 - 3rd",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -59,7 +59,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 13,
-      "awayScore": 0,
+      "awayScore": 3,
       "winner": null,
       "tie": false,
       "picks": {
@@ -73,7 +73,7 @@
         "Giraffes": "IND"
       },
       "picksRevealed": true,
-      "clockReport": "13:37 - 3rd",
+      "clockReport": "13:30 - 3rd",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {

@@ -7,10 +7,10 @@
       "away": "PIT",
       "kickoffISO": "2026-10-18T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 19,
       "awayScore": 26,
-      "winner": null,
+      "winner": "PIT",
       "tie": false,
       "picks": {
         "Lobos": "PIT",
@@ -23,7 +23,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "1:06 - OT",
+      "clockReport": null,
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {
@@ -83,7 +83,7 @@
       "kickoffISO": "2026-10-18T20:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 0,
+      "homeScore": 7,
       "awayScore": 3,
       "winner": null,
       "tie": false,
@@ -98,7 +98,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "4:36 - 1st",
+      "clockReport": "4:27 - 1st",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {

@@ -2,6 +2,31 @@
   "week": 6,
   "games": [
     {
+      "id": "2026_06_DAL_GB",
+      "home": "GB",
+      "away": "DAL",
+      "kickoffISO": "2026-10-19T00:20Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "DAL",
+        "Roughriders": "GB",
+        "Maniacs": "GB",
+        "Critters": "GB",
+        "Chickens": "DAL",
+        "Ferraris": "DAL",
+        "Llamas": "DAL",
+        "Giraffes": "GB"
+      },
+      "picksRevealed": true,
+      "clockReport": "12:37 - 1st",
+      "deadline": "2026-10-17T17:00:00.000Z"
+    },
+    {
       "id": "2026_06_HOU_JAX",
       "home": "JAX",
       "away": "HOU",
@@ -274,31 +299,6 @@
       },
       "picksRevealed": true,
       "clockReport": null,
-      "deadline": "2026-10-17T17:00:00.000Z"
-    },
-    {
-      "id": "2026_06_DAL_GB",
-      "home": "GB",
-      "away": "DAL",
-      "kickoffISO": "2026-10-19T00:20Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 0,
-      "awayScore": 0,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "DAL",
-        "Roughriders": "GB",
-        "Maniacs": "GB",
-        "Critters": "GB",
-        "Chickens": "DAL",
-        "Ferraris": "DAL",
-        "Llamas": "DAL",
-        "Giraffes": "GB"
-      },
-      "picksRevealed": true,
-      "clockReport": "13:44 - 1st",
       "deadline": "2026-10-17T17:00:00.000Z"
     },
     {

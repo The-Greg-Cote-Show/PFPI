@@ -9709,3 +9709,24 @@ permission classifier): picks-worker version b92d33a5, scores-worker
 version 021c9cd6. Week 6 resend to Maniacs is done by Yeti via admin.html
 "Resend picks link" -- result not yet confirmed back to Claude. No
 frontend change.
+
+## 2026-10-20 — Recap video embed: vertical box for Shorts
+
+Yeti: the weekly Commissioner's Report videos are usually Shorts, but the
+index.html video rail always drew a 16:9 landscape box. All four videos
+set so far (Weeks 1-4) turned out to be Shorts (720x1280).
+
+Fix (index.html only, no worker or data changes): `updateVideoRail()` now
+asks YouTube's oEmbed endpoint about `youtube.com/shorts/<id>`. It returns
+portrait dimensions for a real Short and landscape for a regular video, and
+it allows cross-origin requests, so the browser checks this directly and
+caches the result per ID. A portrait result adds `.is-vertical` to the
+frame: 9:16, capped at 320px wide and centered so mobile doesn't get a
+huge box. If the check fails for any reason, the box stays landscape. The
+frame now sizes with `aspect-ratio` instead of the padding-top trick, since
+the trick can't be combined with a max-width. A stale-check guards against
+switching weeks while the check is still running.
+
+Verified locally: the Week 4 Short rendered at 309x550, and a regular test
+video (dQw4w9WgXcQ) rendered at 309x174 in the same rail. Not checked at
+real mobile width; the browser window wouldn't resize.

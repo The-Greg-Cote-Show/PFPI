@@ -48,7 +48,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSy
 .video-rail.has-video{display:block;}
 .video-rail-inner{position:sticky;top:1.25rem;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:.9rem;}
 .video-rail-label{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.6rem;}
-.video-rail-frame{position:relative;width:100%;padding-top:56.25%;border-radius:8px;overflow:hidden;background:#000;}
+.video-rail-frame{position:relative;width:100%;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:#000;}
+/* YouTube Shorts are 9:16 -- capped narrower so a vertical video doesn't
+   turn into a full-width, 1000px-tall box on the mobile layout. */
+.video-rail-frame.is-vertical{aspect-ratio:9/16;max-width:320px;margin:0 auto;}
 .video-rail-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}
 @media(max-width:1180px){
   .video-rail{flex-basis:100%;max-width:600px;margin:0 auto;order:99;padding-top:0;}
@@ -515,15 +518,40 @@ async function loadRealBrief(week) {
 // rail via .has-video rather than showing an empty box. youtube-nocookie.com
 // (not youtube.com) per Google's own privacy-enhanced-mode recommendation
 // for embeds -- no functional difference for the viewer.
-function updateVideoRail(week, label) {
+//
+// Shape (Short vs. regular video) is detected live rather than stored:
+// YouTube's oEmbed endpoint, asked about the /shorts/ URL, returns portrait
+// dimensions for a real Short and landscape for anything else, and it
+// allows cross-origin requests. Any failure just falls back to landscape.
+const videoVerticalCache = {};
+async function isVerticalVideo(videoId) {
+  if (videoId in videoVerticalCache) return videoVerticalCache[videoId];
+  let vertical = false;
+  try {
+    const res = await fetch(`https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/shorts/${videoId}`)}`);
+    if (res.ok) {
+      const data = await res.json();
+      vertical = data.height > data.width;
+    }
+  } catch (e) {}
+  videoVerticalCache[videoId] = vertical;
+  return vertical;
+}
+
+async function updateVideoRail(week, label) {
   const rail = document.getElementById("videoRail");
   const frame = document.getElementById("videoRailFrame");
   const videoId = REAL.videos && REAL.videos[String(week)];
+  rail.dataset.week = String(week);
   if (!videoId) {
     rail.classList.remove("has-video");
     frame.innerHTML = "";
     return;
   }
+  const vertical = await isVerticalVideo(videoId);
+  // Week may have been switched again while oEmbed was in flight.
+  if (rail.dataset.week !== String(week)) return;
+  frame.classList.toggle("is-vertical", vertical);
   document.getElementById("videoRailLabel").textContent = `${label} Recap`;
   frame.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}" title="${label} Recap" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
   rail.classList.add("has-video");

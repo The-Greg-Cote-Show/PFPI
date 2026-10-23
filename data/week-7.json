@@ -7,9 +7,9 @@
       "away": "NE",
       "kickoffISO": "2026-10-23T00:15Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 20,
+      "awayScore": 14,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "NE"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "12:32 - 3rd",
       "deadline": "2026-10-22T22:15:00.000Z"
     },
     {

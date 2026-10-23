@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 27,
-      "awayScore": 14,
+      "awayScore": 21,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "NE"
       },
       "picksRevealed": true,
-      "clockReport": "4:11 - 3rd",
+      "clockReport": "3:46 - 3rd",
       "deadline": "2026-10-22T22:15:00.000Z"
     },
     {

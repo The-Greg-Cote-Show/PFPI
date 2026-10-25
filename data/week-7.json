@@ -7,10 +7,10 @@
       "away": "LA",
       "kickoffISO": "2026-10-25T20:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 21,
       "awayScore": 35,
-      "winner": null,
+      "winner": "LA",
       "tie": false,
       "picks": {
         "Lobos": "LA",
@@ -23,7 +23,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "1:19 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

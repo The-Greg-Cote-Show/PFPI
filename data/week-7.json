@@ -23,7 +23,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "7:33 - 4th",
+      "clockReport": "6:59 - 4th",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "MIN"
       },
       "picksRevealed": true,
-      "clockReport": "1:56 - 4th",
+      "clockReport": "1:49 - 4th",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "4:21 - 4th",
+      "clockReport": "4:17 - 4th",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -159,7 +159,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 14,
-      "awayScore": 20,
+      "awayScore": 21,
       "winner": null,
       "tie": false,
       "picks": {

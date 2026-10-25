@@ -2,31 +2,6 @@
   "week": 7,
   "games": [
     {
-      "id": "2026_07_NE_CHI",
-      "home": "CHI",
-      "away": "NE",
-      "kickoffISO": "2026-10-23T00:15Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 30,
-      "awayScore": 24,
-      "winner": "CHI",
-      "tie": false,
-      "picks": {
-        "Lobos": "CHI",
-        "Roughriders": "NE",
-        "Maniacs": "CHI",
-        "Critters": "CHI",
-        "Chickens": "NE",
-        "Ferraris": "NE",
-        "Llamas": "CHI",
-        "Giraffes": "NE"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-22T22:15:00.000Z"
-    },
-    {
       "id": "2026_07_PIT_NO",
       "home": "NO",
       "away": "PIT",
@@ -325,6 +300,31 @@
       "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-24T17:00:00.000Z"
+    },
+    {
+      "id": "2026_07_NE_CHI",
+      "home": "CHI",
+      "away": "NE",
+      "kickoffISO": "2026-10-23T00:15Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 30,
+      "awayScore": 24,
+      "winner": "CHI",
+      "tie": false,
+      "picks": {
+        "Lobos": "CHI",
+        "Roughriders": "NE",
+        "Maniacs": "CHI",
+        "Critters": "CHI",
+        "Chickens": "NE",
+        "Ferraris": "NE",
+        "Llamas": "CHI",
+        "Giraffes": "NE"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-22T22:15:00.000Z"
     },
     {
       "id": "2026_07_DAL_PHI",

@@ -32,10 +32,10 @@
       "away": "GB",
       "kickoffISO": "2026-10-25T20:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 17,
+      "status": "final",
+      "homeScore": 20,
       "awayScore": 17,
-      "winner": null,
+      "winner": "DET",
       "tie": false,
       "picks": {
         "Lobos": "DET",
@@ -48,7 +48,7 @@
         "Giraffes": "GB"
       },
       "picksRevealed": true,
-      "clockReport": "0:01 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

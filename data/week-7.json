@@ -2,31 +2,6 @@
   "week": 7,
   "games": [
     {
-      "id": "2026_07_IND_MIN",
-      "home": "MIN",
-      "away": "IND",
-      "kickoffISO": "2026-10-25T17:00Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 0,
-      "awayScore": 7,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "MIN",
-        "Roughriders": "MIN",
-        "Maniacs": "MIN",
-        "Critters": "MIN",
-        "Chickens": "MIN",
-        "Ferraris": "MIN",
-        "Llamas": "MIN",
-        "Giraffes": "MIN"
-      },
-      "picksRevealed": true,
-      "clockReport": "9:13 - 1st",
-      "deadline": "2026-10-24T17:00:00.000Z"
-    },
-    {
       "id": "2026_07_PIT_NO",
       "home": "NO",
       "away": "PIT",
@@ -98,7 +73,32 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "11:45 - 1st",
+      "clockReport": "11:09 - 1st",
+      "deadline": "2026-10-24T17:00:00.000Z"
+    },
+    {
+      "id": "2026_07_IND_MIN",
+      "home": "MIN",
+      "away": "IND",
+      "kickoffISO": "2026-10-25T17:00Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 7,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "MIN",
+        "Roughriders": "MIN",
+        "Maniacs": "MIN",
+        "Critters": "MIN",
+        "Chickens": "MIN",
+        "Ferraris": "MIN",
+        "Llamas": "MIN",
+        "Giraffes": "MIN"
+      },
+      "picksRevealed": true,
+      "clockReport": "9:13 - 1st",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "10:53 - 1st",
+      "clockReport": "9:20 - 1st",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -173,7 +173,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "12:06 - 1st",
+      "clockReport": "11:17 - 1st",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

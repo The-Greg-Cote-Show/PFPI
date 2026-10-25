@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 13,
-      "awayScore": 27,
+      "awayScore": 30,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": "8:48 - 4th",
+      "clockReport": "8:39 - 4th",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

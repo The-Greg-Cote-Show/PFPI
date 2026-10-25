@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 6,
-      "awayScore": 13,
+      "awayScore": 20,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": "10:36 - 3rd",
+      "clockReport": "10:26 - 3rd",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -34,7 +34,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 10,
-      "awayScore": 7,
+      "awayScore": 14,
       "winner": null,
       "tie": false,
       "picks": {
@@ -48,7 +48,7 @@
         "Giraffes": "GB"
       },
       "picksRevealed": true,
-      "clockReport": "12:26 - 3rd",
+      "clockReport": "12:14 - 3rd",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

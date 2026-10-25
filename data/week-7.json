@@ -73,7 +73,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "End of 4th",
+      "clockReport": "10:00 - OT",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -209,7 +209,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 0,
-      "awayScore": 0,
+      "awayScore": 3,
       "winner": null,
       "tie": false,
       "picks": {
@@ -223,7 +223,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": "11:10 - 1st",
+      "clockReport": "11:00 - 1st",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

@@ -2,31 +2,6 @@
   "week": 7,
   "games": [
     {
-      "id": "2026_07_GB_DET",
-      "home": "DET",
-      "away": "GB",
-      "kickoffISO": "2026-10-25T20:25Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 20,
-      "awayScore": 17,
-      "winner": "DET",
-      "tie": false,
-      "picks": {
-        "Lobos": "DET",
-        "Roughriders": "DET",
-        "Maniacs": "DET",
-        "Critters": "DET",
-        "Chickens": "DET",
-        "Ferraris": "DET",
-        "Llamas": "GB",
-        "Giraffes": "GB"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-24T17:00:00.000Z"
-    },
-    {
       "id": "2026_07_LA_LV",
       "home": "LV",
       "away": "LA",
@@ -271,6 +246,31 @@
         "Ferraris": "DEN",
         "Llamas": "ARI",
         "Giraffes": "DEN"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-24T17:00:00.000Z"
+    },
+    {
+      "id": "2026_07_GB_DET",
+      "home": "DET",
+      "away": "GB",
+      "kickoffISO": "2026-10-25T20:25Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 20,
+      "awayScore": 17,
+      "winner": "DET",
+      "tie": false,
+      "picks": {
+        "Lobos": "DET",
+        "Roughriders": "DET",
+        "Maniacs": "DET",
+        "Critters": "DET",
+        "Chickens": "DET",
+        "Ferraris": "DET",
+        "Llamas": "GB",
+        "Giraffes": "GB"
       },
       "picksRevealed": true,
       "clockReport": null,

@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 10,
-      "awayScore": 10,
+      "awayScore": 13,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "0:43 - 2nd",
+      "clockReport": "Halftime",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

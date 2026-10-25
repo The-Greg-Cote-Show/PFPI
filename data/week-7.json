@@ -48,7 +48,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": "8:38 - 1st",
+      "clockReport": "7:47 - 1st",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -232,9 +232,9 @@
       "away": "GB",
       "kickoffISO": "2026-10-25T20:25Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -248,7 +248,7 @@
         "Giraffes": "GB"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "15:00 - 1st",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -257,9 +257,9 @@
       "away": "LA",
       "kickoffISO": "2026-10-25T20:25Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -273,7 +273,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "15:00 - 1st",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

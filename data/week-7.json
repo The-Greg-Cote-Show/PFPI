@@ -23,7 +23,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": "4:32 - 1st",
+      "clockReport": "4:31 - 1st",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -33,7 +33,7 @@
       "kickoffISO": "2026-10-25T20:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 0,
+      "homeScore": 6,
       "awayScore": 0,
       "winner": null,
       "tie": false,
@@ -48,7 +48,7 @@
         "Giraffes": "GB"
       },
       "picksRevealed": true,
-      "clockReport": "7:51 - 1st",
+      "clockReport": "7:00 - 1st",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

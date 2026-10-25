@@ -2,31 +2,6 @@
   "week": 7,
   "games": [
     {
-      "id": "2026_07_LA_LV",
-      "home": "LV",
-      "away": "LA",
-      "kickoffISO": "2026-10-25T20:25Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 21,
-      "awayScore": 35,
-      "winner": "LA",
-      "tie": false,
-      "picks": {
-        "Lobos": "LA",
-        "Roughriders": "LV",
-        "Maniacs": "LA",
-        "Critters": "LA",
-        "Chickens": "LA",
-        "Ferraris": "LV",
-        "Llamas": "LA",
-        "Giraffes": "LV"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-24T17:00:00.000Z"
-    },
-    {
       "id": "2026_07_PIT_NO",
       "home": "NO",
       "away": "PIT",
@@ -271,6 +246,31 @@
         "Ferraris": "DET",
         "Llamas": "GB",
         "Giraffes": "GB"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-24T17:00:00.000Z"
+    },
+    {
+      "id": "2026_07_LA_LV",
+      "home": "LV",
+      "away": "LA",
+      "kickoffISO": "2026-10-25T20:25Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 21,
+      "awayScore": 35,
+      "winner": "LA",
+      "tie": false,
+      "picks": {
+        "Lobos": "LA",
+        "Roughriders": "LV",
+        "Maniacs": "LA",
+        "Critters": "LA",
+        "Chickens": "LA",
+        "Ferraris": "LV",
+        "Llamas": "LA",
+        "Giraffes": "LV"
       },
       "picksRevealed": true,
       "clockReport": null,

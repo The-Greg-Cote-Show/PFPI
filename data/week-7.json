@@ -23,7 +23,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "2:29 - 4th",
+      "clockReport": "2:25 - 4th",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -48,32 +48,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "2:00 - 4th",
-      "deadline": "2026-10-24T17:00:00.000Z"
-    },
-    {
-      "id": "2026_07_IND_MIN",
-      "home": "MIN",
-      "away": "IND",
-      "kickoffISO": "2026-10-25T17:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 16,
-      "awayScore": 10,
-      "winner": "MIN",
-      "tie": false,
-      "picks": {
-        "Lobos": "MIN",
-        "Roughriders": "MIN",
-        "Maniacs": "MIN",
-        "Critters": "MIN",
-        "Chickens": "MIN",
-        "Ferraris": "MIN",
-        "Llamas": "MIN",
-        "Giraffes": "MIN"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "1:16 - 4th",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -82,10 +57,10 @@
       "away": "MIA",
       "kickoffISO": "2026-10-25T17:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 25,
       "awayScore": 28,
-      "winner": null,
+      "winner": "MIA",
       "tie": false,
       "picks": {
         "Lobos": "MIA",
@@ -98,7 +73,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "1:13 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -173,7 +148,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "3:07 - 4th",
+      "clockReport": "2:00 - 4th",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -196,6 +171,31 @@
         "Ferraris": "PIT",
         "Llamas": "PIT",
         "Giraffes": "PIT"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-24T17:00:00.000Z"
+    },
+    {
+      "id": "2026_07_IND_MIN",
+      "home": "MIN",
+      "away": "IND",
+      "kickoffISO": "2026-10-25T17:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 16,
+      "awayScore": 10,
+      "winner": "MIN",
+      "tie": false,
+      "picks": {
+        "Lobos": "MIN",
+        "Roughriders": "MIN",
+        "Maniacs": "MIN",
+        "Critters": "MIN",
+        "Chickens": "MIN",
+        "Ferraris": "MIN",
+        "Llamas": "MIN",
+        "Giraffes": "MIN"
       },
       "picksRevealed": true,
       "clockReport": null,

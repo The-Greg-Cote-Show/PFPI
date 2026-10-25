@@ -8,7 +8,7 @@
       "kickoffISO": "2026-10-25T17:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 9,
+      "homeScore": 12,
       "awayScore": 14,
       "winner": null,
       "tie": false,
@@ -48,7 +48,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "2:11 - 2nd",
+      "clockReport": "2:00 - 2nd",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "CAR"
       },
       "picksRevealed": true,
-      "clockReport": "0:22 - 2nd",
+      "clockReport": "0:16 - 2nd",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {
@@ -148,7 +148,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "0:46 - 2nd",
+      "clockReport": "0:41 - 2nd",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

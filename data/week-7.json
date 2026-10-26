@@ -2,6 +2,31 @@
   "week": 7,
   "games": [
     {
+      "id": "2026_07_KC_SEA",
+      "home": "SEA",
+      "away": "KC",
+      "kickoffISO": "2026-10-26T00:20Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 20,
+      "awayScore": 3,
+      "winner": "SEA",
+      "tie": false,
+      "picks": {
+        "Lobos": "KC",
+        "Roughriders": "SEA",
+        "Maniacs": "SEA",
+        "Critters": "KC",
+        "Chickens": "SEA",
+        "Ferraris": "SEA",
+        "Llamas": "KC",
+        "Giraffes": "KC"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-24T17:00:00.000Z"
+    },
+    {
       "id": "2026_07_PIT_NO",
       "home": "NO",
       "away": "PIT",
@@ -271,31 +296,6 @@
         "Ferraris": "LV",
         "Llamas": "LA",
         "Giraffes": "LV"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-24T17:00:00.000Z"
-    },
-    {
-      "id": "2026_07_KC_SEA",
-      "home": "SEA",
-      "away": "KC",
-      "kickoffISO": "2026-10-26T00:20Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 20,
-      "awayScore": 3,
-      "winner": "SEA",
-      "tie": false,
-      "picks": {
-        "Lobos": "KC",
-        "Roughriders": "SEA",
-        "Maniacs": "SEA",
-        "Critters": "KC",
-        "Chickens": "SEA",
-        "Ferraris": "SEA",
-        "Llamas": "KC",
-        "Giraffes": "KC"
       },
       "picksRevealed": true,
       "clockReport": null,

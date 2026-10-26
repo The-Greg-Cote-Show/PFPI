@@ -7,10 +7,10 @@
       "away": "KC",
       "kickoffISO": "2026-10-26T00:20Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 20,
       "awayScore": 3,
-      "winner": null,
+      "winner": "SEA",
       "tie": false,
       "picks": {
         "Lobos": "KC",
@@ -23,7 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "0:38 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

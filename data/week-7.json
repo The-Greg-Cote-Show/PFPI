@@ -7,9 +7,9 @@
       "away": "KC",
       "kickoffISO": "2026-10-26T00:20Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 13,
-      "awayScore": 3,
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "11:22 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

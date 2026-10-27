@@ -7,9 +7,9 @@
       "away": "DAL",
       "kickoffISO": "2026-10-27T00:15Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 21,
+      "awayScore": 38,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "0:31 - 4th",
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

@@ -7,10 +7,10 @@
       "away": "DAL",
       "kickoffISO": "2026-10-27T00:15Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 21,
       "awayScore": 38,
-      "winner": null,
+      "winner": "DAL",
       "tie": false,
       "picks": {
         "Lobos": "DAL",
@@ -23,7 +23,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "0:31 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-24T17:00:00.000Z"
     },
     {

@@ -2,31 +2,6 @@
   "week": 8,
   "games": [
     {
-      "id": "2026_08_BAL_BUF",
-      "home": "BUF",
-      "away": "BAL",
-      "kickoffISO": "2026-11-01T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 36,
-      "awayScore": 10,
-      "winner": "BUF",
-      "tie": false,
-      "picks": {
-        "Lobos": "BUF",
-        "Roughriders": "BUF",
-        "Maniacs": "BUF",
-        "Critters": "BUF",
-        "Chickens": "BUF",
-        "Ferraris": "BUF",
-        "Llamas": "BUF",
-        "Giraffes": "BUF"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-31T17:00:00.000Z"
-    },
-    {
       "id": "2026_08_TEN_CIN",
       "home": "CIN",
       "away": "TEN",
@@ -48,7 +23,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "9:13 - OT",
+      "clockReport": "8:32 - OT",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -73,7 +48,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "7:56 - OT",
+      "clockReport": "7:13 - OT",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -99,6 +74,81 @@
       },
       "picksRevealed": true,
       "clockReport": "5:42 - 1st",
+      "deadline": "2026-10-31T17:00:00.000Z"
+    },
+    {
+      "id": "2026_08_KC_DEN",
+      "home": "DEN",
+      "away": "KC",
+      "kickoffISO": "2026-11-01T21:25Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "KC",
+        "Roughriders": "KC",
+        "Maniacs": "KC",
+        "Critters": "KC",
+        "Chickens": "KC",
+        "Ferraris": "DEN",
+        "Llamas": "KC",
+        "Giraffes": "KC"
+      },
+      "picksRevealed": true,
+      "clockReport": "12:21 - 1st",
+      "deadline": "2026-10-31T17:00:00.000Z"
+    },
+    {
+      "id": "2026_08_NE_MIA",
+      "home": "MIA",
+      "away": "NE",
+      "kickoffISO": "2026-11-01T21:25Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "NE",
+        "Roughriders": "NE",
+        "Maniacs": "NE",
+        "Critters": "NE",
+        "Chickens": "NE",
+        "Ferraris": "NE",
+        "Llamas": "NE",
+        "Giraffes": "MIA"
+      },
+      "picksRevealed": true,
+      "clockReport": "10:13 - 1st",
+      "deadline": "2026-10-31T17:00:00.000Z"
+    },
+    {
+      "id": "2026_08_BAL_BUF",
+      "home": "BUF",
+      "away": "BAL",
+      "kickoffISO": "2026-11-01T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 36,
+      "awayScore": 10,
+      "winner": "BUF",
+      "tie": false,
+      "picks": {
+        "Lobos": "BUF",
+        "Roughriders": "BUF",
+        "Maniacs": "BUF",
+        "Critters": "BUF",
+        "Chickens": "BUF",
+        "Ferraris": "BUF",
+        "Llamas": "BUF",
+        "Giraffes": "BUF"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -224,56 +274,6 @@
       },
       "picksRevealed": true,
       "clockReport": null,
-      "deadline": "2026-10-31T17:00:00.000Z"
-    },
-    {
-      "id": "2026_08_KC_DEN",
-      "home": "DEN",
-      "away": "KC",
-      "kickoffISO": "2026-11-01T21:25Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 0,
-      "awayScore": 0,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "KC",
-        "Roughriders": "KC",
-        "Maniacs": "KC",
-        "Critters": "KC",
-        "Chickens": "KC",
-        "Ferraris": "DEN",
-        "Llamas": "KC",
-        "Giraffes": "KC"
-      },
-      "picksRevealed": true,
-      "clockReport": "12:21 - 1st",
-      "deadline": "2026-10-31T17:00:00.000Z"
-    },
-    {
-      "id": "2026_08_NE_MIA",
-      "home": "MIA",
-      "away": "NE",
-      "kickoffISO": "2026-11-01T21:25Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 0,
-      "awayScore": 0,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "NE",
-        "Roughriders": "NE",
-        "Maniacs": "NE",
-        "Critters": "NE",
-        "Chickens": "NE",
-        "Ferraris": "NE",
-        "Llamas": "NE",
-        "Giraffes": "MIA"
-      },
-      "picksRevealed": true,
-      "clockReport": "11:26 - 1st",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

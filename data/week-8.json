@@ -7,10 +7,10 @@
       "away": "TEN",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 43,
       "awayScore": 36,
-      "winner": null,
+      "winner": "CIN",
       "tie": false,
       "picks": {
         "Lobos": "CIN",
@@ -23,7 +23,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "5:37 - OT",
+      "clockReport": null,
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": "0:04 - 1st",
+      "clockReport": "15:00 - 2nd",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "8:03 - 1st",
+      "clockReport": "7:17 - 1st",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

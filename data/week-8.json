@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "7:29 - 4th",
+      "clockReport": "7:30 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -34,7 +34,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 29,
-      "awayScore": 34,
+      "awayScore": 36,
       "winner": null,
       "tie": false,
       "picks": {
@@ -73,7 +73,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "2:07 - 4th",
+      "clockReport": "2:02 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -82,10 +82,10 @@
       "away": "MIN",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 19,
       "awayScore": 15,
-      "winner": null,
+      "winner": "DET",
       "tie": false,
       "picks": {
         "Lobos": "DET",
@@ -98,7 +98,7 @@
         "Giraffes": "MIN"
       },
       "picksRevealed": true,
-      "clockReport": "0:33 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -132,10 +132,10 @@
       "away": "CLE",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 27,
       "awayScore": 6,
-      "winner": null,
+      "winner": "PIT",
       "tie": false,
       "picks": {
         "Lobos": "PIT",
@@ -148,7 +148,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "0:22 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -223,7 +223,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": "15:00 - 1st",
+      "clockReport": "14:48 - 1st",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

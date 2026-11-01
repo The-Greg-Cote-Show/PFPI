@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "3:13 - 4th",
+      "clockReport": "2:33 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -33,7 +33,7 @@
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 29,
+      "homeScore": 36,
       "awayScore": 36,
       "winner": null,
       "tie": false,
@@ -48,7 +48,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "2:00 - 4th",
+      "clockReport": "1:17 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -73,7 +73,32 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "0:36 - 4th",
+      "clockReport": "0:12 - 4th",
+      "deadline": "2026-10-31T17:00:00.000Z"
+    },
+    {
+      "id": "2026_08_LAC_LA",
+      "home": "LA",
+      "away": "LAC",
+      "kickoffISO": "2026-11-01T21:05Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "LA",
+        "Roughriders": "LA",
+        "Maniacs": "LA",
+        "Critters": "LA",
+        "Chickens": "LA",
+        "Ferraris": "LA",
+        "Llamas": "LA",
+        "Giraffes": "LA"
+      },
+      "picksRevealed": true,
+      "clockReport": "10:42 - 1st",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -152,31 +177,6 @@
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
-      "id": "2026_08_IND_JAX",
-      "home": "JAX",
-      "away": "IND",
-      "kickoffISO": "2026-11-01T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 42,
-      "awayScore": 7,
-      "winner": "JAX",
-      "tie": false,
-      "picks": {
-        "Lobos": "JAX",
-        "Roughriders": "JAX",
-        "Maniacs": "JAX",
-        "Critters": "JAX",
-        "Chickens": "JAX",
-        "Ferraris": "JAX",
-        "Llamas": "JAX",
-        "Giraffes": "JAX"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-31T17:00:00.000Z"
-    },
-    {
       "id": "2026_08_ATL_TB",
       "home": "TB",
       "away": "ATL",
@@ -202,28 +202,28 @@
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
-      "id": "2026_08_LAC_LA",
-      "home": "LA",
-      "away": "LAC",
-      "kickoffISO": "2026-11-01T21:05Z",
+      "id": "2026_08_IND_JAX",
+      "home": "JAX",
+      "away": "IND",
+      "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 0,
-      "awayScore": 0,
-      "winner": null,
+      "status": "final",
+      "homeScore": 42,
+      "awayScore": 7,
+      "winner": "JAX",
       "tie": false,
       "picks": {
-        "Lobos": "LA",
-        "Roughriders": "LA",
-        "Maniacs": "LA",
-        "Critters": "LA",
-        "Chickens": "LA",
-        "Ferraris": "LA",
-        "Llamas": "LA",
-        "Giraffes": "LA"
+        "Lobos": "JAX",
+        "Roughriders": "JAX",
+        "Maniacs": "JAX",
+        "Critters": "JAX",
+        "Chickens": "JAX",
+        "Ferraris": "JAX",
+        "Llamas": "JAX",
+        "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "10:42 - 1st",
+      "clockReport": null,
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "2:00 - 2nd",
+      "clockReport": "1:34 - 2nd",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -133,7 +133,7 @@
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 13,
+      "homeScore": 20,
       "awayScore": 6,
       "winner": null,
       "tie": false,
@@ -148,7 +148,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "0:06 - 2nd",
+      "clockReport": "0:01 - 2nd",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -183,7 +183,7 @@
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 27,
+      "homeScore": 28,
       "awayScore": 0,
       "winner": null,
       "tie": false,

@@ -7,10 +7,10 @@
       "away": "BAL",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 36,
       "awayScore": 10,
-      "winner": null,
+      "winner": "BUF",
       "tie": false,
       "picks": {
         "Lobos": "BUF",
@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "0:36 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "0:32 - 4th",
+      "clockReport": "0:27 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": "9:21 - 1st",
+      "clockReport": "8:47 - 1st",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

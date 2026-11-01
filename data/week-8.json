@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "8:53 - 4th",
+      "clockReport": "7:29 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -34,7 +34,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 29,
-      "awayScore": 28,
+      "awayScore": 34,
       "winner": null,
       "tie": false,
       "picks": {
@@ -48,7 +48,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "4:29 - 4th",
+      "clockReport": "3:46 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "2:11 - 4th",
+      "clockReport": "2:07 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "MIN"
       },
       "picksRevealed": true,
-      "clockReport": "1:48 - 4th",
+      "clockReport": "0:33 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -148,7 +148,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "0:28 - 4th",
+      "clockReport": "0:22 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -157,10 +157,10 @@
       "away": "IND",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 42,
       "awayScore": 7,
-      "winner": null,
+      "winner": "JAX",
       "tie": false,
       "picks": {
         "Lobos": "JAX",
@@ -173,7 +173,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "1:17 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

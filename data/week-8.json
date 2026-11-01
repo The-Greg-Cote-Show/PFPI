@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "9:31 - 4th",
+      "clockReport": "8:53 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "5:05 - 4th",
+      "clockReport": "4:29 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "MIN"
       },
       "picksRevealed": true,
-      "clockReport": "1:52 - 4th",
+      "clockReport": "1:48 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -107,10 +107,10 @@
       "away": "LV",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 33,
       "awayScore": 38,
-      "winner": null,
+      "winner": "LV",
       "tie": false,
       "picks": {
         "Lobos": "LV",
@@ -123,7 +123,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "0:06 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -148,7 +148,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "1:44 - 4th",
+      "clockReport": "0:28 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -173,7 +173,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "2:00 - 4th",
+      "clockReport": "1:17 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -207,9 +207,9 @@
       "away": "LAC",
       "kickoffISO": "2026-11-01T21:05Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -223,7 +223,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "15:00 - 1st",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

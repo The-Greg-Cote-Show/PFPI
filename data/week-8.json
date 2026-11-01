@@ -23,7 +23,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": "2:00 - 4th",
+      "clockReport": "1:54 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "0:29 - 3rd",
+      "clockReport": "15:00 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -59,7 +59,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 13,
-      "awayScore": 23,
+      "awayScore": 24,
       "winner": null,
       "tie": false,
       "picks": {

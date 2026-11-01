@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 3,
-      "awayScore": 3,
+      "awayScore": 6,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": "10:51 - 2nd",
+      "clockReport": "10:06 - 2nd",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "MIA"
       },
       "picksRevealed": true,
-      "clockReport": "3:39 - 1st",
+      "clockReport": "2:13 - 1st",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

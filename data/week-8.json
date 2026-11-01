@@ -48,7 +48,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "0:42 - 3rd",
+      "clockReport": "End of 3rd",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -59,7 +59,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 24,
-      "awayScore": 16,
+      "awayScore": 17,
       "winner": null,
       "tie": false,
       "picks": {
@@ -98,7 +98,7 @@
         "Giraffes": "MIN"
       },
       "picksRevealed": true,
-      "clockReport": "14:48 - 4th",
+      "clockReport": "14:29 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -173,7 +173,7 @@
         "Giraffes": "ATL"
       },
       "picksRevealed": true,
-      "clockReport": "6:57 - 4th",
+      "clockReport": "6:12 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

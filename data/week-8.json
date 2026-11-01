@@ -7,9 +7,9 @@
       "away": "BAL",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 16,
+      "awayScore": 7,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "12:17 - 3rd",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -32,9 +32,9 @@
       "away": "TEN",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 21,
+      "awayScore": 21,
       "winner": null,
       "tie": false,
       "picks": {
@@ -48,7 +48,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "7:47 - 3rd",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -57,9 +57,9 @@
       "away": "ARI",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 17,
+      "awayScore": 3,
       "winner": null,
       "tie": false,
       "picks": {
@@ -73,7 +73,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "1:50 - 3rd",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -82,9 +82,9 @@
       "away": "MIN",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 6,
+      "awayScore": 7,
       "winner": null,
       "tie": false,
       "picks": {
@@ -98,7 +98,7 @@
         "Giraffes": "MIN"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "4:40 - 3rd",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -107,9 +107,9 @@
       "away": "LV",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 30,
+      "awayScore": 28,
       "winner": null,
       "tie": false,
       "picks": {
@@ -123,7 +123,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "2:21 - 3rd",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -132,9 +132,9 @@
       "away": "CLE",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 27,
+      "awayScore": 6,
       "winner": null,
       "tie": false,
       "picks": {
@@ -148,7 +148,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "8:08 - 3rd",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -157,9 +157,9 @@
       "away": "ATL",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 16,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -173,7 +173,7 @@
         "Giraffes": "ATL"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "3:04 - 3rd",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -182,9 +182,9 @@
       "away": "IND",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 35,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -198,7 +198,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "6:03 - 3rd",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

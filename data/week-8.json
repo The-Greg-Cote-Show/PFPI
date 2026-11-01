@@ -48,7 +48,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "7:08 - 4th",
+      "clockReport": "6:59 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -59,7 +59,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 27,
-      "awayScore": 17,
+      "awayScore": 24,
       "winner": null,
       "tie": false,
       "picks": {
@@ -73,7 +73,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "2:23 - 4th",
+      "clockReport": "2:11 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "LV"
       },
       "picksRevealed": true,
-      "clockReport": "0:20 - 4th",
+      "clockReport": "0:14 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -152,31 +152,6 @@
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
-      "id": "2026_08_ATL_TB",
-      "home": "TB",
-      "away": "ATL",
-      "kickoffISO": "2026-11-01T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 16,
-      "awayScore": 0,
-      "winner": "TB",
-      "tie": false,
-      "picks": {
-        "Lobos": "TB",
-        "Roughriders": "TB",
-        "Maniacs": "TB",
-        "Critters": "ATL",
-        "Chickens": "ATL",
-        "Ferraris": "ATL",
-        "Llamas": "TB",
-        "Giraffes": "ATL"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-31T17:00:00.000Z"
-    },
-    {
       "id": "2026_08_IND_JAX",
       "home": "JAX",
       "away": "IND",
@@ -199,6 +174,31 @@
       },
       "picksRevealed": true,
       "clockReport": "2:00 - 4th",
+      "deadline": "2026-10-31T17:00:00.000Z"
+    },
+    {
+      "id": "2026_08_ATL_TB",
+      "home": "TB",
+      "away": "ATL",
+      "kickoffISO": "2026-11-01T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 16,
+      "awayScore": 0,
+      "winner": "TB",
+      "tie": false,
+      "picks": {
+        "Lobos": "TB",
+        "Roughriders": "TB",
+        "Maniacs": "TB",
+        "Critters": "ATL",
+        "Chickens": "ATL",
+        "Ferraris": "ATL",
+        "Llamas": "TB",
+        "Giraffes": "ATL"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

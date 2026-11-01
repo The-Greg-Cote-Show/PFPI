@@ -2,31 +2,6 @@
   "week": 8,
   "games": [
     {
-      "id": "2026_08_CAR_GB",
-      "home": "GB",
-      "away": "CAR",
-      "kickoffISO": "2026-10-30T00:15Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 27,
-      "awayScore": 19,
-      "winner": "GB",
-      "tie": false,
-      "picks": {
-        "Lobos": "GB",
-        "Roughriders": "GB",
-        "Maniacs": "GB",
-        "Critters": "GB",
-        "Chickens": "GB",
-        "Ferraris": "GB",
-        "Llamas": "GB",
-        "Giraffes": "GB"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-29T22:15:00.000Z"
-    },
-    {
       "id": "2026_08_BAL_BUF",
       "home": "BUF",
       "away": "BAL",
@@ -313,6 +288,31 @@
       "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-10-31T17:00:00.000Z"
+    },
+    {
+      "id": "2026_08_CAR_GB",
+      "home": "GB",
+      "away": "CAR",
+      "kickoffISO": "2026-10-30T00:15Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 27,
+      "awayScore": 19,
+      "winner": "GB",
+      "tie": false,
+      "picks": {
+        "Lobos": "GB",
+        "Roughriders": "GB",
+        "Maniacs": "GB",
+        "Critters": "GB",
+        "Chickens": "GB",
+        "Ferraris": "GB",
+        "Llamas": "GB",
+        "Giraffes": "GB"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-29T22:15:00.000Z"
     },
     {
       "id": "2026_08_CHI_SEA",

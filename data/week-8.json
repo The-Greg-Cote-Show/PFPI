@@ -132,9 +132,9 @@
       "away": "CLE",
       "kickoffISO": "2026-11-01T18:00Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -148,7 +148,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "15:00 - 1st",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

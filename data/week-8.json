@@ -23,7 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "1:14 - 4th",
+      "clockReport": "1:06 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -32,10 +32,10 @@
       "away": "NE",
       "kickoffISO": "2026-11-01T21:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 19,
       "awayScore": 24,
-      "winner": null,
+      "winner": "NE",
       "tie": false,
       "picks": {
         "Lobos": "NE",
@@ -48,7 +48,7 @@
         "Giraffes": "MIA"
       },
       "picksRevealed": true,
-      "clockReport": "0:34 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

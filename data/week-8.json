@@ -7,10 +7,10 @@
       "away": "PHI",
       "kickoffISO": "2026-11-02T01:20Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 27,
       "awayScore": 10,
-      "winner": null,
+      "winner": "WAS",
       "tie": false,
       "picks": {
         "Lobos": "WAS",
@@ -23,7 +23,7 @@
         "Giraffes": "WAS"
       },
       "picksRevealed": true,
-      "clockReport": "0:02 - 4th",
+      "clockReport": null,
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

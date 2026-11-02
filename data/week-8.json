@@ -23,32 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "1:06 - 4th",
-      "deadline": "2026-10-31T17:00:00.000Z"
-    },
-    {
-      "id": "2026_08_NE_MIA",
-      "home": "MIA",
-      "away": "NE",
-      "kickoffISO": "2026-11-01T21:25Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 19,
-      "awayScore": 24,
-      "winner": "NE",
-      "tie": false,
-      "picks": {
-        "Lobos": "NE",
-        "Roughriders": "NE",
-        "Maniacs": "NE",
-        "Critters": "NE",
-        "Chickens": "NE",
-        "Ferraris": "NE",
-        "Llamas": "NE",
-        "Giraffes": "MIA"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "0:15 - 4th",
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {
@@ -271,6 +246,31 @@
         "Ferraris": "LA",
         "Llamas": "LA",
         "Giraffes": "LA"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-31T17:00:00.000Z"
+    },
+    {
+      "id": "2026_08_NE_MIA",
+      "home": "MIA",
+      "away": "NE",
+      "kickoffISO": "2026-11-01T21:25Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 19,
+      "awayScore": 24,
+      "winner": "NE",
+      "tie": false,
+      "picks": {
+        "Lobos": "NE",
+        "Roughriders": "NE",
+        "Maniacs": "NE",
+        "Critters": "NE",
+        "Chickens": "NE",
+        "Ferraris": "NE",
+        "Llamas": "NE",
+        "Giraffes": "MIA"
       },
       "picksRevealed": true,
       "clockReport": null,

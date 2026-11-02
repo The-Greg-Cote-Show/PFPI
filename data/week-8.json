@@ -2,31 +2,6 @@
   "week": 8,
   "games": [
     {
-      "id": "2026_08_KC_DEN",
-      "home": "DEN",
-      "away": "KC",
-      "kickoffISO": "2026-11-01T21:25Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 28,
-      "awayScore": 24,
-      "winner": "DEN",
-      "tie": false,
-      "picks": {
-        "Lobos": "KC",
-        "Roughriders": "KC",
-        "Maniacs": "KC",
-        "Critters": "KC",
-        "Chickens": "KC",
-        "Ferraris": "DEN",
-        "Llamas": "KC",
-        "Giraffes": "KC"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-31T17:00:00.000Z"
-    },
-    {
       "id": "2026_08_BAL_BUF",
       "home": "BUF",
       "away": "BAL",
@@ -246,6 +221,31 @@
         "Ferraris": "LA",
         "Llamas": "LA",
         "Giraffes": "LA"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-31T17:00:00.000Z"
+    },
+    {
+      "id": "2026_08_KC_DEN",
+      "home": "DEN",
+      "away": "KC",
+      "kickoffISO": "2026-11-01T21:25Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 28,
+      "awayScore": 24,
+      "winner": "DEN",
+      "tie": false,
+      "picks": {
+        "Lobos": "KC",
+        "Roughriders": "KC",
+        "Maniacs": "KC",
+        "Critters": "KC",
+        "Chickens": "KC",
+        "Ferraris": "DEN",
+        "Llamas": "KC",
+        "Giraffes": "KC"
       },
       "picksRevealed": true,
       "clockReport": null,

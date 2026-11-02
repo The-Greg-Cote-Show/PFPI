@@ -7,10 +7,10 @@
       "away": "KC",
       "kickoffISO": "2026-11-01T21:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 28,
       "awayScore": 24,
-      "winner": null,
+      "winner": "DEN",
       "tie": false,
       "picks": {
         "Lobos": "KC",
@@ -23,7 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "End of 4th",
+      "clockReport": null,
       "deadline": "2026-10-31T17:00:00.000Z"
     },
     {

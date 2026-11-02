@@ -2,31 +2,6 @@
   "week": 8,
   "games": [
     {
-      "id": "2026_08_PHI_WAS",
-      "home": "WAS",
-      "away": "PHI",
-      "kickoffISO": "2026-11-02T01:20Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 27,
-      "awayScore": 10,
-      "winner": "WAS",
-      "tie": false,
-      "picks": {
-        "Lobos": "WAS",
-        "Roughriders": "PHI",
-        "Maniacs": "WAS",
-        "Critters": "WAS",
-        "Chickens": "PHI",
-        "Ferraris": "WAS",
-        "Llamas": "WAS",
-        "Giraffes": "WAS"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-31T17:00:00.000Z"
-    },
-    {
       "id": "2026_08_BAL_BUF",
       "home": "BUF",
       "away": "BAL",
@@ -296,6 +271,31 @@
         "Ferraris": "NE",
         "Llamas": "NE",
         "Giraffes": "MIA"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-31T17:00:00.000Z"
+    },
+    {
+      "id": "2026_08_PHI_WAS",
+      "home": "WAS",
+      "away": "PHI",
+      "kickoffISO": "2026-11-02T01:20Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 27,
+      "awayScore": 10,
+      "winner": "WAS",
+      "tie": false,
+      "picks": {
+        "Lobos": "WAS",
+        "Roughriders": "PHI",
+        "Maniacs": "WAS",
+        "Critters": "WAS",
+        "Chickens": "PHI",
+        "Ferraris": "WAS",
+        "Llamas": "WAS",
+        "Giraffes": "WAS"
       },
       "picksRevealed": true,
       "clockReport": null,

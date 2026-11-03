@@ -2,31 +2,6 @@
   "week": 8,
   "games": [
     {
-      "id": "2026_08_CHI_SEA",
-      "home": "SEA",
-      "away": "CHI",
-      "kickoffISO": "2026-11-03T01:15Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 17,
-      "awayScore": 34,
-      "winner": "CHI",
-      "tie": false,
-      "picks": {
-        "Lobos": "CHI",
-        "Roughriders": "SEA",
-        "Maniacs": "SEA",
-        "Critters": "CHI",
-        "Chickens": "SEA",
-        "Ferraris": "SEA",
-        "Llamas": "SEA",
-        "Giraffes": "CHI"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-10-31T17:00:00.000Z"
-    },
-    {
       "id": "2026_08_CAR_GB",
       "home": "GB",
       "away": "CAR",
@@ -346,6 +321,31 @@
         "Ferraris": "WAS",
         "Llamas": "WAS",
         "Giraffes": "WAS"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-10-31T17:00:00.000Z"
+    },
+    {
+      "id": "2026_08_CHI_SEA",
+      "home": "SEA",
+      "away": "CHI",
+      "kickoffISO": "2026-11-03T01:15Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 17,
+      "awayScore": 34,
+      "winner": "CHI",
+      "tie": false,
+      "picks": {
+        "Lobos": "CHI",
+        "Roughriders": "SEA",
+        "Maniacs": "SEA",
+        "Critters": "CHI",
+        "Chickens": "SEA",
+        "Ferraris": "SEA",
+        "Llamas": "SEA",
+        "Giraffes": "CHI"
       },
       "picksRevealed": true,
       "clockReport": null,

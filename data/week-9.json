@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 3,
-      "awayScore": 20,
+      "awayScore": 23,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "14:21 - 4th",
+      "clockReport": "13:35 - 4th",
       "deadline": "2026-11-05T23:15:00.000Z"
     },
     {

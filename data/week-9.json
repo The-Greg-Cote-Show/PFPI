@@ -37,8 +37,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "CIN",
+        "Roughriders": "CIN",
+        "Maniacs": "ATL",
+        "Critters": "CIN",
+        "Chickens": "CIN",
+        "Ferraris": "ATL",
+        "Llamas": "CIN",
+        "Giraffes": "CIN"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-11-07T18:00:00.000Z"
     },

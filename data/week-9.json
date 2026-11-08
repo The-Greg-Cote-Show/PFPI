@@ -7,9 +7,9 @@
       "away": "HOU",
       "kickoffISO": "2026-11-08T21:05Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 9,
+      "awayScore": 17,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "HOU"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "3:06 - 2nd",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -32,9 +32,9 @@
       "away": "GB",
       "kickoffISO": "2026-11-08T21:25Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 17,
       "winner": null,
       "tie": false,
       "picks": {
@@ -48,7 +48,7 @@
         "Giraffes": "NE"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "11:07 - 2nd",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -57,9 +57,9 @@
       "away": "LV",
       "kickoffISO": "2026-11-08T21:25Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 14,
+      "awayScore": 7,
       "winner": null,
       "tie": false,
       "picks": {
@@ -73,7 +73,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "6:36 - 2nd",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -82,9 +82,9 @@
       "away": "ARI",
       "kickoffISO": "2026-11-08T21:25Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 7,
+      "awayScore": 3,
       "winner": null,
       "tie": false,
       "picks": {
@@ -98,7 +98,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "11:41 - 2nd",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {

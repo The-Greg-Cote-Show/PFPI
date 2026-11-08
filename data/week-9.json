@@ -58,7 +58,7 @@
       "kickoffISO": "2026-11-08T21:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 28,
+      "homeScore": 34,
       "awayScore": 17,
       "winner": null,
       "tie": false,
@@ -73,7 +73,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "1:27 - 3rd",
+      "clockReport": "0:36 - 3rd",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -83,7 +83,7 @@
       "kickoffISO": "2026-11-08T21:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 14,
+      "homeScore": 17,
       "awayScore": 3,
       "winner": null,
       "tie": false,
@@ -98,7 +98,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "4:37 - 3rd",
+      "clockReport": "3:50 - 3rd",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {

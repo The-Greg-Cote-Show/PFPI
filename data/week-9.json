@@ -32,10 +32,10 @@
       "away": "NYJ",
       "kickoffISO": "2026-11-08T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 35,
       "awayScore": 12,
-      "winner": null,
+      "winner": "KC",
       "tie": false,
       "picks": {
         "Lobos": "KC",
@@ -48,7 +48,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "1:15 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -59,7 +59,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 16,
-      "awayScore": 13,
+      "awayScore": 16,
       "winner": null,
       "tie": false,
       "picks": {
@@ -73,7 +73,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "0:13 - 4th",
+      "clockReport": "0:08 - 4th",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -123,7 +123,7 @@
         "Giraffes": "WAS"
       },
       "picksRevealed": true,
-      "clockReport": "0:31 - 4th",
+      "clockReport": "0:29 - 4th",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -207,9 +207,9 @@
       "away": "HOU",
       "kickoffISO": "2026-11-08T21:05Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -223,7 +223,7 @@
         "Giraffes": "HOU"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "15:00 - 1st",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {

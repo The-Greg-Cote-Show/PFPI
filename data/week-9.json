@@ -2,56 +2,6 @@
   "week": 9,
   "games": [
     {
-      "id": "2026_09_DAL_IND",
-      "home": "IND",
-      "away": "DAL",
-      "kickoffISO": "2026-11-08T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 23,
-      "awayScore": 27,
-      "winner": "DAL",
-      "tie": false,
-      "picks": {
-        "Lobos": "DAL",
-        "Roughriders": "DAL",
-        "Maniacs": "DAL",
-        "Critters": "DAL",
-        "Chickens": "DAL",
-        "Ferraris": "DAL",
-        "Llamas": "DAL",
-        "Giraffes": "DAL"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-07T18:00:00.000Z"
-    },
-    {
-      "id": "2026_09_CLE_NO",
-      "home": "NO",
-      "away": "CLE",
-      "kickoffISO": "2026-11-08T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 23,
-      "awayScore": 22,
-      "winner": "NO",
-      "tie": false,
-      "picks": {
-        "Lobos": "NO",
-        "Roughriders": "NO",
-        "Maniacs": "NO",
-        "Critters": "NO",
-        "Chickens": "NO",
-        "Ferraris": "NO",
-        "Llamas": "NO",
-        "Giraffes": "CLE"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-07T18:00:00.000Z"
-    },
-    {
       "id": "2026_09_HOU_LAC",
       "home": "LAC",
       "away": "HOU",
@@ -73,7 +23,7 @@
         "Giraffes": "HOU"
       },
       "picksRevealed": true,
-      "clockReport": "End of 1st",
+      "clockReport": "15:00 - 2nd",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -123,7 +73,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "7:21 - 1st",
+      "clockReport": "6:49 - 1st",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -148,7 +98,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "8:04 - 1st",
+      "clockReport": "7:06 - 1st",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -171,6 +121,31 @@
         "Ferraris": "ATL",
         "Llamas": "CIN",
         "Giraffes": "CIN"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-07T18:00:00.000Z"
+    },
+    {
+      "id": "2026_09_DAL_IND",
+      "home": "IND",
+      "away": "DAL",
+      "kickoffISO": "2026-11-08T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 23,
+      "awayScore": 27,
+      "winner": "DAL",
+      "tie": false,
+      "picks": {
+        "Lobos": "DAL",
+        "Roughriders": "DAL",
+        "Maniacs": "DAL",
+        "Critters": "DAL",
+        "Chickens": "DAL",
+        "Ferraris": "DAL",
+        "Llamas": "DAL",
+        "Giraffes": "DAL"
       },
       "picksRevealed": true,
       "clockReport": null,
@@ -221,6 +196,31 @@
         "Ferraris": "DET",
         "Llamas": "DET",
         "Giraffes": "DET"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-07T18:00:00.000Z"
+    },
+    {
+      "id": "2026_09_CLE_NO",
+      "home": "NO",
+      "away": "CLE",
+      "kickoffISO": "2026-11-08T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 23,
+      "awayScore": 22,
+      "winner": "NO",
+      "tie": false,
+      "picks": {
+        "Lobos": "NO",
+        "Roughriders": "NO",
+        "Maniacs": "NO",
+        "Critters": "NO",
+        "Chickens": "NO",
+        "Ferraris": "NO",
+        "Llamas": "NO",
+        "Giraffes": "CLE"
       },
       "picksRevealed": true,
       "clockReport": null,

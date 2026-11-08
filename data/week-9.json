@@ -7,10 +7,10 @@
       "away": "DAL",
       "kickoffISO": "2026-11-08T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 23,
       "awayScore": 27,
-      "winner": null,
+      "winner": "DAL",
       "tie": false,
       "picks": {
         "Lobos": "DAL",
@@ -23,7 +23,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "0:35 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "NE"
       },
       "picksRevealed": true,
-      "clockReport": "12:39 - 1st",
+      "clockReport": "12:34 - 1st",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -108,7 +108,7 @@
       "kickoffISO": "2026-11-08T21:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 0,
+      "homeScore": 7,
       "awayScore": 0,
       "winner": null,
       "tie": false,
@@ -123,7 +123,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "10:11 - 1st",
+      "clockReport": "9:32 - 1st",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -148,7 +148,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "12:36 - 1st",
+      "clockReport": "11:14 - 1st",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {

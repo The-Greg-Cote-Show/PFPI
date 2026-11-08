@@ -23,7 +23,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "9:12 - 4th",
+      "clockReport": "8:31 - 4th",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -48,32 +48,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "3:35 - 4th",
-      "deadline": "2026-11-07T18:00:00.000Z"
-    },
-    {
-      "id": "2026_09_DET_MIA",
-      "home": "MIA",
-      "away": "DET",
-      "kickoffISO": "2026-11-08T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 9,
-      "awayScore": 19,
-      "winner": "DET",
-      "tie": false,
-      "picks": {
-        "Lobos": "DET",
-        "Roughriders": "DET",
-        "Maniacs": "DET",
-        "Critters": "DET",
-        "Chickens": "DET",
-        "Ferraris": "DET",
-        "Llamas": "DET",
-        "Giraffes": "DET"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "2:39 - 4th",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -83,7 +58,7 @@
       "kickoffISO": "2026-11-08T18:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 9,
+      "homeScore": 16,
       "awayScore": 13,
       "winner": null,
       "tie": false,
@@ -98,7 +73,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "1:00 - 4th",
+      "clockReport": "0:58 - 4th",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -123,7 +98,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "2:25 - 4th",
+      "clockReport": "2:00 - 4th",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -148,7 +123,7 @@
         "Giraffes": "WAS"
       },
       "picksRevealed": true,
-      "clockReport": "1:53 - 4th",
+      "clockReport": "1:49 - 4th",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -196,6 +171,31 @@
         "Ferraris": "ATL",
         "Llamas": "CIN",
         "Giraffes": "CIN"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-07T18:00:00.000Z"
+    },
+    {
+      "id": "2026_09_DET_MIA",
+      "home": "MIA",
+      "away": "DET",
+      "kickoffISO": "2026-11-08T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 9,
+      "awayScore": 19,
+      "winner": "DET",
+      "tie": false,
+      "picks": {
+        "Lobos": "DET",
+        "Roughriders": "DET",
+        "Maniacs": "DET",
+        "Critters": "DET",
+        "Chickens": "DET",
+        "Ferraris": "DET",
+        "Llamas": "DET",
+        "Giraffes": "DET"
       },
       "picksRevealed": true,
       "clockReport": null,

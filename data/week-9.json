@@ -2,31 +2,6 @@
   "week": 9,
   "games": [
     {
-      "id": "2026_09_GB_NE",
-      "home": "NE",
-      "away": "GB",
-      "kickoffISO": "2026-11-08T21:25Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 27,
-      "awayScore": 45,
-      "winner": "GB",
-      "tie": false,
-      "picks": {
-        "Lobos": "GB",
-        "Roughriders": "NE",
-        "Maniacs": "NE",
-        "Critters": "NE",
-        "Chickens": "NE",
-        "Ferraris": "NE",
-        "Llamas": "GB",
-        "Giraffes": "NE"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-07T18:00:00.000Z"
-    },
-    {
       "id": "2026_09_CIN_ATL",
       "home": "ATL",
       "away": "CIN",
@@ -246,6 +221,31 @@
         "Ferraris": "HOU",
         "Llamas": "HOU",
         "Giraffes": "HOU"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-07T18:00:00.000Z"
+    },
+    {
+      "id": "2026_09_GB_NE",
+      "home": "NE",
+      "away": "GB",
+      "kickoffISO": "2026-11-08T21:25Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 27,
+      "awayScore": 45,
+      "winner": "GB",
+      "tie": false,
+      "picks": {
+        "Lobos": "GB",
+        "Roughriders": "NE",
+        "Maniacs": "NE",
+        "Critters": "NE",
+        "Chickens": "NE",
+        "Ferraris": "NE",
+        "Llamas": "GB",
+        "Giraffes": "NE"
       },
       "picksRevealed": true,
       "clockReport": null,

@@ -8,7 +8,7 @@
       "kickoffISO": "2026-11-08T21:05Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 21,
+      "homeScore": 22,
       "awayScore": 41,
       "winner": null,
       "tie": false,
@@ -34,7 +34,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 21,
-      "awayScore": 42,
+      "awayScore": 45,
       "winner": null,
       "tie": false,
       "picks": {
@@ -48,7 +48,7 @@
         "Giraffes": "NE"
       },
       "picksRevealed": true,
-      "clockReport": "11:55 - 4th",
+      "clockReport": "11:51 - 4th",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {

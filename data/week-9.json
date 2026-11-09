@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 24,
-      "awayScore": 13,
+      "awayScore": 16,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "11:28 - 4th",
+      "clockReport": "11:24 - 4th",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {

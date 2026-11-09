@@ -7,10 +7,10 @@
       "away": "TB",
       "kickoffISO": "2026-11-09T01:20Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 24,
+      "status": "final",
+      "homeScore": 27,
       "awayScore": 24,
-      "winner": null,
+      "winner": "CHI",
       "tie": false,
       "picks": {
         "Lobos": "CHI",
@@ -23,7 +23,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "0:03 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {

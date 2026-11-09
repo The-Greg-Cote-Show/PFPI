@@ -7,10 +7,10 @@
       "away": "GB",
       "kickoffISO": "2026-11-08T21:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 27,
       "awayScore": 45,
-      "winner": null,
+      "winner": "GB",
       "tie": false,
       "picks": {
         "Lobos": "GB",
@@ -23,7 +23,7 @@
         "Giraffes": "NE"
       },
       "picksRevealed": true,
-      "clockReport": "1:07 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {

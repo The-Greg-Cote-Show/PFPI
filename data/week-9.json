@@ -23,7 +23,7 @@
         "Giraffes": "HOU"
       },
       "picksRevealed": true,
-      "clockReport": "3:34 - 4th",
+      "clockReport": "3:29 - 4th",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -48,7 +48,32 @@
         "Giraffes": "NE"
       },
       "picksRevealed": true,
-      "clockReport": "11:45 - 4th",
+      "clockReport": "11:39 - 4th",
+      "deadline": "2026-11-07T18:00:00.000Z"
+    },
+    {
+      "id": "2026_09_LV_SF",
+      "home": "SF",
+      "away": "LV",
+      "kickoffISO": "2026-11-08T21:25Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 38,
+      "awayScore": 17,
+      "winner": "SF",
+      "tie": false,
+      "picks": {
+        "Lobos": "SF",
+        "Roughriders": "SF",
+        "Maniacs": "SF",
+        "Critters": "SF",
+        "Chickens": "SF",
+        "Ferraris": "SF",
+        "Llamas": "SF",
+        "Giraffes": "SF"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -73,7 +98,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "3:28 - 4th",
+      "clockReport": "2:42 - 4th",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -271,31 +296,6 @@
         "Ferraris": "DEN",
         "Llamas": "DEN",
         "Giraffes": "DEN"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-07T18:00:00.000Z"
-    },
-    {
-      "id": "2026_09_LV_SF",
-      "home": "SF",
-      "away": "LV",
-      "kickoffISO": "2026-11-08T21:25Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 38,
-      "awayScore": 17,
-      "winner": "SF",
-      "tie": false,
-      "picks": {
-        "Lobos": "SF",
-        "Roughriders": "SF",
-        "Maniacs": "SF",
-        "Critters": "SF",
-        "Chickens": "SF",
-        "Ferraris": "SF",
-        "Llamas": "SF",
-        "Giraffes": "SF"
       },
       "picksRevealed": true,
       "clockReport": null,

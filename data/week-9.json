@@ -23,7 +23,7 @@
         "Giraffes": "HOU"
       },
       "picksRevealed": true,
-      "clockReport": "2:20 - 4th",
+      "clockReport": "2:19 - 4th",
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {
@@ -57,10 +57,10 @@
       "away": "ARI",
       "kickoffISO": "2026-11-08T21:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 17,
       "awayScore": 3,
-      "winner": null,
+      "winner": "SEA",
       "tie": false,
       "picks": {
         "Lobos": "SEA",
@@ -73,7 +73,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "1:18 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-07T18:00:00.000Z"
     },
     {

@@ -2,31 +2,6 @@
   "week": 9,
   "games": [
     {
-      "id": "2026_09_BUF_MIN",
-      "home": "MIN",
-      "away": "BUF",
-      "kickoffISO": "2026-11-10T01:15Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 6,
-      "awayScore": 23,
-      "winner": "BUF",
-      "tie": false,
-      "picks": {
-        "Lobos": "BUF",
-        "Roughriders": "BUF",
-        "Maniacs": "BUF",
-        "Critters": "BUF",
-        "Chickens": "BUF",
-        "Ferraris": "MIN",
-        "Llamas": "BUF",
-        "Giraffes": "BUF"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-07T18:00:00.000Z"
-    },
-    {
       "id": "2026_09_JAX_BAL",
       "home": "BAL",
       "away": "JAX",
@@ -371,6 +346,31 @@
         "Ferraris": "CHI",
         "Llamas": "CHI",
         "Giraffes": "CHI"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-07T18:00:00.000Z"
+    },
+    {
+      "id": "2026_09_BUF_MIN",
+      "home": "MIN",
+      "away": "BUF",
+      "kickoffISO": "2026-11-10T01:15Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 6,
+      "awayScore": 23,
+      "winner": "BUF",
+      "tie": false,
+      "picks": {
+        "Lobos": "BUF",
+        "Roughriders": "BUF",
+        "Maniacs": "BUF",
+        "Critters": "BUF",
+        "Chickens": "BUF",
+        "Ferraris": "MIN",
+        "Llamas": "BUF",
+        "Giraffes": "BUF"
       },
       "picksRevealed": true,
       "clockReport": null,

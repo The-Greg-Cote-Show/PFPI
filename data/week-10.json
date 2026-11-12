@@ -12,8 +12,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "NYG",
+        "Roughriders": "NYG",
+        "Maniacs": "NYG",
+        "Critters": "NYG",
+        "Chickens": "NYG",
+        "Ferraris": "NYG",
+        "Llamas": "NYG",
+        "Giraffes": "NYG"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-11-12T23:15:00.000Z"
     },

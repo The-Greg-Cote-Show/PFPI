@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 21,
-      "awayScore": 17,
+      "awayScore": 23,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "NYG"
       },
       "picksRevealed": true,
-      "clockReport": "1:40 - 4th",
+      "clockReport": "0:57 - 4th",
       "deadline": "2026-11-12T23:15:00.000Z"
     },
     {

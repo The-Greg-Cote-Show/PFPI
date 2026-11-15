@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 7,
-      "awayScore": 6,
+      "awayScore": 7,
       "winner": null,
       "tie": false,
       "picks": {
@@ -73,7 +73,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "14:46 - 1st",
+      "clockReport": "14:27 - 1st",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {

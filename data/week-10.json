@@ -48,7 +48,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "14:11 - 2nd",
+      "clockReport": "13:28 - 2nd",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -84,7 +84,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 3,
-      "awayScore": 7,
+      "awayScore": 10,
       "winner": null,
       "tie": false,
       "picks": {
@@ -98,7 +98,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "14:17 - 2nd",
+      "clockReport": "12:58 - 2nd",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -108,7 +108,7 @@
       "kickoffISO": "2026-11-15T18:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 6,
+      "homeScore": 7,
       "awayScore": 0,
       "winner": null,
       "tie": false,

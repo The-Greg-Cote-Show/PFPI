@@ -123,7 +123,7 @@
         "Giraffes": "IND"
       },
       "picksRevealed": true,
-      "clockReport": "3:15 - 4th",
+      "clockReport": "2:39 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -148,7 +148,7 @@
         "Giraffes": "NO"
       },
       "picksRevealed": true,
-      "clockReport": "0:56 - 4th",
+      "clockReport": "0:51 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -207,9 +207,9 @@
       "away": "SEA",
       "kickoffISO": "2026-11-15T21:05Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -223,7 +223,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "15:00 - 1st",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {

@@ -32,10 +32,10 @@
       "away": "LA",
       "kickoffISO": "2026-11-15T21:05Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 6,
       "awayScore": 34,
-      "winner": null,
+      "winner": "LA",
       "tie": false,
       "picks": {
         "Lobos": "LA",
@@ -48,7 +48,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": "0:39 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "12:57 - 4th",
+      "clockReport": "12:15 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {

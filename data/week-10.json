@@ -33,7 +33,7 @@
       "kickoffISO": "2026-11-15T18:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 10,
+      "homeScore": 16,
       "awayScore": 17,
       "winner": null,
       "tie": false,
@@ -48,7 +48,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "9:33 - 3rd",
+      "clockReport": "8:35 - 3rd",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "GB"
       },
       "picksRevealed": true,
-      "clockReport": "9:14 - 3rd",
+      "clockReport": "7:46 - 3rd",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -133,7 +133,7 @@
       "kickoffISO": "2026-11-15T18:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 0,
+      "homeScore": 7,
       "awayScore": 7,
       "winner": null,
       "tie": false,
@@ -148,7 +148,7 @@
         "Giraffes": "NO"
       },
       "picksRevealed": true,
-      "clockReport": "7:00 - 3rd",
+      "clockReport": "6:33 - 3rd",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {

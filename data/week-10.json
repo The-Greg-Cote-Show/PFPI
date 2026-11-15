@@ -23,7 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "2:27 - 4th",
+      "clockReport": "2:21 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -33,7 +33,7 @@
       "kickoffISO": "2026-11-15T18:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 20,
+      "homeScore": 27,
       "awayScore": 24,
       "winner": null,
       "tie": false,
@@ -48,32 +48,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "0:56 - 4th",
-      "deadline": "2026-11-14T18:00:00.000Z"
-    },
-    {
-      "id": "2026_10_MIN_GB",
-      "home": "GB",
-      "away": "MIN",
-      "kickoffISO": "2026-11-15T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 10,
-      "awayScore": 30,
-      "winner": "MIN",
-      "tie": false,
-      "picks": {
-        "Lobos": "GB",
-        "Roughriders": "MIN",
-        "Maniacs": "GB",
-        "Critters": "GB",
-        "Chickens": "GB",
-        "Ferraris": "MIN",
-        "Llamas": "GB",
-        "Giraffes": "GB"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "0:53 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -148,7 +123,7 @@
         "Giraffes": "NO"
       },
       "picksRevealed": true,
-      "clockReport": "1:17 - 4th",
+      "clockReport": "1:10 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -196,6 +171,31 @@
         "Ferraris": "DET",
         "Llamas": "DET",
         "Giraffes": "DET"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-14T18:00:00.000Z"
+    },
+    {
+      "id": "2026_10_MIN_GB",
+      "home": "GB",
+      "away": "MIN",
+      "kickoffISO": "2026-11-15T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 10,
+      "awayScore": 30,
+      "winner": "MIN",
+      "tie": false,
+      "picks": {
+        "Lobos": "GB",
+        "Roughriders": "MIN",
+        "Maniacs": "GB",
+        "Critters": "GB",
+        "Chickens": "GB",
+        "Ferraris": "MIN",
+        "Llamas": "GB",
+        "Giraffes": "GB"
       },
       "picksRevealed": true,
       "clockReport": null,

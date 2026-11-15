@@ -52,31 +52,6 @@
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
-      "id": "2026_10_MIN_GB",
-      "home": "GB",
-      "away": "MIN",
-      "kickoffISO": "2026-11-15T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 10,
-      "awayScore": 30,
-      "winner": "MIN",
-      "tie": false,
-      "picks": {
-        "Lobos": "GB",
-        "Roughriders": "MIN",
-        "Maniacs": "GB",
-        "Critters": "GB",
-        "Chickens": "GB",
-        "Ferraris": "MIN",
-        "Llamas": "GB",
-        "Giraffes": "GB"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-14T18:00:00.000Z"
-    },
-    {
       "id": "2026_10_JAX_TEN",
       "home": "TEN",
       "away": "JAX",
@@ -173,7 +148,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "1:51 - 4th",
+      "clockReport": "0:38 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -202,6 +177,31 @@
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
+      "id": "2026_10_MIN_GB",
+      "home": "GB",
+      "away": "MIN",
+      "kickoffISO": "2026-11-15T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 10,
+      "awayScore": 30,
+      "winner": "MIN",
+      "tie": false,
+      "picks": {
+        "Lobos": "GB",
+        "Roughriders": "MIN",
+        "Maniacs": "GB",
+        "Critters": "GB",
+        "Chickens": "GB",
+        "Ferraris": "MIN",
+        "Llamas": "GB",
+        "Giraffes": "GB"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-14T18:00:00.000Z"
+    },
+    {
       "id": "2026_10_SEA_LV",
       "home": "LV",
       "away": "SEA",
@@ -223,7 +223,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "14:50 - 1st",
+      "clockReport": "14:10 - 1st",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -248,7 +248,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": "14:56 - 1st",
+      "clockReport": "14:22 - 1st",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {

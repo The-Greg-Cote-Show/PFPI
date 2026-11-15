@@ -23,7 +23,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "5:43 - 3rd",
+      "clockReport": "4:27 - 3rd",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -34,7 +34,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 6,
-      "awayScore": 30,
+      "awayScore": 31,
       "winner": null,
       "tie": false,
       "picks": {

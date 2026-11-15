@@ -23,7 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "14:23 - 3rd",
+      "clockReport": "13:02 - 3rd",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "14:36 - 3rd",
+      "clockReport": "14:26 - 3rd",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -108,7 +108,7 @@
       "kickoffISO": "2026-11-15T18:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 20,
+      "homeScore": 21,
       "awayScore": 7,
       "winner": null,
       "tie": false,

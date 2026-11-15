@@ -34,7 +34,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 6,
-      "awayScore": 24,
+      "awayScore": 30,
       "winner": null,
       "tie": false,
       "picks": {
@@ -48,7 +48,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": "6:46 - 3rd",
+      "clockReport": "5:55 - 3rd",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {

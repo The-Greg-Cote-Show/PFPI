@@ -7,10 +7,10 @@
       "away": "KC",
       "kickoffISO": "2026-11-15T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 13,
       "awayScore": 35,
-      "winner": null,
+      "winner": "KC",
       "tie": false,
       "picks": {
         "Lobos": "KC",
@@ -23,7 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "0:13 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "0:22 - 4th",
+      "clockReport": "0:10 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -98,7 +98,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "0:30 - 4th",
+      "clockReport": "0:10 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -132,10 +132,10 @@
       "away": "CAR",
       "kickoffISO": "2026-11-15T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 17,
-      "awayScore": 17,
-      "winner": null,
+      "awayScore": 20,
+      "winner": "CAR",
       "tie": false,
       "picks": {
         "Lobos": "CAR",
@@ -148,7 +148,7 @@
         "Giraffes": "NO"
       },
       "picksRevealed": true,
-      "clockReport": "0:02 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -248,7 +248,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": "11:35 - 1st",
+      "clockReport": "11:29 - 1st",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {

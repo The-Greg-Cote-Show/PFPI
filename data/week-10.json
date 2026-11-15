@@ -23,7 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "3:35 - 4th",
+      "clockReport": "3:17 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -48,32 +48,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "1:54 - 4th",
-      "deadline": "2026-11-14T18:00:00.000Z"
-    },
-    {
-      "id": "2026_10_MIN_GB",
-      "home": "GB",
-      "away": "MIN",
-      "kickoffISO": "2026-11-15T18:00Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 10,
-      "awayScore": 30,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "GB",
-        "Roughriders": "MIN",
-        "Maniacs": "GB",
-        "Critters": "GB",
-        "Chickens": "GB",
-        "Ferraris": "MIN",
-        "Llamas": "GB",
-        "Giraffes": "GB"
-      },
-      "picksRevealed": true,
-      "clockReport": "0:29 - 4th",
+      "clockReport": "1:18 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -98,7 +73,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "4:31 - 4th",
+      "clockReport": "3:41 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -123,7 +98,7 @@
         "Giraffes": "IND"
       },
       "picksRevealed": true,
-      "clockReport": "6:12 - 4th",
+      "clockReport": "5:42 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -173,7 +148,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "2:32 - 4th",
+      "clockReport": "2:28 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -196,6 +171,31 @@
         "Ferraris": "DET",
         "Llamas": "DET",
         "Giraffes": "DET"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-14T18:00:00.000Z"
+    },
+    {
+      "id": "2026_10_MIN_GB",
+      "home": "GB",
+      "away": "MIN",
+      "kickoffISO": "2026-11-15T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 10,
+      "awayScore": 30,
+      "winner": "MIN",
+      "tie": false,
+      "picks": {
+        "Lobos": "GB",
+        "Roughriders": "MIN",
+        "Maniacs": "GB",
+        "Critters": "GB",
+        "Chickens": "GB",
+        "Ferraris": "MIN",
+        "Llamas": "GB",
+        "Giraffes": "GB"
       },
       "picksRevealed": true,
       "clockReport": null,

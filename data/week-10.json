@@ -7,10 +7,10 @@
       "away": "HOU",
       "kickoffISO": "2026-11-15T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 27,
       "awayScore": 24,
-      "winner": null,
+      "winner": "CLE",
       "tie": false,
       "picks": {
         "Lobos": "HOU",
@@ -23,7 +23,7 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "0:01 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "IND"
       },
       "picksRevealed": true,
-      "clockReport": "1:30 - 4th",
+      "clockReport": "1:18 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {

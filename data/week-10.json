@@ -13,6 +13,7 @@
       "winner": null,
       "tie": false,
       "picks": {
+        "Lobos": "DET",
         "Roughriders": "DET",
         "Maniacs": "DET",
         "Critters": "DET",
@@ -37,6 +38,7 @@
       "winner": null,
       "tie": false,
       "picks": {
+        "Lobos": "KC",
         "Roughriders": "KC",
         "Maniacs": "KC",
         "Critters": "KC",
@@ -61,6 +63,7 @@
       "winner": null,
       "tie": false,
       "picks": {
+        "Lobos": "HOU",
         "Roughriders": "HOU",
         "Maniacs": "HOU",
         "Critters": "HOU",
@@ -109,6 +112,7 @@
       "winner": null,
       "tie": false,
       "picks": {
+        "Lobos": "JAX",
         "Roughriders": "JAX",
         "Maniacs": "JAX",
         "Critters": "JAX",
@@ -157,6 +161,7 @@
       "winner": null,
       "tie": false,
       "picks": {
+        "Lobos": "CAR",
         "Roughriders": "NO",
         "Maniacs": "CAR",
         "Critters": "NO",
@@ -181,6 +186,7 @@
       "winner": null,
       "tie": false,
       "picks": {
+        "Lobos": "BUF",
         "Roughriders": "BUF",
         "Maniacs": "BUF",
         "Critters": "BUF",
@@ -205,6 +211,7 @@
       "winner": null,
       "tie": false,
       "picks": {
+        "Lobos": "SEA",
         "Roughriders": "SEA",
         "Maniacs": "SEA",
         "Critters": "SEA",
@@ -253,6 +260,7 @@
       "winner": null,
       "tie": false,
       "picks": {
+        "Lobos": "SF",
         "Roughriders": "SF",
         "Maniacs": "SF",
         "Critters": "DAL",
@@ -277,6 +285,7 @@
       "winner": null,
       "tie": false,
       "picks": {
+        "Lobos": "CIN",
         "Roughriders": "CIN",
         "Maniacs": "CIN",
         "Critters": "CIN",

@@ -23,7 +23,7 @@
         "Giraffes": "KC"
       },
       "picksRevealed": true,
-      "clockReport": "2:00 - 4th",
+      "clockReport": "1:14 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -48,7 +48,32 @@
         "Giraffes": "CLE"
       },
       "picksRevealed": true,
-      "clockReport": "0:53 - 4th",
+      "clockReport": "0:42 - 4th",
+      "deadline": "2026-11-14T18:00:00.000Z"
+    },
+    {
+      "id": "2026_10_MIN_GB",
+      "home": "GB",
+      "away": "MIN",
+      "kickoffISO": "2026-11-15T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 10,
+      "awayScore": 30,
+      "winner": "MIN",
+      "tie": false,
+      "picks": {
+        "Lobos": "GB",
+        "Roughriders": "MIN",
+        "Maniacs": "GB",
+        "Critters": "GB",
+        "Chickens": "GB",
+        "Ferraris": "MIN",
+        "Llamas": "GB",
+        "Giraffes": "GB"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -59,7 +84,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 23,
-      "awayScore": 33,
+      "awayScore": 40,
       "winner": null,
       "tie": false,
       "picks": {
@@ -73,7 +98,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "2:00 - 4th",
+      "clockReport": "1:10 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -123,7 +148,7 @@
         "Giraffes": "NO"
       },
       "picksRevealed": true,
-      "clockReport": "0:41 - 4th",
+      "clockReport": "0:34 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -132,10 +157,10 @@
       "away": "BUF",
       "kickoffISO": "2026-11-15T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 12,
       "awayScore": 31,
-      "winner": null,
+      "winner": "BUF",
       "tie": false,
       "picks": {
         "Lobos": "BUF",
@@ -148,7 +173,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "0:38 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -177,31 +202,6 @@
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
-      "id": "2026_10_MIN_GB",
-      "home": "GB",
-      "away": "MIN",
-      "kickoffISO": "2026-11-15T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 10,
-      "awayScore": 30,
-      "winner": "MIN",
-      "tie": false,
-      "picks": {
-        "Lobos": "GB",
-        "Roughriders": "MIN",
-        "Maniacs": "GB",
-        "Critters": "GB",
-        "Chickens": "GB",
-        "Ferraris": "MIN",
-        "Llamas": "GB",
-        "Giraffes": "GB"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-14T18:00:00.000Z"
-    },
-    {
       "id": "2026_10_SEA_LV",
       "home": "LV",
       "away": "SEA",
@@ -223,7 +223,7 @@
         "Giraffes": "SEA"
       },
       "picksRevealed": true,
-      "clockReport": "14:10 - 1st",
+      "clockReport": "14:01 - 1st",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {
@@ -248,7 +248,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": "14:22 - 1st",
+      "clockReport": "13:44 - 1st",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {

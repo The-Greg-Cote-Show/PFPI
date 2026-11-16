@@ -2,31 +2,6 @@
   "week": 10,
   "games": [
     {
-      "id": "2026_10_SF_DAL",
-      "home": "DAL",
-      "away": "SF",
-      "kickoffISO": "2026-11-15T21:25Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 40,
-      "awayScore": 46,
-      "winner": "SF",
-      "tie": false,
-      "picks": {
-        "Lobos": "SF",
-        "Roughriders": "SF",
-        "Maniacs": "SF",
-        "Critters": "DAL",
-        "Chickens": "SF",
-        "Ferraris": "SF",
-        "Llamas": "SF",
-        "Giraffes": "SF"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-14T18:00:00.000Z"
-    },
-    {
       "id": "2026_10_NE_DET",
       "home": "DET",
       "away": "NE",
@@ -271,6 +246,31 @@
         "Ferraris": "LA",
         "Llamas": "LA",
         "Giraffes": "LA"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-14T18:00:00.000Z"
+    },
+    {
+      "id": "2026_10_SF_DAL",
+      "home": "DAL",
+      "away": "SF",
+      "kickoffISO": "2026-11-15T21:25Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 40,
+      "awayScore": 46,
+      "winner": "SF",
+      "tie": false,
+      "picks": {
+        "Lobos": "SF",
+        "Roughriders": "SF",
+        "Maniacs": "SF",
+        "Critters": "DAL",
+        "Chickens": "SF",
+        "Ferraris": "SF",
+        "Llamas": "SF",
+        "Giraffes": "SF"
       },
       "picksRevealed": true,
       "clockReport": null,

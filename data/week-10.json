@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 31,
-      "awayScore": 3,
+      "awayScore": 11,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "12:23 - 4th",
+      "clockReport": "12:16 - 4th",
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {

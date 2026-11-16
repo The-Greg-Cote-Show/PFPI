@@ -2,31 +2,6 @@
   "week": 10,
   "games": [
     {
-      "id": "2026_10_PIT_CIN",
-      "home": "CIN",
-      "away": "PIT",
-      "kickoffISO": "2026-11-16T01:20Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 38,
-      "awayScore": 18,
-      "winner": "CIN",
-      "tie": false,
-      "picks": {
-        "Lobos": "CIN",
-        "Roughriders": "CIN",
-        "Maniacs": "CIN",
-        "Critters": "CIN",
-        "Chickens": "CIN",
-        "Ferraris": "CIN",
-        "Llamas": "PIT",
-        "Giraffes": "CIN"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-14T18:00:00.000Z"
-    },
-    {
       "id": "2026_10_NE_DET",
       "home": "DET",
       "away": "NE",
@@ -296,6 +271,31 @@
         "Ferraris": "SF",
         "Llamas": "SF",
         "Giraffes": "SF"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-14T18:00:00.000Z"
+    },
+    {
+      "id": "2026_10_PIT_CIN",
+      "home": "CIN",
+      "away": "PIT",
+      "kickoffISO": "2026-11-16T01:20Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 38,
+      "awayScore": 18,
+      "winner": "CIN",
+      "tie": false,
+      "picks": {
+        "Lobos": "CIN",
+        "Roughriders": "CIN",
+        "Maniacs": "CIN",
+        "Critters": "CIN",
+        "Chickens": "CIN",
+        "Ferraris": "CIN",
+        "Llamas": "PIT",
+        "Giraffes": "CIN"
       },
       "picksRevealed": true,
       "clockReport": null,

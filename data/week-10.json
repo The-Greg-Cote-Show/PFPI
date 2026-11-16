@@ -7,10 +7,10 @@
       "away": "PIT",
       "kickoffISO": "2026-11-16T01:20Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 38,
       "awayScore": 18,
-      "winner": null,
+      "winner": "CIN",
       "tie": false,
       "picks": {
         "Lobos": "CIN",
@@ -23,7 +23,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": "1:06 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-14T18:00:00.000Z"
     },
     {

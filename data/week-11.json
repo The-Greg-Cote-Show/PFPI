@@ -12,8 +12,17 @@
       "awayScore": null,
       "winner": null,
       "tie": false,
-      "picks": {},
-      "picksRevealed": false,
+      "picks": {
+        "Lobos": "HOU",
+        "Roughriders": "HOU",
+        "Maniacs": "HOU",
+        "Critters": "HOU",
+        "Chickens": "HOU",
+        "Ferraris": "HOU",
+        "Llamas": "HOU",
+        "Giraffes": "HOU"
+      },
+      "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-11-19T23:15:00.000Z"
     },

@@ -207,9 +207,9 @@
       "away": "LV",
       "kickoffISO": "2026-11-22T21:25Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -223,7 +223,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "15:00 - 1st",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -232,9 +232,9 @@
       "away": "JAX",
       "kickoffISO": "2026-11-22T21:25Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -248,7 +248,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "15:00 - 1st",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

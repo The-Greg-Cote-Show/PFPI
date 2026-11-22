@@ -2,6 +2,81 @@
   "week": 11,
   "games": [
     {
+      "id": "2026_11_TB_DET",
+      "home": "DET",
+      "away": "TB",
+      "kickoffISO": "2026-11-22T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 31,
+      "awayScore": 21,
+      "winner": "DET",
+      "tie": false,
+      "picks": {
+        "Lobos": "DET",
+        "Roughriders": "DET",
+        "Maniacs": "DET",
+        "Critters": "DET",
+        "Chickens": "DET",
+        "Ferraris": "DET",
+        "Llamas": "DET",
+        "Giraffes": "DET"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-21T18:00:00.000Z"
+    },
+    {
+      "id": "2026_11_PIT_PHI",
+      "home": "PHI",
+      "away": "PIT",
+      "kickoffISO": "2026-11-22T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 19,
+      "awayScore": 16,
+      "winner": "PHI",
+      "tie": false,
+      "picks": {
+        "Lobos": "PIT",
+        "Roughriders": "PIT",
+        "Maniacs": "PIT",
+        "Critters": "PIT",
+        "Chickens": "PIT",
+        "Ferraris": "PIT",
+        "Llamas": "PIT",
+        "Giraffes": "PIT"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-21T18:00:00.000Z"
+    },
+    {
+      "id": "2026_11_BAL_CAR",
+      "home": "CAR",
+      "away": "BAL",
+      "kickoffISO": "2026-11-22T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 35,
+      "awayScore": 33,
+      "winner": "CAR",
+      "tie": false,
+      "picks": {
+        "Lobos": "BAL",
+        "Roughriders": "CAR",
+        "Maniacs": "CAR",
+        "Critters": "CAR",
+        "Chickens": "BAL",
+        "Ferraris": "CAR",
+        "Llamas": "BAL",
+        "Giraffes": "BAL"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-21T18:00:00.000Z"
+    },
+    {
       "id": "2026_11_NYJ_LAC",
       "home": "LAC",
       "away": "NYJ",
@@ -23,7 +98,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "7:05 - 1st",
+      "clockReport": "6:50 - 1st",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -102,31 +177,6 @@
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
-      "id": "2026_11_TB_DET",
-      "home": "DET",
-      "away": "TB",
-      "kickoffISO": "2026-11-22T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 31,
-      "awayScore": 21,
-      "winner": "DET",
-      "tie": false,
-      "picks": {
-        "Lobos": "DET",
-        "Roughriders": "DET",
-        "Maniacs": "DET",
-        "Critters": "DET",
-        "Chickens": "DET",
-        "Ferraris": "DET",
-        "Llamas": "DET",
-        "Giraffes": "DET"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-21T18:00:00.000Z"
-    },
-    {
       "id": "2026_11_ARI_KC",
       "home": "KC",
       "away": "ARI",
@@ -146,56 +196,6 @@
         "Ferraris": "KC",
         "Llamas": "KC",
         "Giraffes": "KC"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-21T18:00:00.000Z"
-    },
-    {
-      "id": "2026_11_PIT_PHI",
-      "home": "PHI",
-      "away": "PIT",
-      "kickoffISO": "2026-11-22T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 19,
-      "awayScore": 16,
-      "winner": "PHI",
-      "tie": false,
-      "picks": {
-        "Lobos": "PIT",
-        "Roughriders": "PIT",
-        "Maniacs": "PIT",
-        "Critters": "PIT",
-        "Chickens": "PIT",
-        "Ferraris": "PIT",
-        "Llamas": "PIT",
-        "Giraffes": "PIT"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-21T18:00:00.000Z"
-    },
-    {
-      "id": "2026_11_BAL_CAR",
-      "home": "CAR",
-      "away": "BAL",
-      "kickoffISO": "2026-11-22T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 35,
-      "awayScore": 33,
-      "winner": "CAR",
-      "tie": false,
-      "picks": {
-        "Lobos": "BAL",
-        "Roughriders": "CAR",
-        "Maniacs": "CAR",
-        "Critters": "CAR",
-        "Chickens": "BAL",
-        "Ferraris": "CAR",
-        "Llamas": "BAL",
-        "Giraffes": "BAL"
       },
       "picksRevealed": true,
       "clockReport": null,

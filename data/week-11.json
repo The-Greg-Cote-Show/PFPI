@@ -48,7 +48,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "4:58 - 4th",
+      "clockReport": "4:33 - 4th",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "3:15 - 4th",
+      "clockReport": "3:06 - 4th",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -98,7 +98,57 @@
         "Giraffes": "DET"
       },
       "picksRevealed": true,
-      "clockReport": "2:58 - 4th",
+      "clockReport": "2:52 - 4th",
+      "deadline": "2026-11-21T18:00:00.000Z"
+    },
+    {
+      "id": "2026_11_PIT_PHI",
+      "home": "PHI",
+      "away": "PIT",
+      "kickoffISO": "2026-11-22T18:00Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 19,
+      "awayScore": 9,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "PIT",
+        "Roughriders": "PIT",
+        "Maniacs": "PIT",
+        "Critters": "PIT",
+        "Chickens": "PIT",
+        "Ferraris": "PIT",
+        "Llamas": "PIT",
+        "Giraffes": "PIT"
+      },
+      "picksRevealed": true,
+      "clockReport": "2:10 - 4th",
+      "deadline": "2026-11-21T18:00:00.000Z"
+    },
+    {
+      "id": "2026_11_BAL_CAR",
+      "home": "CAR",
+      "away": "BAL",
+      "kickoffISO": "2026-11-22T18:00Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 32,
+      "awayScore": 26,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "BAL",
+        "Roughriders": "CAR",
+        "Maniacs": "CAR",
+        "Critters": "CAR",
+        "Chickens": "BAL",
+        "Ferraris": "CAR",
+        "Llamas": "BAL",
+        "Giraffes": "BAL"
+      },
+      "picksRevealed": true,
+      "clockReport": "7:20 - 4th",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -124,56 +174,6 @@
       },
       "picksRevealed": true,
       "clockReport": null,
-      "deadline": "2026-11-21T18:00:00.000Z"
-    },
-    {
-      "id": "2026_11_PIT_PHI",
-      "home": "PHI",
-      "away": "PIT",
-      "kickoffISO": "2026-11-22T18:00Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 19,
-      "awayScore": 9,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "PIT",
-        "Roughriders": "PIT",
-        "Maniacs": "PIT",
-        "Critters": "PIT",
-        "Chickens": "PIT",
-        "Ferraris": "PIT",
-        "Llamas": "PIT",
-        "Giraffes": "PIT"
-      },
-      "picksRevealed": true,
-      "clockReport": "2:36 - 4th",
-      "deadline": "2026-11-21T18:00:00.000Z"
-    },
-    {
-      "id": "2026_11_BAL_CAR",
-      "home": "CAR",
-      "away": "BAL",
-      "kickoffISO": "2026-11-22T18:00Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 32,
-      "awayScore": 26,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "BAL",
-        "Roughriders": "CAR",
-        "Maniacs": "CAR",
-        "Critters": "CAR",
-        "Chickens": "BAL",
-        "Ferraris": "CAR",
-        "Llamas": "BAL",
-        "Giraffes": "BAL"
-      },
-      "picksRevealed": true,
-      "clockReport": "8:45 - 4th",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

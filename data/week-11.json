@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 20,
-      "awayScore": 3,
+      "awayScore": 6,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "1:24 - 2nd",
+      "clockReport": "1:14 - 2nd",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "1:04 - 2nd",
+      "clockReport": "0:54 - 2nd",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "1:47 - 2nd",
+      "clockReport": "1:39 - 2nd",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

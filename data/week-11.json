@@ -7,10 +7,10 @@
       "away": "NYJ",
       "kickoffISO": "2026-11-22T21:05Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 24,
       "awayScore": 27,
-      "winner": null,
+      "winner": "NYJ",
       "tie": false,
       "picks": {
         "Lobos": "LAC",
@@ -23,7 +23,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "0:47 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -33,7 +33,7 @@
       "kickoffISO": "2026-11-22T21:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 17,
+      "homeScore": 24,
       "awayScore": 17,
       "winner": null,
       "tie": false,
@@ -48,7 +48,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": "1:06 - 3rd",
+      "clockReport": "0:20 - 3rd",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

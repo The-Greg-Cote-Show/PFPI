@@ -2,31 +2,6 @@
   "week": 11,
   "games": [
     {
-      "id": "2026_11_IND_HOU",
-      "home": "HOU",
-      "away": "IND",
-      "kickoffISO": "2026-11-20T01:15Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 26,
-      "awayScore": 3,
-      "winner": "HOU",
-      "tie": false,
-      "picks": {
-        "Lobos": "HOU",
-        "Roughriders": "HOU",
-        "Maniacs": "HOU",
-        "Critters": "HOU",
-        "Chickens": "HOU",
-        "Ferraris": "HOU",
-        "Llamas": "HOU",
-        "Giraffes": "HOU"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-19T23:15:00.000Z"
-    },
-    {
       "id": "2026_11_MIA_BUF",
       "home": "BUF",
       "away": "MIA",
@@ -300,6 +275,31 @@
       "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-11-21T18:00:00.000Z"
+    },
+    {
+      "id": "2026_11_IND_HOU",
+      "home": "HOU",
+      "away": "IND",
+      "kickoffISO": "2026-11-20T01:15Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 26,
+      "awayScore": 3,
+      "winner": "HOU",
+      "tie": false,
+      "picks": {
+        "Lobos": "HOU",
+        "Roughriders": "HOU",
+        "Maniacs": "HOU",
+        "Critters": "HOU",
+        "Chickens": "HOU",
+        "Ferraris": "HOU",
+        "Llamas": "HOU",
+        "Giraffes": "HOU"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-19T23:15:00.000Z"
     },
     {
       "id": "2026_11_CIN_WAS",

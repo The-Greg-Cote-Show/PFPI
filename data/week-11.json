@@ -27,6 +27,56 @@
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
+      "id": "2026_11_LV_DEN",
+      "home": "DEN",
+      "away": "LV",
+      "kickoffISO": "2026-11-22T21:25Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "DEN",
+        "Roughriders": "DEN",
+        "Maniacs": "DEN",
+        "Critters": "DEN",
+        "Chickens": "DEN",
+        "Ferraris": "DEN",
+        "Llamas": "DEN",
+        "Giraffes": "DEN"
+      },
+      "picksRevealed": true,
+      "clockReport": "10:57 - 1st",
+      "deadline": "2026-11-21T18:00:00.000Z"
+    },
+    {
+      "id": "2026_11_JAX_NYG",
+      "home": "NYG",
+      "away": "JAX",
+      "kickoffISO": "2026-11-22T21:25Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 3,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "JAX",
+        "Roughriders": "JAX",
+        "Maniacs": "JAX",
+        "Critters": "JAX",
+        "Chickens": "JAX",
+        "Ferraris": "JAX",
+        "Llamas": "JAX",
+        "Giraffes": "JAX"
+      },
+      "picksRevealed": true,
+      "clockReport": "11:58 - 1st",
+      "deadline": "2026-11-21T18:00:00.000Z"
+    },
+    {
       "id": "2026_11_MIA_BUF",
       "home": "BUF",
       "away": "MIA",
@@ -199,56 +249,6 @@
       },
       "picksRevealed": true,
       "clockReport": null,
-      "deadline": "2026-11-21T18:00:00.000Z"
-    },
-    {
-      "id": "2026_11_LV_DEN",
-      "home": "DEN",
-      "away": "LV",
-      "kickoffISO": "2026-11-22T21:25Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 0,
-      "awayScore": 0,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "DEN",
-        "Roughriders": "DEN",
-        "Maniacs": "DEN",
-        "Critters": "DEN",
-        "Chickens": "DEN",
-        "Ferraris": "DEN",
-        "Llamas": "DEN",
-        "Giraffes": "DEN"
-      },
-      "picksRevealed": true,
-      "clockReport": "11:01 - 1st",
-      "deadline": "2026-11-21T18:00:00.000Z"
-    },
-    {
-      "id": "2026_11_JAX_NYG",
-      "home": "NYG",
-      "away": "JAX",
-      "kickoffISO": "2026-11-22T21:25Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 0,
-      "awayScore": 3,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "JAX",
-        "Roughriders": "JAX",
-        "Maniacs": "JAX",
-        "Critters": "JAX",
-        "Chickens": "JAX",
-        "Ferraris": "JAX",
-        "Llamas": "JAX",
-        "Giraffes": "JAX"
-      },
-      "picksRevealed": true,
-      "clockReport": "11:58 - 1st",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

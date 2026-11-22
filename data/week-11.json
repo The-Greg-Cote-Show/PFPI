@@ -2,6 +2,31 @@
   "week": 11,
   "games": [
     {
+      "id": "2026_11_NO_CHI",
+      "home": "CHI",
+      "away": "NO",
+      "kickoffISO": "2026-11-22T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 21,
+      "awayScore": 13,
+      "winner": "CHI",
+      "tie": false,
+      "picks": {
+        "Lobos": "CHI",
+        "Roughriders": "CHI",
+        "Maniacs": "CHI",
+        "Critters": "CHI",
+        "Chickens": "CHI",
+        "Ferraris": "CHI",
+        "Llamas": "CHI",
+        "Giraffes": "CHI"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-21T18:00:00.000Z"
+    },
+    {
       "id": "2026_11_TB_DET",
       "home": "DET",
       "away": "TB",
@@ -73,32 +98,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "0:36 - 4th",
-      "deadline": "2026-11-21T18:00:00.000Z"
-    },
-    {
-      "id": "2026_11_NYJ_LAC",
-      "home": "LAC",
-      "away": "NYJ",
-      "kickoffISO": "2026-11-22T21:05Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 0,
-      "awayScore": 3,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "LAC",
-        "Roughriders": "NYJ",
-        "Maniacs": "LAC",
-        "Critters": "LAC",
-        "Chickens": "LAC",
-        "Ferraris": "LAC",
-        "Llamas": "NYJ",
-        "Giraffes": "NYJ"
-      },
-      "picksRevealed": true,
-      "clockReport": "9:45 - 1st",
+      "clockReport": "0:13 - 4th",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -121,31 +121,6 @@
         "Ferraris": "BUF",
         "Llamas": "BUF",
         "Giraffes": "BUF"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-21T18:00:00.000Z"
-    },
-    {
-      "id": "2026_11_NO_CHI",
-      "home": "CHI",
-      "away": "NO",
-      "kickoffISO": "2026-11-22T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 21,
-      "awayScore": 13,
-      "winner": "CHI",
-      "tie": false,
-      "picks": {
-        "Lobos": "CHI",
-        "Roughriders": "CHI",
-        "Maniacs": "CHI",
-        "Critters": "CHI",
-        "Chickens": "CHI",
-        "Ferraris": "CHI",
-        "Llamas": "CHI",
-        "Giraffes": "CHI"
       },
       "picksRevealed": true,
       "clockReport": null,
@@ -199,6 +174,31 @@
       },
       "picksRevealed": true,
       "clockReport": null,
+      "deadline": "2026-11-21T18:00:00.000Z"
+    },
+    {
+      "id": "2026_11_NYJ_LAC",
+      "home": "LAC",
+      "away": "NYJ",
+      "kickoffISO": "2026-11-22T21:05Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 3,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "LAC",
+        "Roughriders": "NYJ",
+        "Maniacs": "LAC",
+        "Critters": "LAC",
+        "Chickens": "LAC",
+        "Ferraris": "LAC",
+        "Llamas": "NYJ",
+        "Giraffes": "NYJ"
+      },
+      "picksRevealed": true,
+      "clockReport": "9:05 - 1st",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

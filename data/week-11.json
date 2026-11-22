@@ -23,7 +23,7 @@
         "Giraffes": "BUF"
       },
       "picksRevealed": true,
-      "clockReport": "2:46 - 4th",
+      "clockReport": "2:41 - 4th",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "6:32 - 4th",
+      "clockReport": "5:47 - 4th",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "4:21 - 4th",
+      "clockReport": "3:52 - 4th",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -102,31 +102,6 @@
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
-      "id": "2026_11_ARI_KC",
-      "home": "KC",
-      "away": "ARI",
-      "kickoffISO": "2026-11-22T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 34,
-      "awayScore": 7,
-      "winner": "KC",
-      "tie": false,
-      "picks": {
-        "Lobos": "KC",
-        "Roughriders": "KC",
-        "Maniacs": "KC",
-        "Critters": "KC",
-        "Chickens": "KC",
-        "Ferraris": "KC",
-        "Llamas": "KC",
-        "Giraffes": "KC"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-21T18:00:00.000Z"
-    },
-    {
       "id": "2026_11_PIT_PHI",
       "home": "PHI",
       "away": "PIT",
@@ -148,7 +123,7 @@
         "Giraffes": "PIT"
       },
       "picksRevealed": true,
-      "clockReport": "4:10 - 4th",
+      "clockReport": "2:45 - 4th",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -173,7 +148,32 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "9:25 - 4th",
+      "clockReport": "9:21 - 4th",
+      "deadline": "2026-11-21T18:00:00.000Z"
+    },
+    {
+      "id": "2026_11_ARI_KC",
+      "home": "KC",
+      "away": "ARI",
+      "kickoffISO": "2026-11-22T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 34,
+      "awayScore": 7,
+      "winner": "KC",
+      "tie": false,
+      "picks": {
+        "Lobos": "KC",
+        "Roughriders": "KC",
+        "Maniacs": "KC",
+        "Critters": "KC",
+        "Chickens": "KC",
+        "Ferraris": "KC",
+        "Llamas": "KC",
+        "Giraffes": "KC"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

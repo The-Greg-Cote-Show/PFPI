@@ -82,10 +82,10 @@
       "away": "BAL",
       "kickoffISO": "2026-11-22T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 35,
       "awayScore": 33,
-      "winner": null,
+      "winner": "CAR",
       "tie": false,
       "picks": {
         "Lobos": "BAL",
@@ -98,7 +98,7 @@
         "Giraffes": "BAL"
       },
       "picksRevealed": true,
-      "clockReport": "0:13 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -198,7 +198,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "9:05 - 1st",
+      "clockReport": "8:00 - 1st",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

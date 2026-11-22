@@ -9,7 +9,7 @@
       "hasRealTime": true,
       "status": "in_progress",
       "homeScore": 3,
-      "awayScore": 3,
+      "awayScore": 9,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "NYJ"
       },
       "picksRevealed": true,
-      "clockReport": "14:20 - 2nd",
+      "clockReport": "13:34 - 2nd",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": "10:57 - 1st",
+      "clockReport": "10:08 - 1st",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -73,7 +73,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "11:53 - 1st",
+      "clockReport": "11:16 - 1st",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

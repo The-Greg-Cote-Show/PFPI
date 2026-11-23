@@ -7,9 +7,9 @@
       "away": "MIN",
       "kickoffISO": "2026-11-23T01:20Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 28,
+      "awayScore": 10,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "12:39 - 3rd",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

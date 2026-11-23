@@ -2,31 +2,6 @@
   "week": 11,
   "games": [
     {
-      "id": "2026_11_JAX_NYG",
-      "home": "NYG",
-      "away": "JAX",
-      "kickoffISO": "2026-11-22T21:25Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 23,
-      "awayScore": 18,
-      "winner": "NYG",
-      "tie": false,
-      "picks": {
-        "Lobos": "JAX",
-        "Roughriders": "JAX",
-        "Maniacs": "JAX",
-        "Critters": "JAX",
-        "Chickens": "JAX",
-        "Ferraris": "JAX",
-        "Llamas": "JAX",
-        "Giraffes": "JAX"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-21T18:00:00.000Z"
-    },
-    {
       "id": "2026_11_MIA_BUF",
       "home": "BUF",
       "away": "MIA",
@@ -246,6 +221,31 @@
         "Ferraris": "DEN",
         "Llamas": "DEN",
         "Giraffes": "DEN"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-21T18:00:00.000Z"
+    },
+    {
+      "id": "2026_11_JAX_NYG",
+      "home": "NYG",
+      "away": "JAX",
+      "kickoffISO": "2026-11-22T21:25Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 23,
+      "awayScore": 18,
+      "winner": "NYG",
+      "tie": false,
+      "picks": {
+        "Lobos": "JAX",
+        "Roughriders": "JAX",
+        "Maniacs": "JAX",
+        "Critters": "JAX",
+        "Chickens": "JAX",
+        "Ferraris": "JAX",
+        "Llamas": "JAX",
+        "Giraffes": "JAX"
       },
       "picksRevealed": true,
       "clockReport": null,

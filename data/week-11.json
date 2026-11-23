@@ -33,7 +33,7 @@
       "kickoffISO": "2026-11-22T21:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 20,
+      "homeScore": 23,
       "awayScore": 9,
       "winner": null,
       "tie": false,
@@ -48,7 +48,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "10:13 - 4th",
+      "clockReport": "10:03 - 4th",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

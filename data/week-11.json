@@ -8,7 +8,7 @@
       "kickoffISO": "2026-11-22T21:25Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 31,
+      "homeScore": 38,
       "awayScore": 24,
       "winner": null,
       "tie": false,
@@ -23,7 +23,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": "2:00 - 4th",
+      "clockReport": "1:52 - 4th",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {
@@ -48,7 +48,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "6:39 - 4th",
+      "clockReport": "6:35 - 4th",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

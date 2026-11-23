@@ -7,10 +7,10 @@
       "away": "LV",
       "kickoffISO": "2026-11-22T21:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 38,
       "awayScore": 24,
-      "winner": null,
+      "winner": "DEN",
       "tie": false,
       "picks": {
         "Lobos": "DEN",
@@ -23,7 +23,7 @@
         "Giraffes": "DEN"
       },
       "picksRevealed": true,
-      "clockReport": "0:10 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

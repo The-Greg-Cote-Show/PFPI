@@ -2,31 +2,6 @@
   "week": 11,
   "games": [
     {
-      "id": "2026_11_MIN_SF",
-      "home": "SF",
-      "away": "MIN",
-      "kickoffISO": "2026-11-23T01:20Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 7,
-      "awayScore": 0,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "SF",
-        "Roughriders": "SF",
-        "Maniacs": "SF",
-        "Critters": "MIN",
-        "Chickens": "SF",
-        "Ferraris": "SF",
-        "Llamas": "MIN",
-        "Giraffes": "SF"
-      },
-      "picksRevealed": true,
-      "clockReport": "9:13 - 1st",
-      "deadline": "2026-11-21T18:00:00.000Z"
-    },
-    {
       "id": "2026_11_MIA_BUF",
       "home": "BUF",
       "away": "MIA",
@@ -274,6 +249,31 @@
       },
       "picksRevealed": true,
       "clockReport": null,
+      "deadline": "2026-11-21T18:00:00.000Z"
+    },
+    {
+      "id": "2026_11_MIN_SF",
+      "home": "SF",
+      "away": "MIN",
+      "kickoffISO": "2026-11-23T01:20Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 7,
+      "awayScore": 0,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "SF",
+        "Roughriders": "SF",
+        "Maniacs": "SF",
+        "Critters": "MIN",
+        "Chickens": "SF",
+        "Ferraris": "SF",
+        "Llamas": "MIN",
+        "Giraffes": "SF"
+      },
+      "picksRevealed": true,
+      "clockReport": "9:07 - 1st",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

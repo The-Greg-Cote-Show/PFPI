@@ -258,7 +258,7 @@
       "kickoffISO": "2026-11-23T01:20Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 0,
+      "homeScore": 7,
       "awayScore": 0,
       "winner": null,
       "tie": false,
@@ -273,7 +273,7 @@
         "Giraffes": "SF"
       },
       "picksRevealed": true,
-      "clockReport": "11:21 - 1st",
+      "clockReport": "11:16 - 1st",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

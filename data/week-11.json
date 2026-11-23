@@ -7,10 +7,10 @@
       "away": "JAX",
       "kickoffISO": "2026-11-22T21:25Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 23,
       "awayScore": 18,
-      "winner": null,
+      "winner": "NYG",
       "tie": false,
       "picks": {
         "Lobos": "JAX",
@@ -23,7 +23,7 @@
         "Giraffes": "JAX"
       },
       "picksRevealed": true,
-      "clockReport": "1:21 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

@@ -7,9 +7,9 @@
       "away": "CIN",
       "kickoffISO": "2026-11-24T01:15Z",
       "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "CIN"
       },
       "picksRevealed": true,
-      "clockReport": null,
+      "clockReport": "5:23 - 1st",
       "deadline": "2026-11-21T18:00:00.000Z"
     },
     {

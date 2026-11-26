@@ -7,9 +7,9 @@
       "away": "CHI",
       "kickoffISO": "2026-11-26T18:00Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 3,
-      "awayScore": 0,
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "CHI"
       },
       "picksRevealed": true,
-      "clockReport": "6:15 - 1st",
+      "clockReport": null,
       "deadline": "2026-11-26T16:00:00.000Z"
     },
     {

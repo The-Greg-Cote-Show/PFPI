@@ -2,31 +2,6 @@
   "week": 12,
   "games": [
     {
-      "id": "2026_12_CHI_DET",
-      "home": "DET",
-      "away": "CHI",
-      "kickoffISO": "2026-11-26T18:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 35,
-      "awayScore": 39,
-      "winner": "CHI",
-      "tie": false,
-      "picks": {
-        "Lobos": "DET",
-        "Roughriders": "DET",
-        "Maniacs": "DET",
-        "Critters": "CHI",
-        "Chickens": "CHI",
-        "Ferraris": "DET",
-        "Llamas": "DET",
-        "Giraffes": "CHI"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-26T16:00:00.000Z"
-    },
-    {
       "id": "2026_12_PHI_DAL",
       "home": "DAL",
       "away": "PHI",
@@ -50,6 +25,31 @@
       "picksRevealed": true,
       "clockReport": "8:50 - 1st",
       "deadline": "2026-11-26T19:30:00.000Z"
+    },
+    {
+      "id": "2026_12_CHI_DET",
+      "home": "DET",
+      "away": "CHI",
+      "kickoffISO": "2026-11-26T18:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 35,
+      "awayScore": 39,
+      "winner": "CHI",
+      "tie": false,
+      "picks": {
+        "Lobos": "DET",
+        "Roughriders": "DET",
+        "Maniacs": "DET",
+        "Critters": "CHI",
+        "Chickens": "CHI",
+        "Ferraris": "DET",
+        "Llamas": "DET",
+        "Giraffes": "CHI"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-26T16:00:00.000Z"
     },
     {
       "id": "2026_12_KC_BUF",

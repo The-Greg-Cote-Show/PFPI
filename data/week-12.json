@@ -8,7 +8,7 @@
       "kickoffISO": "2026-11-26T01:00Z",
       "hasRealTime": true,
       "status": "in_progress",
-      "homeScore": 20,
+      "homeScore": 23,
       "awayScore": 13,
       "winner": null,
       "tie": false,
@@ -23,7 +23,7 @@
         "Giraffes": "LA"
       },
       "picksRevealed": true,
-      "clockReport": "7:02 - 4th",
+      "clockReport": "6:13 - 4th",
       "deadline": "2026-11-25T23:00:00.000Z"
     },
     {

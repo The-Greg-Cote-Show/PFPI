@@ -7,9 +7,9 @@
       "away": "PHI",
       "kickoffISO": "2026-11-26T21:30Z",
       "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 38,
-      "awayScore": 30,
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
       "winner": null,
       "tie": false,
       "picks": {
@@ -23,7 +23,7 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "7:48 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-26T19:30:00.000Z"
     },
     {

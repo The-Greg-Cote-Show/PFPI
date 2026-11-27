@@ -2,6 +2,56 @@
   "week": 12,
   "games": [
     {
+      "id": "2026_12_DEN_PIT",
+      "home": "PIT",
+      "away": "DEN",
+      "kickoffISO": "2026-11-27T20:00Z",
+      "hasRealTime": true,
+      "status": "scheduled",
+      "homeScore": null,
+      "awayScore": null,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "DEN",
+        "Roughriders": "DEN",
+        "Maniacs": "DEN",
+        "Critters": "DEN",
+        "Chickens": "DEN",
+        "Ferraris": "DEN",
+        "Llamas": "DEN",
+        "Giraffes": "DEN"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-27T18:00:00.000Z"
+    },
+    {
+      "id": "2026_12_GB_LA",
+      "home": "LA",
+      "away": "GB",
+      "kickoffISO": "2026-11-26T01:00Z",
+      "hasRealTime": true,
+      "status": "final",
+      "homeScore": 26,
+      "awayScore": 13,
+      "winner": "LA",
+      "tie": false,
+      "picks": {
+        "Lobos": "LA",
+        "Roughriders": "GB",
+        "Maniacs": "LA",
+        "Critters": "LA",
+        "Chickens": "GB",
+        "Ferraris": "LA",
+        "Llamas": "LA",
+        "Giraffes": "LA"
+      },
+      "picksRevealed": true,
+      "clockReport": null,
+      "deadline": "2026-11-25T23:00:00.000Z"
+    },
+    {
       "id": "2026_12_CHI_DET",
       "home": "DET",
       "away": "CHI",
@@ -75,56 +125,6 @@
       "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-11-26T23:20:00.000Z"
-    },
-    {
-      "id": "2026_12_GB_LA",
-      "home": "LA",
-      "away": "GB",
-      "kickoffISO": "2026-11-26T01:00Z",
-      "hasRealTime": true,
-      "status": "final",
-      "homeScore": 26,
-      "awayScore": 13,
-      "winner": "LA",
-      "tie": false,
-      "picks": {
-        "Lobos": "LA",
-        "Roughriders": "GB",
-        "Maniacs": "LA",
-        "Critters": "LA",
-        "Chickens": "GB",
-        "Ferraris": "LA",
-        "Llamas": "LA",
-        "Giraffes": "LA"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-25T23:00:00.000Z"
-    },
-    {
-      "id": "2026_12_DEN_PIT",
-      "home": "PIT",
-      "away": "DEN",
-      "kickoffISO": "2026-11-27T20:00Z",
-      "hasRealTime": true,
-      "status": "scheduled",
-      "homeScore": null,
-      "awayScore": null,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "DEN",
-        "Roughriders": "DEN",
-        "Maniacs": "DEN",
-        "Critters": "DEN",
-        "Chickens": "DEN",
-        "Ferraris": "DEN",
-        "Llamas": "DEN",
-        "Giraffes": "DEN"
-      },
-      "picksRevealed": true,
-      "clockReport": null,
-      "deadline": "2026-11-27T18:00:00.000Z"
     },
     {
       "id": "2026_12_NO_CIN",

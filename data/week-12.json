@@ -7,10 +7,10 @@
       "away": "PHI",
       "kickoffISO": "2026-11-26T21:30Z",
       "hasRealTime": true,
-      "status": "in_progress",
+      "status": "final",
       "homeScore": 38,
       "awayScore": 39,
-      "winner": null,
+      "winner": "PHI",
       "tie": false,
       "picks": {
         "Lobos": "DAL",
@@ -23,8 +23,33 @@
         "Giraffes": "DAL"
       },
       "picksRevealed": true,
-      "clockReport": "0:02 - 4th",
+      "clockReport": null,
       "deadline": "2026-11-26T19:30:00.000Z"
+    },
+    {
+      "id": "2026_12_KC_BUF",
+      "home": "BUF",
+      "away": "KC",
+      "kickoffISO": "2026-11-27T01:20Z",
+      "hasRealTime": true,
+      "status": "in_progress",
+      "homeScore": 0,
+      "awayScore": 0,
+      "winner": null,
+      "tie": false,
+      "picks": {
+        "Lobos": "BUF",
+        "Roughriders": "BUF",
+        "Maniacs": "BUF",
+        "Critters": "KC",
+        "Chickens": "BUF",
+        "Ferraris": "BUF",
+        "Llamas": "KC",
+        "Giraffes": "BUF"
+      },
+      "picksRevealed": true,
+      "clockReport": "11:06 - 1st",
+      "deadline": "2026-11-26T23:20:00.000Z"
     },
     {
       "id": "2026_12_CHI_DET",
@@ -50,31 +75,6 @@
       "picksRevealed": true,
       "clockReport": null,
       "deadline": "2026-11-26T16:00:00.000Z"
-    },
-    {
-      "id": "2026_12_KC_BUF",
-      "home": "BUF",
-      "away": "KC",
-      "kickoffISO": "2026-11-27T01:20Z",
-      "hasRealTime": true,
-      "status": "in_progress",
-      "homeScore": 0,
-      "awayScore": 0,
-      "winner": null,
-      "tie": false,
-      "picks": {
-        "Lobos": "BUF",
-        "Roughriders": "BUF",
-        "Maniacs": "BUF",
-        "Critters": "KC",
-        "Chickens": "BUF",
-        "Ferraris": "BUF",
-        "Llamas": "KC",
-        "Giraffes": "BUF"
-      },
-      "picksRevealed": true,
-      "clockReport": "11:47 - 1st",
-      "deadline": "2026-11-26T23:20:00.000Z"
     },
     {
       "id": "2026_12_GB_LA",
